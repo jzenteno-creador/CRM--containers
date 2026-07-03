@@ -35,8 +35,8 @@ export default async function CrmLayout({
           </form>
         </div>
       </div>
-      <CrmNav />
       <SessionProvider session={session}>
+        <CrmNav />
         <main className="crm-screen">{children}</main>
       </SessionProvider>
     </div>

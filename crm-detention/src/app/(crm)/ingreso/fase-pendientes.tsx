@@ -55,7 +55,7 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
     const { data, error, count } = await supabase
       .from("operaciones")
       .select(
-        "id, retiro_de, fecha_retiro, contenedores(numero_contenedor, navieras(nombre)), movimientos_planta(planta_destino_id, medio, estado, plantas(nombre))",
+        "id, retiro_de, fecha_retiro, contenedores(numero_contenedor, navieras(nombre)), movimientos_planta(planta_destino_id, medio, estado, plantas!movimientos_planta_planta_destino_id_fkey(nombre))",
         { count: "exact" }
       )
       .eq("estado", "en_transito_a_planta")
