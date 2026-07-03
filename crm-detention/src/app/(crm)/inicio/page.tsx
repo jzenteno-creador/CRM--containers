@@ -22,6 +22,8 @@ interface TendenciaMes {
 interface DashboardData {
   costo_mes: number;
   costo_ytd: number;
+  costo_historial: number;
+  historial_desde: string | null; // 'YYYY-MM' de la primera devolución registrada
   costo_proyectado_abiertas: number;
   en_riesgo: number;
   vencidos: number;
@@ -51,8 +53,17 @@ function mesCorto(mes: string): string {
   return `${mes.slice(5, 7)}/${mes.slice(2, 4)}`;
 }
 
+const MESES_ABBR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** 'YYYY-MM' → 'ago-25' (para rotular el rango real del historial). */
+function mesNombre(mes: string | null | undefined): string {
+  if (!mes || mes.length < 7) return "—";
+  const m = Number(mes.slice(5, 7));
+  return `${MESES_ABBR[m - 1] ?? mes.slice(5, 7)}-${mes.slice(2, 4)}`;
+}
+
 function BarrasNavieras({ datos }: { datos: CostoNaviera[] }) {
-  if (!datos || datos.length === 0) return <Vacio msg="sin costos registrados este año" />;
+  if (!datos || datos.length === 0) return <Vacio msg="sin costos registrados" />;
   const max = Math.max(...datos.map((d) => Number(d.costo) || 0), 1);
   return (
     <div style={{ overflowX: "auto" }}>
@@ -152,6 +163,72 @@ function TendenciaMensual({ datos }: { datos: TendenciaMes[] }) {
   );
 }
 
+/** Módulo APARTE: serie agregada 2020-2026 de la planilla COSTOS HISTORICOS de operaciones.
+ *  Granularidad y alcance distintos al historial del CRM — no se mezcla con los KPIs operativos. */
+function HistoricoAgregado() {
+  const [serie, setSerie] = useState<{ anio: number; costo: number }[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const { data, error } = await supabase.from("costos_historicos").select("anio, costo_usd");
+      if (cancelado) return;
+      if (error) {
+        setErr(error.message);
+        return;
+      }
+      const porAnio = new Map<number, number>();
+      for (const r of (data ?? []) as { anio: number; costo_usd: number }[]) {
+        porAnio.set(r.anio, (porAnio.get(r.anio) ?? 0) + Number(r.costo_usd));
+      }
+      setSerie(
+        [...porAnio.entries()].map(([anio, costo]) => ({ anio, costo })).sort((a, b) => a.anio - b.anio)
+      );
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  if (err) return null; // módulo secundario: si falla no ensucia el dashboard
+  if (!serie || serie.length === 0) return null;
+  const max = Math.max(...serie.map((s) => s.costo), 1);
+  const total = serie.reduce((acc, s) => acc + s.costo, 0);
+  return (
+    <div className="crm-card" style={{ marginTop: 12 }}>
+      <h4>
+        <i className="ti ti-archive" aria-hidden /> histórico agregado 2020-2026
+      </h4>
+      {serie.map((s) => (
+        <div key={s.anio} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
+          <span className="mono" style={{ width: 38, fontSize: 12, color: "var(--text-secondary)" }}>
+            {s.anio}
+          </span>
+          <div style={{ flex: 1, height: 8, background: "var(--surface-1)", borderRadius: 4, overflow: "hidden" }}>
+            <div
+              style={{
+                width: `${Math.max(1, Math.round((s.costo / max) * 100))}%`,
+                height: "100%",
+                background: "var(--text-accent)",
+                opacity: 0.85,
+                borderRadius: 4,
+              }}
+            />
+          </div>
+          <span className="mono" style={{ width: 86, textAlign: "right", fontSize: 12 }}>
+            {fmtUsdCorto(s.costo)}
+          </span>
+        </div>
+      ))}
+      <p className="note">
+        serie semanal registrada por operaciones (hoja COSTOS HISTORICOS) · total {fmtUSD(total)} ·
+        métrica propia del equipo — no comparable con el historial operativo del CRM (ago-2025 → hoy)
+      </p>
+    </div>
+  );
+}
+
 export default function InicioPage() {
   const session = useSession();
   const plantaScope = session.rol === "operador" ? session.plantaId : null;
@@ -233,8 +310,11 @@ export default function InicioPage() {
     );
   }
 
-  // Estadía (dwell) promedio: cuenta TODAS las cerradas del año, no solo las con costo
+  // Estadía (dwell) promedio: cuenta TODAS las cerradas del historial, no solo las con costo
   const estadia = Number(datos.estadia_promedio ?? 0);
+  // Rango real del registro: el historial NO es año calendario (arranca en ago-2025)
+  const desdeLbl = mesNombre(datos.historial_desde);
+  const anioActual = new Date().getFullYear();
 
   return (
     <div>
@@ -274,7 +354,11 @@ export default function InicioPage() {
           <div className="v">{fmtUSD(datos.costo_mes)}</div>
         </div>
         <div className="kpi">
-          <div className="l">costo detention (YTD)</div>
+          <div className="l">costo detention — historial ({desdeLbl} → hoy)</div>
+          <div className="v">{fmtUSD(datos.costo_historial)}</div>
+        </div>
+        <div className="kpi">
+          <div className="l">costo detention ({anioActual})</div>
           <div className="v">{fmtUSD(datos.costo_ytd)}</div>
         </div>
         <div className="kpi">
@@ -286,7 +370,7 @@ export default function InicioPage() {
           <div className="v">{datos.stock_vacios}</div>
         </div>
         <div className="kpi">
-          <div className="l">estadía promedio (todas)</div>
+          <div className="l">estadía promedio (historial, cerradas)</div>
           <div className="v">
             {estadia.toLocaleString("es-AR", { maximumFractionDigits: 1 })} d
           </div>
@@ -301,17 +385,20 @@ export default function InicioPage() {
       <div className="twocol">
         <div className="crm-card">
           <h4>
-            <i className="ti ti-chart-bar" aria-hidden /> costo por naviera (YTD)
+            <i className="ti ti-chart-bar" aria-hidden /> costo por naviera — historial ({desdeLbl} → hoy)
           </h4>
           <BarrasNavieras datos={datos.costo_por_naviera ?? []} />
         </div>
         <div className="crm-card">
           <h4>
-            <i className="ti ti-chart-line" aria-hidden /> tendencia mensual (USD)
+            <i className="ti ti-chart-line" aria-hidden /> tendencia mensual (USD) — historial ({desdeLbl} → hoy)
           </h4>
           <TendenciaMensual datos={datos.tendencia_mensual ?? []} />
         </div>
       </div>
+
+      {/* Módulo aparte: histórico agregado 2020-2026 (granularidad distinta, no se mezcla) */}
+      <HistoricoAgregado />
 
       {/* Chips secundarios */}
       <div className="filters" style={{ marginTop: 12, marginBottom: 0 }}>
