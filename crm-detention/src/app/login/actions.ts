@@ -29,7 +29,11 @@ export async function login(
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/usuarios?select=id,email,nombre,rol,planta_asignada_id,password,planta:plantas(nombre)&email=eq.${encodeURIComponent(email)}&activo=eq.true`,
       {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Accept-Profile": "detention", // el CRM vive en el schema detention
+        },
         cache: "no-store",
       }
     );

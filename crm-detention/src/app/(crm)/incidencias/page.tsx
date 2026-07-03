@@ -249,7 +249,7 @@ export default function IncidenciasPage() {
       .channel("incidencias-historial")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "incidencias" },
+        { event: "*", schema: "detention", table: "incidencias" },
         () => {
           void refetchRef.current();
         }

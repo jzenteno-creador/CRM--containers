@@ -187,7 +187,7 @@ export default function EgresoPage() {
   useEffect(() => {
     const ch = supabase
       .channel("egreso-operaciones")
-      .on("postgres_changes", { event: "*", schema: "public", table: "operaciones" }, () => {
+      .on("postgres_changes", { event: "*", schema: "detention", table: "operaciones" }, () => {
         refetchRef.current();
       })
       .subscribe();

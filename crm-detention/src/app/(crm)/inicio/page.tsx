@@ -181,7 +181,7 @@ export default function InicioPage() {
       .channel("inicio-dashboard")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "operaciones" },
+        { event: "*", schema: "detention", table: "operaciones" },
         () => {
           void cargar();
         }

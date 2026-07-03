@@ -83,7 +83,7 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
   useEffect(() => {
     const ch = supabase
       .channel("ingreso-pendientes-operaciones")
-      .on("postgres_changes", { event: "*", schema: "public", table: "operaciones" }, () => {
+      .on("postgres_changes", { event: "*", schema: "detention", table: "operaciones" }, () => {
         void cargarRef.current();
       })
       .subscribe();

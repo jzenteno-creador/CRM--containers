@@ -131,7 +131,7 @@ export default function AlertasPage() {
       .channel("alertas-operaciones")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "operaciones" },
+        { event: "*", schema: "detention", table: "operaciones" },
         () => {
           setTick((t) => t + 1);
         },

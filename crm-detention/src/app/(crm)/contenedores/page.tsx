@@ -208,7 +208,7 @@ export default function ContenedoresPage() {
       .channel("contenedores-planilla")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "operaciones" },
+        { event: "*", schema: "detention", table: "operaciones" },
         () => {
           void refetchRef.current();
         },
