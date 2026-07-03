@@ -9,6 +9,7 @@ const TABS = [
   { href: "/ingreso", label: "Ingreso", icon: "ti-login-2" },
   { href: "/egreso", label: "Egreso", icon: "ti-logout-2" },
   { href: "/contenedores", label: "Contenedores", icon: "ti-list-details" },
+  { href: "/historial", label: "Historial", icon: "ti-history" },
   { href: "/alertas", label: "Alertas", icon: "ti-bell" },
   { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
   { href: "/admin", label: "Admin", icon: "ti-settings", adminOnly: true },
