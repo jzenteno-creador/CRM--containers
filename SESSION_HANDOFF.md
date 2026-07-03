@@ -44,6 +44,19 @@ Las 2 ops históricas ZIM (historial f1642–1643, `DETENTION HISTORIAL ... 2025
   2. Re-seed estándar 21d/$25 desde 2023-10-01 según INFORMACION: las 2 ops seguirían dando $0, pero se pierde el registro de que hubo condición especial.
   3. Modelar condiciones NO REFORZADO por naviera con tarifas escalonadas: requiere cambiar el modelo (`freetime_origin` es plano: días + tarifa única) — solo vale si van a repetir retiros ZIM no reforzados.
 
+## FASE 1 · Análisis de CONTROL DE VACIOS como base de consulta (2026-07-03 — ⏸ esperando OK de John para Fase 2)
+
+**Semántica temporal (evidencia):**
+- HISTORIAL vivo: 2880 ops cerradas; retiros **2025-05-12 → 2026-06-30** (~14 meses), devoluciones **2025-08-04 → 2026-07-03** (11 meses). "Arranca en agosto 2025" vale solo por devolución. NO es año calendario.
+- La DB tiene 2804 cerradas = copia EXACTA de `DETENTION HISTORIAL...xlsx` (2804 filas, max dev 29-jun): el import de sesión 3 usó ese export viejo. **Faltan 76 cierres recientes** (58 jun + 18 jul, dev 12-jun→3-jul, 66 MAERSK + 10 HAPAG, $3.185) que solo están en el HISTORIAL vivo.
+- **8 waivers históricos** con $0 manual en Excel (roturas "SIN COSTOS" autorizadas por CMA/MAERSK: f38, f401-403, f731, f1053-54, f1693) que el CRM computó con tarifa: **CRM sobreestima $14.255**. Conciliación exacta: DB 599.440 − 14.255 (waivers) + 3.185 (76 faltantes) = **588.370 = Excel**. Días/libres atan 100% en las 2880.
+- Dinámico vs estático: GENERAL+derivadas recalculan contra `B1==TODAY()` (VENCIDOS/ESTADIA/DEMORA/COSTOS); HISTORIAL es estático (dev−ret+1); REPORTE TOTAL es un **pivot con cache manual** (último refresh: Operez 2026-07-02 11:34 → de ahí salió el "27.370"); COSTOS HISTORICOS y PREFIJOS estáticos.
+- Rotulado temporal en el CRM: `inicio/page.tsx:277` "costo detention (YTD)" y `:304` "costo por naviera (YTD)" = solo 2026 (461.000; oculta 138.440 de ago-dic 2025 y el gráfico por naviera invisibiliza a CMA); `:310` "tendencia mensual" = últimos 12 meses (hoy cubre todo por casualidad; desde ago-2026 trunca silenciosamente); `:289` "estadía promedio (todas)" = solo cerradas 2026. **No existe ningún KPI "acumulado del historial completo".**
+
+**Mapeo (resumen):** integrado ✔: contenedor/naviera/retiro_de/planta/tipo/reforzado/fechas/bookings/buque/destino/orden/shp/producto/gmid/observaciones/estado(LLENOS)/tipo_cierre (CARGADO+DEVOLUCION DE VACIOS: 2787 embarcado + 17 devuelto_vacio ✓ exacto). NO modelado ✖: ROTURAS (13 ops), facturación DP (DP-FLETE/DP-DETENTION/invoices, 799 ops), prefijos restringidos (26+13, regla "PARA DOW"), COSTOS HISTORICOS (serie semanal abr-2020→jul-2026, 76 meses), régimen `cargados` de INFORMACION, NO REFORZADO MAERSK 0d/$25, tarifas escalonadas ZIM. ⚠ Hojas VENCIDOS/PROXIMOS/VACIOS>5: derivadas con structured refs DESALINEADOS (VACIOS>5 muestra costos de filas equivocadas) — **solo GENERAL e HISTORIAL son fuente confiable**.
+
+**Dudas para John (Fase 2):** (1) importar las 76 faltantes; (2) marcar sin_cargo los 8 waivers (con ambos fixes el CRM ata 588.370 exacto); (3) ¿facturación DP al modelo?; (4) ROTURAS como incidencias retroactivas o flag; (5) ¿validar prefijos restringidos en tanda de retiro?; (6) MSC en INFORMACION contradice al seed (7d/$25 vs 15/$50, sin ops → sin impacto); (7) ¿serie 2020-2026 en dashboard?; (8) nuevos rótulos temporales; (9) CONSOLIDADO/trasvase MAERSK→HAPAG: ¿quién cobra?
+
 ## Recorrido de sesiones anteriores (resumen)
 
 - **Sesión 3:** datos reales de CONTROL DE VACIOS (70 abiertos + 2804 históricas), freetime reconciliado contra INFORMACION (MAERSK 14/$35, CMA 18/$25, HAPAG 14/$25, ZIM 7→21 + sin_uso, MSC 15/$50), dwell separado del costo (`dias_estadia` siempre visible, semáforo `neutro` para navieras que no cobran), E2E completo sobre prod con evidencia por paso, mobile 375px OK. Deploy: `cd crm-detention && npx vercel deploy --prod --yes`.
