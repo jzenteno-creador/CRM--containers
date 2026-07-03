@@ -62,13 +62,19 @@ export function FreetimeMeter({
   if (libres == null || libres <= 0) {
     return (
       <div className="ft-meter" title="sin freetime aplicable">
-        <i className="neutro" style={{ width: "25%" }} />
+        <i className="ft-neutro" style={{ width: "25%" }} />
       </div>
     );
   }
   const pct = Math.max(4, Math.min(100, Math.round((estadia / libres) * 100)));
   const cls =
-    semaforo === "rojo" ? "over" : semaforo === "amarillo" ? "warn" : semaforo === "neutro" ? "neutro" : "ok";
+    semaforo === "rojo"
+      ? "ft-over"
+      : semaforo === "amarillo"
+        ? "ft-warn"
+        : semaforo === "neutro"
+          ? "ft-neutro"
+          : "ft-ok";
   return (
     <div className="ft-meter" title={`${estadia} de ${libres} días libres`}>
       <i className={cls} style={{ width: `${pct}%` }} />

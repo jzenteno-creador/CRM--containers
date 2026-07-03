@@ -200,11 +200,12 @@ table.t tbody tr:hover td { background: var(--surface-3); }
   height: 7px; min-width: 64px;
   background: var(--surface-0); border-radius: 4px; overflow: hidden;
 }
-.ft-meter i { display: block; height: 7px; border-radius: 4px; }
-.ft-meter .ok { background: var(--text-success); }
-.ft-meter .warn { background: var(--text-accent); }
-.ft-meter .over { background: var(--text-danger); }
-.ft-meter .neutro { background: var(--text-muted); }
+/* clases con namespace ft-*: "ok" colisionaba con el banner global .ok (margin/padding) */
+.ft-meter i { display: block; height: 7px; border-radius: 4px; margin: 0; padding: 0; }
+.ft-meter .ft-ok { background: var(--text-success); }
+.ft-meter .ft-warn { background: var(--text-accent); }
+.ft-meter .ft-over { background: var(--text-danger); }
+.ft-meter .ft-neutro { background: var(--text-muted); }
 
 /* ---- fila expandible (clic/+) ---- */
 tr.expandible { cursor: pointer; }
