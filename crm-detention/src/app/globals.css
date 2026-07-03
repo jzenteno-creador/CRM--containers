@@ -193,12 +193,14 @@ table.t tbody tr:hover td { background: var(--surface-3); }
 /* ---- tema contenedores: ícono como marcador de unidad ---- */
 .cont-ico { width: 15px; height: 15px; display: inline-block; vertical-align: -2px; flex-shrink: 0; }
 
-/* ---- firma: medidor de freetime (se llena verde→ámbar→rojo) ---- */
+/* ---- firma: medidor de freetime (se llena verde→ámbar→rojo) ----
+   El fill va en flujo normal (display:block), NO absoluto: dentro de celdas de tabla
+   el posicionamiento absoluto lo corría fuera del track y el overflow lo recortaba. */
 .ft-meter {
-  position: relative; height: 7px; min-width: 64px;
+  height: 7px; min-width: 64px;
   background: var(--surface-0); border-radius: 4px; overflow: hidden;
 }
-.ft-meter i { position: absolute; left: 0; top: 0; height: 100%; border-radius: 4px; }
+.ft-meter i { display: block; height: 7px; border-radius: 4px; }
 .ft-meter .ok { background: var(--text-success); }
 .ft-meter .warn { background: var(--text-accent); }
 .ft-meter .over { background: var(--text-danger); }
