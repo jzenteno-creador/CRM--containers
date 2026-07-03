@@ -137,12 +137,16 @@ export interface VistaAlerta {
   naviera: string;
   estado: OperacionEstado;
   fecha_retiro: string;
+  sin_cargo: boolean;
   dias_transcurridos: number;
-  dias_libres: number;
-  dias_restantes: number;
-  tarifa_usd_dia: number;
-  costo_proyectado: number;
-  estado_semaforo: "verde" | "amarillo" | "rojo";
+  /** dwell: días que se tiene el contenedor (retiro = día 1, zona AR) — SIEMPRE presente */
+  dias_estadia: number;
+  dias_libres: number | null;
+  dias_restantes: number | null;
+  tarifa_usd_dia: number | null;
+  /** null = la naviera no tiene tarifa aplicable / no cobra origen; 0 puede ser waiver (sin_cargo) */
+  costo_proyectado: number | null;
+  estado_semaforo: "verde" | "amarillo" | "rojo" | "neutro";
 }
 
 export interface VistaCostoCerrado {

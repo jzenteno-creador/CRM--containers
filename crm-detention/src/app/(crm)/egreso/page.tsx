@@ -411,7 +411,9 @@ export default function EgresoPage() {
                       <td>{r.naviera}</td>
                       <td>{r.planta_actual ?? "—"}</td>
                       <td>
-                        {r.dias_restantes < 0 ? (
+                        {r.dias_restantes == null ? (
+                          "—"
+                        ) : r.dias_restantes < 0 ? (
                           <span className="badge badge-danger">{r.dias_restantes}</span>
                         ) : (
                           r.dias_restantes

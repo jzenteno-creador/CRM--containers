@@ -30,6 +30,8 @@ interface DashboardData {
   en_transito_a_planta: number;
   en_transito_a_terminal: number;
   demora_promedio: number;
+  estadia_promedio: number;
+  estadia_promedio_abiertas: number;
   costo_por_naviera: CostoNaviera[];
   tendencia_mensual: TendenciaMes[];
 }
@@ -231,7 +233,8 @@ export default function InicioPage() {
     );
   }
 
-  const demora = Number(datos.demora_promedio ?? 0);
+  // Estadía (dwell) promedio: cuenta TODAS las cerradas del año, no solo las con costo
+  const estadia = Number(datos.estadia_promedio ?? 0);
 
   return (
     <div>
@@ -283,9 +286,9 @@ export default function InicioPage() {
           <div className="v">{datos.stock_vacios}</div>
         </div>
         <div className="kpi">
-          <div className="l">demora promedio</div>
+          <div className="l">estadía promedio (todas)</div>
           <div className="v">
-            {demora.toLocaleString("es-AR", { maximumFractionDigits: 1 })} d
+            {estadia.toLocaleString("es-AR", { maximumFractionDigits: 1 })} d
           </div>
         </div>
         <div className="kpi">

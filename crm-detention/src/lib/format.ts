@@ -19,6 +19,11 @@ export function diasDesde(iso: string): number {
   return Math.round((b - a) / 86400000);
 }
 
+/** Estadía (dwell) contando el día de retiro inclusive (retiro = día 1) — mismo criterio que el Excel. */
+export function diasEstadia(fechaRetiroIso: string): number {
+  return diasDesde(fechaRetiroIso) + 1;
+}
+
 export function fmtFecha(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);

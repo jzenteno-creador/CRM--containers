@@ -18,7 +18,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Paginacion } from "@/components/ui";
-import { fmtFecha, ESTADO_LABELS } from "@/lib/format";
+import { fmtFecha, diasEstadia, ESTADO_LABELS } from "@/lib/format";
 import type { Naviera, OperacionEstado, Planta, ReforzadoEstado } from "@/lib/types";
 
 const PAGE_SIZE = 50;
@@ -323,6 +323,7 @@ export default function ContenedoresPage() {
                     <th>planta</th>
                     <th>estado</th>
                     <th>fecha retiro</th>
+                    <th>estadía (días)</th>
                     <th>reforzado</th>
                     <th aria-label="acciones" />
                   </tr>
@@ -342,6 +343,12 @@ export default function ContenedoresPage() {
                         <BadgeEstado estado={f.estado} />
                       </td>
                       <td>{fmtFecha(f.fecha_retiro)}</td>
+                      <td>
+                        {/* dwell siempre visible en abiertas (retiro = día 1, zona AR) */}
+                        {f.estado === "cerrado" || f.estado === "anulada"
+                          ? "—"
+                          : diasEstadia(f.fecha_retiro)}
+                      </td>
                       <td>
                         <CeldaReforzado estado={f.contenedores.reforzado_estado} />
                       </td>

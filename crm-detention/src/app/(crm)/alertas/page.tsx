@@ -158,6 +158,9 @@ export default function AlertasPage() {
         <span className="chip">
           <span className="dot dot-rojo" /> vencido
         </span>
+        <span className="chip">
+          <span className="dot dot-neutro" /> sin cargo de origen
+        </span>
         <span className="note" style={{ marginTop: 0 }}>
           umbral amarillo: {umbral} {umbral === 1 ? "día" : "días"} (configurable en admin)
         </span>
@@ -252,7 +255,7 @@ export default function AlertasPage() {
                   <th>naviera</th>
                   <th>planta</th>
                   <th>estado</th>
-                  <th>días transc.</th>
+                  <th>estadía (días)</th>
                   <th>días libres</th>
                   <th>días rest.</th>
                   <th>costo proy.</th>
@@ -268,10 +271,12 @@ export default function AlertasPage() {
                     <td>{a.naviera}</td>
                     <td>{a.planta_actual ?? "—"}</td>
                     <td>{ESTADO_LABELS[a.estado] ?? a.estado}</td>
-                    <td>{a.dias_transcurridos}</td>
-                    <td>{a.dias_libres}</td>
+                    <td>{a.dias_estadia}</td>
+                    <td>{a.dias_libres ?? "—"}</td>
                     <td>
-                      {a.dias_restantes < 0 ? (
+                      {a.dias_restantes == null ? (
+                        "—"
+                      ) : a.dias_restantes < 0 ? (
                         <span className="badge badge-danger">{a.dias_restantes}</span>
                       ) : a.dias_restantes <= umbral ? (
                         <span className="badge">{a.dias_restantes}</span>
@@ -279,7 +284,14 @@ export default function AlertasPage() {
                         a.dias_restantes
                       )}
                     </td>
-                    <td>{fmtUSD(a.costo_proyectado)}</td>
+                    <td>
+                      {a.costo_proyectado == null ? "—" : fmtUSD(a.costo_proyectado)}
+                      {a.sin_cargo && (
+                        <span className="badge" style={{ marginLeft: 6 }} title="excepción de cargo (waiver)">
+                          sin cargo
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <Semaforo estado={a.estado_semaforo} />
                     </td>

@@ -23,8 +23,8 @@ export function ErrorMsg({ msg, onRetry }: { msg: string; onRetry?: () => void }
   );
 }
 
-export function Semaforo({ estado }: { estado: "verde" | "amarillo" | "rojo" }) {
-  return <span className={`dot dot-${estado}`} title={estado} />;
+export function Semaforo({ estado }: { estado: "verde" | "amarillo" | "rojo" | "neutro" }) {
+  return <span className={`dot dot-${estado}`} title={estado === "neutro" ? "sin cargo de origen aplicable" : estado} />;
 }
 
 export function Paginacion({

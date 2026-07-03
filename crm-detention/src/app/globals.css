@@ -165,6 +165,7 @@ table.t tbody tr:hover td { background: var(--surface-1); }
 .dot-verde { background: var(--text-success); }
 .dot-amarillo { background: var(--text-warning); }
 .dot-rojo { background: var(--text-danger); }
+.dot-neutro { background: var(--text-muted); }
 .pill {
   font-size: 12px; color: var(--text-secondary); background: var(--surface-1);
   border: 0.5px solid var(--border); border-radius: 20px; padding: 3px 9px;
@@ -177,3 +178,42 @@ table.t tbody tr:hover td { background: var(--surface-1); }
   background: var(--bg-success); color: var(--text-success); border: 0.5px solid var(--border-success);
   border-radius: var(--radius); padding: 8px 12px; font-size: 12px; margin: 8px 0;
 }
+
+/* ============ Mobile (se opera en depósito/planta con el dedo) ============ */
+@media (max-width: 640px) {
+  .crm-wrap { padding: 8px 6px; }
+  .crm-screen { padding: 12px 8px; }
+  .crm-card { padding: 12px 10px; }
+
+  /* Nav: una sola línea con scroll horizontal (sin hamburguesa: 7 solapas entran deslizando) */
+  .crm-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .crm-nav::-webkit-scrollbar { display: none; }
+  .crm-nav a { white-space: nowrap; flex: 0 0 auto; }
+
+  /* Formularios (tanda, egreso, asignación): una columna */
+  .grid { grid-template-columns: 1fr; }
+  .twocol { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+
+  /* Touch targets ≥44px */
+  input, select, textarea, button, .crm-nav a {
+    min-height: 44px;
+    font-size: 16px; /* evita zoom automático de iOS */
+  }
+  input[type="checkbox"], input[type="radio"] {
+    min-height: 0;
+    width: 22px; height: 22px;
+  }
+  table.t input[type="checkbox"] { width: 24px; height: 24px; }
+  table.t th, table.t td { padding: 10px 8px; }
+  .actbar { align-items: stretch; }
+  .actbar > button { width: 100%; }
+  .actbar > .f { width: 100%; }
+  .actbar > .f > input, .actbar > .f > select { width: 100%; }
+}
+/* Las tablas ya scrollean horizontal dentro de .tblwrap en todo viewport */
