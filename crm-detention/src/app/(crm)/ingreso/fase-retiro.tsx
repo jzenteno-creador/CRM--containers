@@ -63,6 +63,11 @@ export function FaseRetiro({
   const [texto, setTexto] = useState("");
   const [reforzadoMap, setReforzadoMap] = useState<Record<string, boolean>>({});
 
+  // Prefijos restringidos (regla "PARA DOW"): alerta de compliance en la fila, NO bloquea la carga
+  const [prefijos, setPrefijos] = useState<Map<string, { armador: string; estado: string }>>(
+    new Map()
+  );
+
   // Verificación contra la base
   const [existentes, setExistentes] = useState<Map<string, ContenedorExistente>>(new Map());
   const [ciclosAbiertos, setCiclosAbiertos] = useState<Set<string>>(new Set());
@@ -77,6 +82,29 @@ export function FaseRetiro({
   const [enviando, setEnviando] = useState(false);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  // La lista es chica (39 prefijos): se carga una vez por montaje
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const { data } = await supabase
+        .from("prefijos_restringidos")
+        .select("prefijo, armador, estado");
+      if (!cancelado && data) {
+        setPrefijos(
+          new Map(
+            (data as { prefijo: string; armador: string; estado: string }[]).map((p) => [
+              p.prefijo,
+              { armador: p.armador, estado: p.estado },
+            ])
+          )
+        );
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   const parseadas = useMemo(() => parsearListaContenedores(texto), [texto]);
   const numerosValidos = useMemo(
@@ -157,6 +185,13 @@ export function FaseRetiro({
   );
 
   const navieraNombre = navieras.find((n) => n.id === navieraId)?.nombre ?? "—";
+
+  const prefijoDeFila = (numero: string) => prefijos.get(numero.slice(0, 4)) ?? null;
+  const restringidas = useMemo(
+    () => filasValidas.filter((f) => prefijoDeFila(f.numero)?.estado === "vigente"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filasValidas, prefijos]
+  );
 
   function reforzadoDeFila(f: Fila): boolean {
     if (f.existente) return f.existente.reforzado_estado === "confirmado_reforzado";
@@ -294,6 +329,16 @@ export function FaseRetiro({
 
       {errVerif && <div className="err">error verificando contenedores: {errVerif}</div>}
 
+      {restringidas.length > 0 && (
+        <div className="err" role="alert">
+          <i className="ti ti-alert-triangle" aria-hidden />{" "}
+          {restringidas.length === 1 ? "1 contenedor" : `${restringidas.length} contenedores`} con{" "}
+          prefijo restringido para DOW (
+          {[...new Set(restringidas.map((f) => f.numero.slice(0, 4)))].join(", ")}) — la carga no
+          se bloquea; verificá con compliance antes de operar.
+        </div>
+      )}
+
       {filas.length > 0 && (
         <div className="tblwrap" style={{ marginTop: 10 }}>
           <table className="t">
@@ -318,6 +363,28 @@ export function FaseRetiro({
                     {f.estado === "existente" && <span className="badge badge-accent">existente</span>}
                     {f.estado === "nuevo" &&
                       (verificando ? <span className="badge">verificando…</span> : <span className="badge">nuevo</span>)}
+                    {f.estado !== "error" &&
+                      (() => {
+                        const pr = prefijoDeFila(f.numero);
+                        if (!pr) return null;
+                        return pr.estado === "vigente" ? (
+                          <span
+                            className="badge badge-danger"
+                            style={{ marginLeft: 4 }}
+                            title={`armador sancionado: ${pr.armador} — restringido para DOW`}
+                          >
+                            ⚠ prefijo restringido
+                          </span>
+                        ) : (
+                          <span
+                            className="badge"
+                            style={{ marginLeft: 4 }}
+                            title={`${pr.armador} — fuera del listado restringido desde 26-08-2025`}
+                          >
+                            prefijo ex-restringido
+                          </span>
+                        );
+                      })()}
                   </td>
                   <td>
                     {f.estado === "error" || f.estado === "ciclo_abierto" ? (
