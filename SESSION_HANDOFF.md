@@ -1,73 +1,71 @@
 # SESSION_HANDOFF — CRM Detention de Contenedores
 
-**Fecha:** 2026-07-03 (sesión 4: verificación BMOU + decisión NO REFORZADO + investigación ZIM) · **Rama:** master · **Último commit:** ver `git log`
+**Fecha:** 2026-07-03 (sesión 5: Fase 2 — integración Excel + solapa Historial + diseño navy/oro) · **Rama:** master
 
 ## 🟢 DEMOSTRABLE EN PRODUCCIÓN
 
 **URL: https://crm-detention.vercel.app** — login: `admin@ssb.demo`/`admin123` · `supervisor@ssb.demo`/`super123` · `operador@ssb.demo`/`opera123`
 
-## A · BMOU4172000: ya estaba resuelto — el "desvío de $630" era el Excel leído otro día
+## A · RECONCILIACIÓN CERRADA: el CRM ata EXACTO con el Excel, mismo día, fila por fila
 
-**No se mutó ningún dato en esta sesión.** Verificación completa contra prod y contra el Excel:
+| Métrica | Antes | Después | Excel (03-jul) |
+|---|---|---|---|
+| Ops cerradas | 2.804 | **2.880** | 2.880 ✓ |
+| Costo historial | 599.440 | **588.370** | **588.370 ✓ EXACTO** |
+| Hashes MD5 mensuales (cont\|retiro\|est\|libres\|costo) | 1/12 | **12/12 idénticos** | — |
 
-- `operaciones.sin_cargo = true` en BMOU4172000 **desde la carga de datos** (2026-07-03 15:04 UTC, sesión 3), documentado en `observaciones` ("SIN CARGO según Excel (NO REFORZADO, pendiente definición de regla)").
-- **Diff SQL fila por fila Excel↔prod: 70/70 match, 0 discrepancias. Total Excel = 28.000 = Total CRM = 28.000,00.** (VALUES generados desde la hoja GENERAL vs `detention.vista_alertas`, misma fecha.)
-- **El 27.370 no es una discrepancia: es el MISMO Excel leído el 2026-07-02.** `GENERAL!B1 = =TODAY()` → estadías/costos recalculan a diario. 18 filas con cargo × $35/día = **$630/día de deriva**. 28.000 (03-jul) − 630 = 27.370 (02-jul). Ni siquiera es el costo de BMOU: BMOU cobrado hoy daría $595 (17 días × $35), no $630.
-  - ⚠ **Para la demo:** CRM y Excel se mueven juntos día a día; comparar totales siempre del mismo día.
-- Fila BMOU en prod (UI Alertas, screenshot verificado en navegador): `BMOU4172000 | MAERSK | ABBOTT | en planta | estadía 31 | libres 14 | restantes −17 | USD 0 + badge "sin cargo" | semáforo ROJO (dot-rojo rgb(163,45,45))`. **El dwell sigue visible y la fila sigue contando como vencida; solo el costo es $0** (la view pone `costo=0` si `sin_cargo` pero el semáforo no mira `sin_cargo`).
-- Dashboard RPC `crm_dashboard(null)`: `costo_proyectado_abiertas: 28000`, `vencidos: 19`. Cross-check de scoping: operador BAHIA ve 15 vencidos / USD 23.555 = 28.000 − 4.445 de las 4 filas ABBOTT ✓.
-- Confirmación de operaciones (vía John): BMOU tuvo demora real pero fue informado erróneamente como reforzado sin serlo → la naviera asumió el costo → costo a SSB $0. El dato ya cargado replica esto.
+Camino del ajuste (todo con diff SQL fila por fila, mismo día):
+1. **+76 cierres importados** del HISTORIAL vivo (devoluciones 12-jun→3-jul; 66 MAERSK + 10 HAPAG, todas embarcado/REFORZADO/BAHIA), replicando convenciones sesión 3 (retiro 12:00Z, ingreso +6h, egreso dev−1 17:00Z, devolución 19:00Z, 4 eventos/op). Guards de idempotencia por (contenedor, fecha_retiro).
+2. **8 waivers históricos → sin_cargo=true** (roturas con devolución en vacío "SIN COSTOS" autorizadas por CMA/MAERSK: TCNU3517944, HASU4904147, SUDU6729339, MSKU8696734, TCLU5892700, INKU6197809, TCLU8377540, MRKU4955835; −$14.255). Motivo documentado en `observaciones` de cada una. Dwell/días siguen visibles.
+3. **Hallazgo extra en la reconciliación (−$490):** 8 ops pre-existentes tenían **devolución desactualizada** en el export viejo (dev 24-jun; el Excel vivo las devuelve 26/27-jun): CAAU8468553, TRHU8052801, MRKU4889266, TRLU8199220, MRSU6895358, SUDU8971969, MRKU6331313, MRKU4616066. Corregidas fechas de devolución/egreso + eventos. 105×4+70 = 490 exacto.
+- Dashboard RPC verificado en prod: `costo_historial: 588370`, `vencidos: 19`, abiertas intactas (70 / USD 28.000 al 03-jul — recordar que el proyectado de abiertas deriva a diario con el Excel).
 
-## B · Decisión de diseño: NO automatizar "NO REFORZADO = 0 días libres"
+## B · Rótulos temporales corregidos (el "YTD" ya no miente) — commit `d108bde`
 
-**Decisión (no deuda técnica):** el no-reforzado se resuelve **caso por caso** con el flag `sin_cargo` por operación (+`observaciones`), no como regla determinística. Evidencia de que la regla no es determinística:
+- KPI **"costo detention — historial (ago-25 → hoy)"** = 588.370 (rango dinámico desde `historial_desde` de la RPC v2) + KPI **"costo detention (2026)"** = 463.905 explícito + "(mes)" = 635.
+- **"costo por naviera — historial"**: rango completo → **CMA/MERCOSUL reapareció** (12.850; antes el filtro YTD lo ocultaba). MAERSK 558.320, HAPAG 17.200, ZIM 0.
+- **Tendencia mensual**: historial completo ago-25→jul-26, sin el truncado de 12 meses que iba a recortar desde ago-2026.
+- "estadía promedio (historial, cerradas)" = 17 d con alcance real.
+- RPC `crm_dashboard` v2 (migración `crm_dashboard_v2_historial_completo`): claves nuevas `costo_historial`, `historial_desde`; `costo_por_naviera`/`tendencia_mensual`/`estadia_promedio`/`demora_promedio` pasan a rango completo; `costo_ytd` se mantiene para la vista "(2026)".
 
-1. **MAERSK** tiene la regla en contrato (hoja INFORMACION f11: "DIAS LIBRES - VACIOS | 0 | USD 25 | CONTENEDORES NO REFORZADOS"), pero en el único caso real (BMOU4172000) la naviera absorbió el costo → cargo real $0. La regla automática habría proyectado ~$775 (31d × $25) de más.
-2. **ZIM** no-reforzado tuvo una estructura totalmente distinta: 7 días libres + tarifa escalonada por tamaño (ver C). Ni 0 días ni la tarifa estándar.
+## C · Solapa HISTORIAL (consulta de las 2.880 cerradas) — commit `376a3b1`
 
-→ El resultado depende de naviera + negociación puntual. Si John define lo contrario, se automatiza después (el flag `navieras`/`freetime_origin` por régimen ya da la base).
+- `/historial` en el nav: búsqueda contenedor/booking/orden (`.or` + ilike con **índices pg_trgm**), filtro naviera y rango de devolución, **paginación server-side** (`range` + `count exact`, 50/pág — verificado en prod: "1–50 de 2.880 · página 1 de 58"). Nunca se traen las 2.880 al cliente.
+- Ficha expandible por fila (clic/+): retiro_de, bookings, buque, destino, orden, shp, planta, tipo, producto, tarifa, observaciones. Verificado con ZIMU1022976 (HIPERBAIRES → CHLOE D V292 → ITAPOA).
+- `vista_costos_cerrados` v2: columnas de consulta agregadas AL FINAL (no rompe consumidores). Scoping por planta para rol operador.
 
-## C · ZIM 7 días vs INFORMACION 21 días: es una condición especial real de NO REFORZADO, no un error de carga
+## D · Prefijos restringidos (regla "PARA DOW") — commit `2484695`
 
-Las 2 ops históricas ZIM (historial f1642–1643, `DETENTION HISTORIAL ... 2025-2026.xlsx` y hoja `HISTORIAL,` idénticas):
+- Tabla `detention.prefijos_restringidos`: 26 vigentes + 13 retirados del listado (nota 26-08-2025).
+- En el alta de tanda: badge rojo "⚠ prefijo restringido" (con armador en tooltip) + aviso agregado **NO bloqueante**; badge suave "prefijo ex-restringido" para los 13 históricos. Verificado en prod: HWIU→alerta, BANU→ex-restringido, MSKU→limpio.
 
-| Contenedor | Tipo | Reforzado | Retiro | Devolución | Booking | Libres (Excel) | Valor unit (Excel) | Costo |
-|---|---|---|---|---|---|---|---|---|
-| ZIMU1022976 | 20DC | **NO REFORZADO** | 2026-01-06 (HIPERBAIRES) | 2026-01-09 embarcado (CHLOE D V292 → ITAPOA) | ZIMUBUE9046380 | **7** | **42** | 0 |
-| TGHU5252722 | 40DC | **NO REFORZADO** | 2026-01-06 (HIPERBAIRES) | 2026-01-09 embarcado (ídem) | ZIMUBUE9046363 | **7** | **84** | 0 |
+## E · Módulo aparte "histórico agregado 2020-2026" — commit `d108bde`
 
-- OBSERVACIONES del historial (textual): 20' → "Del dia 8 al 12 costo de detention de USD 42 y del dia 13 al 16 costo de detention de USD 67 y del 17 en adelante costo de detention de USD 75". 40' → ídem con 84/134/150. **Tarifario escalonado por tamaño, cotizado para esos retiros NO REFORZADO** — no es la condición estándar de vacíos (INFORMACION: ZIM 21d/$25 desde oct-2023).
-- **Impacto numérico: cero en todos los escenarios.** Estadía fue 4 días < 7 < 21 → demora 0, costo $0 en Excel y en CRM (`vista_costos_cerrados` = 0.00 en ambas). Son 2 de 2804 ops.
-- Estado del seed en CRM: `freetime_origin` ZIM vacíos = 7d/$25 (2025-05-01→2026-06-30) + 21d/$25 (2026-07-01→) + sin_uso 0d/$84. El 7d reproduce la columna del historial, pero con tarifa $25 (la real cotizada era 42/84 escalonada) — sin efecto porque demora=0.
-- **Opciones para John (no se cambió el seed):**
-  1. **Dejar como está** (recomendado): impacto $0, el historial ata.
-  2. Re-seed estándar 21d/$25 desde 2023-10-01 según INFORMACION: las 2 ops seguirían dando $0, pero se pierde el registro de que hubo condición especial.
-  3. Modelar condiciones NO REFORZADO por naviera con tarifas escalonadas: requiere cambiar el modelo (`freetime_origin` es plano: días + tarifa única) — solo vale si van a repetir retiros ZIM no reforzados.
+- Tabla `detention.costos_historicos` (323 semanas de la hoja COSTOS HISTORICOS, abr-2020→jul-2026, USD 4.200.685) + card separada en el dashboard con barras anuales.
+- ⚠ **Esta serie NO reconcilia con el historial del CRM** (2025: 395k vs 138k; es una métrica propia del equipo de ops, alcance distinto) — por eso va como módulo aparte, rotulado, sin mezclar con KPIs operativos. La "semana 1 de jul-2026" de esa hoja es 27.370 (otra huella del pivot desactualizado de la sesión 4).
 
-## FASE 1 · Análisis de CONTROL DE VACIOS como base de consulta (2026-07-03 — ⏸ esperando OK de John para Fase 2)
+## F · Punto 9 — consolidado/trasvase MAERSK→HAPAG (solo investigación)
 
-**Semántica temporal (evidencia):**
-- HISTORIAL vivo: 2880 ops cerradas; retiros **2025-05-12 → 2026-06-30** (~14 meses), devoluciones **2025-08-04 → 2026-07-03** (11 meses). "Arranca en agosto 2025" vale solo por devolución. NO es año calendario.
-- La DB tiene 2804 cerradas = copia EXACTA de `DETENTION HISTORIAL...xlsx` (2804 filas, max dev 29-jun): el import de sesión 3 usó ese export viejo. **Faltan 76 cierres recientes** (58 jun + 18 jul, dev 12-jun→3-jul, 66 MAERSK + 10 HAPAG, $3.185) que solo están en el HISTORIAL vivo.
-- **8 waivers históricos** con $0 manual en Excel (roturas "SIN COSTOS" autorizadas por CMA/MAERSK: f38, f401-403, f731, f1053-54, f1693) que el CRM computó con tarifa: **CRM sobreestima $14.255**. Conciliación exacta: DB 599.440 − 14.255 (waivers) + 3.185 (76 faltantes) = **588.370 = Excel**. Días/libres atan 100% en las 2880.
-- Dinámico vs estático: GENERAL+derivadas recalculan contra `B1==TODAY()` (VENCIDOS/ESTADIA/DEMORA/COSTOS); HISTORIAL es estático (dev−ret+1); REPORTE TOTAL es un **pivot con cache manual** (último refresh: Operez 2026-07-02 11:34 → de ahí salió el "27.370"); COSTOS HISTORICOS y PREFIJOS estáticos.
-- Rotulado temporal en el CRM: `inicio/page.tsx:277` "costo detention (YTD)" y `:304` "costo por naviera (YTD)" = solo 2026 (461.000; oculta 138.440 de ago-dic 2025 y el gráfico por naviera invisibiliza a CMA); `:310` "tendencia mensual" = últimos 12 meses (hoy cubre todo por casualidad; desde ago-2026 trunca silenciosamente); `:289` "estadía promedio (todas)" = solo cerradas 2026. **No existe ningún KPI "acumulado del historial completo".**
+Las 3 ops consolidadas (CAAU9115289, CAIU8059394, TGBU5395830, orden 118009744, sep-2025): la observación del historial cierra la duda — *"AUTORIZADO SE EXPORTÓ CON MAERSK LA ORDEN MANTENIENDO LOS CONTENEDORES"*. Se facturaron con condiciones MAERSK (14 libres/$35 → $140 c/u). **La naviera que factura la detention no cambió: siempre la dueña del contenedor.** El modelo del CRM ya lo representa; no se tocó nada.
 
-**Mapeo (resumen):** integrado ✔: contenedor/naviera/retiro_de/planta/tipo/reforzado/fechas/bookings/buque/destino/orden/shp/producto/gmid/observaciones/estado(LLENOS)/tipo_cierre (CARGADO+DEVOLUCION DE VACIOS: 2787 embarcado + 17 devuelto_vacio ✓ exacto). NO modelado ✖: ROTURAS (13 ops), facturación DP (DP-FLETE/DP-DETENTION/invoices, 799 ops), prefijos restringidos (26+13, regla "PARA DOW"), COSTOS HISTORICOS (serie semanal abr-2020→jul-2026, 76 meses), régimen `cargados` de INFORMACION, NO REFORZADO MAERSK 0d/$25, tarifas escalonadas ZIM. ⚠ Hojas VENCIDOS/PROXIMOS/VACIOS>5: derivadas con structured refs DESALINEADOS (VACIOS>5 muestra costos de filas equivocadas) — **solo GENERAL e HISTORIAL son fuente confiable**.
+## G · Diseño navy + ámbar-oro aplicado (mejora básica) — commits `14187aa`, `09040f3`, `c3c4911`, `ab72cbc`
 
-**Dudas para John (Fase 2):** (1) importar las 76 faltantes; (2) marcar sin_cargo los 8 waivers (con ambos fixes el CRM ata 588.370 exacto); (3) ¿facturación DP al modelo?; (4) ROTURAS como incidencias retroactivas o flag; (5) ¿validar prefijos restringidos en tanda de retiro?; (6) MSC en INFORMACION contradice al seed (7d/$25 vs 15/$50, sin ops → sin impacto); (7) ¿serie 2020-2026 en dashboard?; (8) nuevos rótulos temporales; (9) CONSOLIDADO/trasvase MAERSK→HAPAG: ¿quién cobra?
+- Paleta navy oscuro + oro único (verde/rojo solo semáforo) vía re-mapeo de variables CSS → las 8 solapas consistentes sin tocar su estructura. Tipos: Archivo (display/cifras) + IBM Plex Sans + IBM Plex Mono (contenedores), tabulares.
+- Ícono de contenedor en KPIs/conteos; **medidor de freetime** (verde→ámbar→rojo) en Alertas; filas expandibles en Contenedores e Historial; login institucional split con **slots SSB/Dow** (los logos reales los suma John).
+- 2 bugs de CSS cazados por verificación de píxel en prod (lección specificity): (1) fill absoluto fuera del track dentro de celdas; (2) **clase `ok` del meter colisionaba con el banner global `.ok`** → namespace `ft-*`.
+- **Mobile 375 verificado en prod**: body 360<375 sin overflow; en Alertas/Historial las columnas secundarias se ocultan (`hide-sm`) y **contenedor + estadía + medidor + costo quedan visibles sin scroll** (BMOU: "USD 0 · sin cargo" con barra roja, `getBoundingClientRect` right=355<375).
+- Screenshots de evidencia: login, dashboard, alertas (meter), contenedores (fila expandida), historial (búsqueda ZIM + ficha), ingreso (alerta prefijos), mobile alertas/dashboard.
 
-## Recorrido de sesiones anteriores (resumen)
+## Decisiones de diseño vigentes (de sesiones 3-4)
 
-- **Sesión 3:** datos reales de CONTROL DE VACIOS (70 abiertos + 2804 históricas), freetime reconciliado contra INFORMACION (MAERSK 14/$35, CMA 18/$25, HAPAG 14/$25, ZIM 7→21 + sin_uso, MSC 15/$50), dwell separado del costo (`dias_estadia` siempre visible, semáforo `neutro` para navieras que no cobran), E2E completo sobre prod con evidencia por paso, mobile 375px OK. Deploy: `cd crm-detention && npx vercel deploy --prod --yes`.
-- Columna `regimen` (`vacios`/`cargados`/`sin_uso`) en `freetime_origin`; el cálculo de origen usa SOLO `vacios` (o `sin_uso` para devuelto_vacio ZIM).
-- Flag `navieras.cobra_detention_origen` (default true) listo para dar de alta navieras que no cobran (Log-In no dado de alta).
+- NO REFORZADO: caso por caso vía `sin_cargo` + observaciones (no regla automática). ZIM 7d histórico = condición especial escalonada real (42/67/75 · 84/134/150), sin impacto ($0).
+- El Excel GENERAL es blanco móvil (`B1==TODAY()`): comparar CRM↔Excel siempre mismo día.
+- Naviera que factura = dueña del contenedor, aun en órdenes consolidadas (F).
 
 ## Gaps / pendientes para John
 
-1. ~~BMOU4172000 sin_cargo~~ ✔ confirmado por operaciones y verificado en prod (sección A).
-2. ~~Regla NO REFORZADO~~ ✔ decisión de diseño: caso por caso vía `sin_cargo` (sección B). Reabrir solo si John define automatizar.
-3. **ZIM histórico 7d:** elegir opción 1/2/3 de la sección C (recomendada: 1, impacto $0).
-4. Confirmar decisiones restantes de la carga: los 3 `BAHIA/ABBOTT` → planta actual ABBOTT; GENERAL = todo en planta (nada en tránsito).
-5. Password plano + credenciales committeadas: OK para demo, migrar a Supabase Auth si pasa a producción real.
-6. Carga masiva (spec §11): sigue diferida a testing.
+1. Medidor de freetime en la solapa Contenedores: no se agregó porque ese listado no carga datos de freetime (es la vista de operaciones); está en Alertas, que es la pantalla de freetime. Si lo querés también ahí, hay que joinear `vista_alertas` por fila.
+2. Logos reales SSB/Dow en los `.logo-slot` del login.
+3. Dudas de INFORMACION sin impacto numérico: MSC contradictorio (7/25 vs 15/50, sin ops), régimen `cargados` no modelado (por diseño), facturación DP (799 ops) fuera del CRM, ROTURAS (13 ops) sin flag propio.
+4. Password plano + credenciales committeadas: OK demo; migrar a Supabase Auth si pasa a producción real.
+5. Carga masiva (spec §11) sigue diferida. Sincronización periódica del HISTORIAL vivo (el import es manual; el Excel sigue moviéndose).
