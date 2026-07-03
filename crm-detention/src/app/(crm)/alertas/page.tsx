@@ -262,12 +262,12 @@ export default function AlertasPage() {
                   <th className="hide-sm">naviera</th>
                   <th className="hide-sm">planta</th>
                   <th className="hide-sm">estado</th>
-                  <th>estadía (días)</th>
+                  <th>estadía</th>
                   <th>freetime</th>
                   <th className="hide-sm">días libres</th>
                   <th className="hide-sm">días rest.</th>
                   <th>costo proy.</th>
-                  <th>semáforo</th>
+                  <th className="hide-sm">semáforo</th>
                 </tr>
               </thead>
               <tbody>
@@ -307,7 +307,7 @@ export default function AlertasPage() {
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td className="hide-sm">
                       <Semaforo estado={a.estado_semaforo} />
                     </td>
                   </tr>

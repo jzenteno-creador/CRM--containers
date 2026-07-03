@@ -227,13 +227,13 @@ export default function HistorialPage() {
             <thead>
               <tr>
                 <th>contenedor</th>
-                <th>naviera</th>
-                <th>retiro</th>
+                <th className="hide-sm">naviera</th>
+                <th className="hide-sm">retiro</th>
                 <th>devolución</th>
-                <th>cierre</th>
+                <th className="hide-sm">cierre</th>
                 <th style={{ textAlign: "right" }}>estadía</th>
-                <th style={{ textAlign: "right" }}>libres</th>
-                <th style={{ textAlign: "right" }}>demora</th>
+                <th className="hide-sm" style={{ textAlign: "right" }}>libres</th>
+                <th className="hide-sm" style={{ textAlign: "right" }}>demora</th>
                 <th style={{ textAlign: "right" }}>costo</th>
                 <th aria-label="detalle" />
               </tr>
@@ -293,13 +293,13 @@ function FilaConDetalle({
     <>
       <tr onClick={onToggle} style={{ cursor: "pointer" }} aria-expanded={abierta}>
         <td className="mono">{f.numero_contenedor}</td>
-        <td>{f.naviera}</td>
-        <td className="mono">{fmtFecha(f.fecha_retiro)}</td>
+        <td className="hide-sm">{f.naviera}</td>
+        <td className="mono hide-sm">{fmtFecha(f.fecha_retiro)}</td>
         <td className="mono">{fmtFecha(f.fecha_devolucion)}</td>
-        <td>{TIPO_CIERRE_LABELS[f.tipo_cierre] ?? f.tipo_cierre}</td>
+        <td className="hide-sm">{TIPO_CIERRE_LABELS[f.tipo_cierre] ?? f.tipo_cierre}</td>
         <td className="mono" style={{ textAlign: "right" }}>{f.estadia}</td>
-        <td className="mono" style={{ textAlign: "right" }}>{f.dias_libres ?? "—"}</td>
-        <td className="mono" style={{ textAlign: "right" }}>{f.demora ?? "—"}</td>
+        <td className="mono hide-sm" style={{ textAlign: "right" }}>{f.dias_libres ?? "—"}</td>
+        <td className="mono hide-sm" style={{ textAlign: "right" }}>{f.demora ?? "—"}</td>
         <td className="mono" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
           {costo == null ? "—" : fmtUSD(costo)}
           {f.sin_cargo && (

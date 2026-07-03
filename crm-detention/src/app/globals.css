@@ -276,9 +276,10 @@ tr.expandible:hover .ft-plus { background: var(--bg-accent); color: var(--text-a
   .twocol { grid-template-columns: 1fr; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
 
-  /* Columnas secundarias fuera en mobile: contenedor + días + costo + semáforo entran sin scroll */
+  /* Columnas secundarias fuera en mobile: contenedor + estadía + freetime + costo entran sin scroll */
   .hide-sm { display: none; }
   table.t { min-width: 0; }
+  .ft-meter { min-width: 36px; }
 
   /* Touch targets ≥44px */
   input, select, textarea, button, .crm-nav a {
@@ -290,7 +291,7 @@ tr.expandible:hover .ft-plus { background: var(--bg-accent); color: var(--text-a
     width: 22px; height: 22px;
   }
   table.t input[type="checkbox"] { width: 24px; height: 24px; }
-  table.t th, table.t td { padding: 10px 8px; }
+  table.t th, table.t td { padding: 10px 6px; }
   .ft-plus { min-height: 0; }
   .actbar { align-items: stretch; }
   .actbar > button { width: 100%; }
