@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg, Semaforo, Paginacion } from "@/components/ui";
+import { Cargando, Vacio, ErrorMsg, Semaforo, Paginacion, ContainerIcon, FreetimeMeter } from "@/components/ui";
 import { fmtUSD, ESTADO_LABELS } from "@/lib/format";
 import type { VistaAlerta, Naviera } from "@/lib/types";
 
@@ -168,11 +168,18 @@ export default function AlertasPage() {
 
       <div className="kpis">
         <div className="kpi">
-          <div className="l">operaciones abiertas</div>
+          <div className="l">
+            <ContainerIcon /> operaciones abiertas
+          </div>
           <div className="v">{kpis.total}</div>
         </div>
         <div className="kpi">
-          <div className="l">vencidos</div>
+          <div className="l">
+            <span style={{ color: "var(--text-danger)" }}>
+              <ContainerIcon />
+            </span>{" "}
+            vencidos
+          </div>
           <div className="v" style={{ color: "var(--text-danger)" }}>
             {kpis.vencidos}
           </div>
@@ -252,12 +259,13 @@ export default function AlertasPage() {
               <thead>
                 <tr>
                   <th>n° contenedor</th>
-                  <th>naviera</th>
-                  <th>planta</th>
-                  <th>estado</th>
+                  <th className="hide-sm">naviera</th>
+                  <th className="hide-sm">planta</th>
+                  <th className="hide-sm">estado</th>
                   <th>estadía (días)</th>
-                  <th>días libres</th>
-                  <th>días rest.</th>
+                  <th>freetime</th>
+                  <th className="hide-sm">días libres</th>
+                  <th className="hide-sm">días rest.</th>
                   <th>costo proy.</th>
                   <th>semáforo</th>
                 </tr>
@@ -268,12 +276,19 @@ export default function AlertasPage() {
                     <td className="mono">
                       <Link href={`/contenedores/${a.operacion_id}`}>{a.numero_contenedor}</Link>
                     </td>
-                    <td>{a.naviera}</td>
-                    <td>{a.planta_actual ?? "—"}</td>
-                    <td>{ESTADO_LABELS[a.estado] ?? a.estado}</td>
+                    <td className="hide-sm">{a.naviera}</td>
+                    <td className="hide-sm">{a.planta_actual ?? "—"}</td>
+                    <td className="hide-sm">{ESTADO_LABELS[a.estado] ?? a.estado}</td>
                     <td>{a.dias_estadia}</td>
-                    <td>{a.dias_libres ?? "—"}</td>
                     <td>
+                      <FreetimeMeter
+                        estadia={a.dias_estadia}
+                        libres={a.dias_libres}
+                        semaforo={a.estado_semaforo}
+                      />
+                    </td>
+                    <td className="hide-sm">{a.dias_libres ?? "—"}</td>
+                    <td className="hide-sm">
                       {a.dias_restantes == null ? (
                         "—"
                       ) : a.dias_restantes < 0 ? (

@@ -27,6 +27,55 @@ export function Semaforo({ estado }: { estado: "verde" | "amarillo" | "rojo" | "
   return <span className={`dot dot-${estado}`} title={estado === "neutro" ? "sin cargo de origen aplicable" : estado} />;
 }
 
+/** Ícono de contenedor (guía de diseño): marcador de unidad en conteos y KPIs. */
+export function ContainerIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg
+      className="cont-ico"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      aria-hidden
+    >
+      <rect x="2" y="7" width="20" height="10" rx="1" />
+      <line x1="6" y1="7" x2="6" y2="17" />
+      <line x1="10" y1="7" x2="10" y2="17" />
+      <line x1="14" y1="7" x2="14" y2="17" />
+      <line x1="18" y1="7" x2="18" y2="17" />
+    </svg>
+  );
+}
+
+/** Medidor de freetime (firma de la guía): barra que se llena verde→ámbar→rojo según el semáforo. */
+export function FreetimeMeter({
+  estadia,
+  libres,
+  semaforo,
+}: {
+  estadia: number;
+  libres: number | null;
+  semaforo: "verde" | "amarillo" | "rojo" | "neutro";
+}) {
+  if (libres == null || libres <= 0) {
+    return (
+      <div className="ft-meter" title="sin freetime aplicable">
+        <i className="neutro" style={{ width: "25%" }} />
+      </div>
+    );
+  }
+  const pct = Math.max(4, Math.min(100, Math.round((estadia / libres) * 100)));
+  const cls =
+    semaforo === "rojo" ? "over" : semaforo === "amarillo" ? "warn" : semaforo === "neutro" ? "neutro" : "ok";
+  return (
+    <div className="ft-meter" title={`${estadia} de ${libres} días libres`}>
+      <i className={cls} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
 export function Paginacion({
   page,
   pageSize,

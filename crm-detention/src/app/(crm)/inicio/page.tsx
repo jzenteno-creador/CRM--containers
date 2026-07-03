@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg } from "@/components/ui";
+import { Cargando, Vacio, ErrorMsg, ContainerIcon } from "@/components/ui";
 import { fmtUSD } from "@/lib/format";
 
 interface CostoNaviera {
@@ -362,11 +362,15 @@ export default function InicioPage() {
           <div className="v">{fmtUSD(datos.costo_ytd)}</div>
         </div>
         <div className="kpi">
-          <div className="l">contenedores en riesgo</div>
+          <div className="l">
+            <ContainerIcon /> contenedores en riesgo
+          </div>
           <div className="v">{datos.en_riesgo}</div>
         </div>
         <div className="kpi">
-          <div className="l">stock de vacíos</div>
+          <div className="l">
+            <ContainerIcon /> stock de vacíos
+          </div>
           <div className="v">{datos.stock_vacios}</div>
         </div>
         <div className="kpi">

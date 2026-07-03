@@ -19,7 +19,10 @@ export default async function CrmLayout({
     <div className="crm-wrap">
       <div className="crm-top">
         <div className="crm-brand">
-          <i className="ti ti-box" aria-hidden /> CRM Detention · SSB
+          <span className="dot-logo">S</span>
+          <span>
+            SSB<b>·</b>DETENTION
+          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span className="chip">

@@ -13,11 +13,11 @@
 // (suficiente para la demo); sin búsqueda la paginación es server-side con
 // count:'exact' y .range().
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg, Paginacion } from "@/components/ui";
+import { Cargando, Vacio, ErrorMsg, Paginacion, ContainerIcon } from "@/components/ui";
 import { fmtFecha, diasEstadia, ESTADO_LABELS } from "@/lib/format";
 import type { Naviera, OperacionEstado, Planta, ReforzadoEstado } from "@/lib/types";
 
@@ -96,6 +96,9 @@ export default function ContenedoresPage() {
   // catálogos para selects
   const [plantas, setPlantas] = useState<Planta[]>([]);
   const [navieras, setNavieras] = useState<Naviera[]>([]);
+
+  // fila expandida (clic/+): detalle inline sin salir del listado
+  const [abierta, setAbierta] = useState<string | null>(null);
 
   // datos
   const [filas, setFilas] = useState<FilaOperacion[]>([]);
@@ -225,7 +228,7 @@ export default function ContenedoresPage() {
     <div>
       <div className="crm-card">
         <h4>
-          <i className="ti ti-list-details" aria-hidden /> planilla de contenedores
+          <ContainerIcon /> planilla de contenedores
         </h4>
 
         <div className="filters">
@@ -329,36 +332,111 @@ export default function ContenedoresPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filas.map((f) => (
-                    <tr key={f.id}>
-                      <td className="mono">
-                        <Link href={`/contenedores/${f.id}`}>
-                          {f.contenedores.numero_contenedor}
-                        </Link>
-                      </td>
-                      <td>{f.contenedores.navieras?.nombre ?? "—"}</td>
-                      <td>{f.contenedores.tipo}</td>
-                      <td>{f.plantas?.nombre ?? "—"}</td>
-                      <td>
-                        <BadgeEstado estado={f.estado} />
-                      </td>
-                      <td>{fmtFecha(f.fecha_retiro)}</td>
-                      <td>
-                        {/* dwell siempre visible en abiertas (retiro = día 1, zona AR) */}
-                        {f.estado === "cerrado" || f.estado === "anulada"
-                          ? "—"
-                          : diasEstadia(f.fecha_retiro)}
-                      </td>
-                      <td>
-                        <CeldaReforzado estado={f.contenedores.reforzado_estado} />
-                      </td>
-                      <td>
-                        <Link href={`/contenedores/${f.id}`} title="ver ficha">
-                          <i className="ti ti-file-description" aria-hidden />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {filas.map((f) => {
+                    const abiertaEsta = abierta === f.id;
+                    return (
+                      <Fragment key={f.id}>
+                        <tr
+                          className="expandible"
+                          aria-expanded={abiertaEsta}
+                          onClick={(e) => {
+                            if ((e.target as HTMLElement).closest("a")) return;
+                            setAbierta(abiertaEsta ? null : f.id);
+                          }}
+                        >
+                          <td className="mono">
+                            <Link href={`/contenedores/${f.id}`}>
+                              {f.contenedores.numero_contenedor}
+                            </Link>
+                          </td>
+                          <td className="hide-sm">{f.contenedores.navieras?.nombre ?? "—"}</td>
+                          <td className="hide-sm">{f.contenedores.tipo}</td>
+                          <td className="hide-sm">{f.plantas?.nombre ?? "—"}</td>
+                          <td>
+                            <BadgeEstado estado={f.estado} />
+                          </td>
+                          <td className="hide-sm">{fmtFecha(f.fecha_retiro)}</td>
+                          <td>
+                            {/* dwell siempre visible en abiertas (retiro = día 1, zona AR) */}
+                            {f.estado === "cerrado" || f.estado === "anulada"
+                              ? "—"
+                              : diasEstadia(f.fecha_retiro)}
+                          </td>
+                          <td className="hide-sm">
+                            <CeldaReforzado estado={f.contenedores.reforzado_estado} />
+                          </td>
+                          <td style={{ whiteSpace: "nowrap" }}>
+                            <button
+                              type="button"
+                              className="ft-plus"
+                              title={abiertaEsta ? "cerrar detalle" : "ver detalle"}
+                              aria-label={abiertaEsta ? "cerrar detalle" : "ver detalle"}
+                            >
+                              {abiertaEsta ? "−" : "+"}
+                            </button>
+                          </td>
+                        </tr>
+                        {abiertaEsta && (
+                          <tr>
+                            <td colSpan={9} style={{ padding: "4px 8px 10px" }}>
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                                  gap: "10px 18px",
+                                  padding: "12px 14px",
+                                  background: "var(--surface-1)",
+                                  borderRadius: "var(--radius)",
+                                }}
+                              >
+                                {(
+                                  [
+                                    ["retiro de", f.retiro_de ?? "—"],
+                                    ["fecha retiro", fmtFecha(f.fecha_retiro)],
+                                    ["booking retiro", f.booking_retiro ?? "—"],
+                                    ["booking asignado", f.booking_asignado ?? "—"],
+                                    ["orden", f.orden ?? "—"],
+                                    ["planta", f.plantas?.nombre ?? "—"],
+                                    [
+                                      "tipo",
+                                      `${f.contenedores.tipo} · ${
+                                        f.contenedores.reforzado_estado === "confirmado_reforzado"
+                                          ? "reforzado"
+                                          : f.contenedores.reforzado_estado === "confirmado_no_reforzado"
+                                            ? "no reforzado"
+                                            : f.contenedores.reforzado_estado
+                                      }`,
+                                    ],
+                                  ] as const
+                                ).map(([k, v]) => (
+                                  <div key={k} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                    <span
+                                      style={{
+                                        fontSize: 10.5,
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.06em",
+                                        color: "var(--text-muted)",
+                                      }}
+                                    >
+                                      {k}
+                                    </span>
+                                    <span className="mono" style={{ fontSize: 12.5 }}>
+                                      {v}
+                                    </span>
+                                  </div>
+                                ))}
+                                <div style={{ alignSelf: "end" }}>
+                                  <Link href={`/contenedores/${f.id}`} title="ver ficha completa">
+                                    ficha completa <i className="ti ti-arrow-right" aria-hidden />
+                                  </Link>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
