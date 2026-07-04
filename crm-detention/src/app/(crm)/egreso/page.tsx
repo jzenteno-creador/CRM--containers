@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg, Semaforo, Paginacion } from "@/components/ui";
+import { Vacio, ErrorMsg, Semaforo, Paginacion } from "@/components/ui";
+import { SkeletonRowsTable } from "@/components/fd/skeleton-row";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { ContainerNumber } from "@/components/container-number";
 import { hoyAR, fmtFecha, diasDesde, TIPO_CIERRE_LABELS } from "@/lib/format";
@@ -331,10 +332,12 @@ export default function EgresoPage() {
   return (
     <>
       {/* Fase 1 · salida de planta */}
-      <section className="crm-card">
-        <h4>
+      <section className="fd-panel" style={{ marginBottom: 16 }}>
+        <div className="fd-panel-title">
           <span className="num">1</span> salida de planta
-        </h4>
+          <span className="fd-count">no corta freetime — lo corta la fase 2</span>
+        </div>
+        <div className="fd-panel-body">
 
         <div className="filters">
           <input
@@ -373,7 +376,13 @@ export default function EgresoPage() {
         {err1 ? (
           <ErrorMsg msg={err1} onRetry={() => void fetchFase1()} />
         ) : loading1 ? (
-          <Cargando msg="cargando contenedores en planta…" />
+          <div className="tblwrap">
+            <table className="t">
+              <tbody>
+                <SkeletonRowsTable cols={6} rows={5} />
+              </tbody>
+            </table>
+          </div>
         ) : rows1.length === 0 ? (
           <Vacio msg="no hay contenedores en planta que coincidan" />
         ) : (
@@ -537,23 +546,27 @@ export default function EgresoPage() {
 
         {errMut1 && <div className="err">{errMut1}</div>}
         {okMut1 && <div className="ok">{okMut1}</div>}
-
-        <p className="note">la salida de planta no corta el freetime — lo corta la fase 2.</p>
+        </div>
       </section>
 
       {/* Fase 2 · confirmación en terminal */}
-      <section className="crm-card">
-        <h4>
-          <span className="num">2</span> pendientes de confirmar ingreso a terminal / devolución
-        </h4>
-        <p className="note" style={{ marginTop: 0, marginBottom: 10 }}>
-          salidos en tránsito. confirmar acá corta el freetime.
-        </p>
+      <section className="fd-panel">
+        <div className="fd-panel-title" style={{ color: "var(--color-status-amber-deep)" }}>
+          <span className="num">2</span> confirmar ingreso a terminal / devolución
+          <span className="fd-count">salidos en tránsito — confirmar CORTA el freetime</span>
+        </div>
+        <div className="fd-panel-body">
 
         {err2 ? (
           <ErrorMsg msg={err2} onRetry={() => void fetchFase2()} />
         ) : loading2 ? (
-          <Cargando msg="cargando operaciones en tránsito…" />
+          <div className="tblwrap">
+            <table className="t">
+              <tbody>
+                <SkeletonRowsTable cols={6} rows={4} />
+              </tbody>
+            </table>
+          </div>
         ) : rows2.length === 0 ? (
           <Vacio msg="no hay operaciones en tránsito a terminal" />
         ) : (
@@ -631,6 +644,7 @@ export default function EgresoPage() {
 
         {errMut2 && <div className="err">{errMut2}</div>}
         {okMut2 && <div className="ok">{okMut2}</div>}
+        </div>
       </section>
     </>
   );
