@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg } from "@/components/ui";
+import { Vacio, ErrorMsg } from "@/components/ui";
+import { SkeletonRowsTable } from "@/components/fd/skeleton-row";
 import { fmtFecha, fmtUSD, TIPO_CIERRE_LABELS } from "@/lib/format";
 import { ContainerNumber } from "@/components/container-number";
 
@@ -180,9 +181,9 @@ export default function HistorialPage() {
           marginBottom: 12,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 500 }}>Historial de operaciones cerradas</h2>
-        <span className="note" style={{ margin: 0 }}>
-          {total.toLocaleString("es-AR")} operaciones · registro completo desde ago-2025
+        <h2 className="fd-display" style={{ margin: 0, fontSize: 15 }}>historial de operaciones cerradas</h2>
+        <span className="pill mono">
+          {total.toLocaleString("es-AR")} operaciones · desde ago-2025
         </span>
       </div>
 
@@ -218,12 +219,48 @@ export default function HistorialPage() {
         </div>
       </div>
 
+      {(naviera || desde || hasta || qDebounced) && (
+        <div className="filters">
+          {qDebounced && (
+            <button type="button" className="chip" onClick={() => setQ("")} style={{ color: "var(--text-accent)", borderColor: "var(--border-accent)", background: "var(--bg-accent)", cursor: "pointer" }}>
+              búsqueda: {qDebounced} <i className="ti ti-x" aria-hidden style={{ fontSize: 11 }} />
+            </button>
+          )}
+          {naviera && (
+            <button type="button" className="chip" onClick={() => setNaviera("")} style={{ color: "var(--text-accent)", borderColor: "var(--border-accent)", background: "var(--bg-accent)", cursor: "pointer" }}>
+              naviera: {naviera} <i className="ti ti-x" aria-hidden style={{ fontSize: 11 }} />
+            </button>
+          )}
+          {desde && (
+            <button type="button" className="chip" onClick={() => setDesde("")} style={{ color: "var(--text-accent)", borderColor: "var(--border-accent)", background: "var(--bg-accent)", cursor: "pointer" }}>
+              desde: {desde} <i className="ti ti-x" aria-hidden style={{ fontSize: 11 }} />
+            </button>
+          )}
+          {hasta && (
+            <button type="button" className="chip" onClick={() => setHasta("")} style={{ color: "var(--text-accent)", borderColor: "var(--border-accent)", background: "var(--bg-accent)", cursor: "pointer" }}>
+              hasta: {hasta} <i className="ti ti-x" aria-hidden style={{ fontSize: 11 }} />
+            </button>
+          )}
+        </div>
+      )}
+
       {error && <ErrorMsg msg={error} onRetry={() => void cargar()} />}
-      {!filas && !error && <Cargando msg="cargando historial…" />}
+      {!filas && !error && (
+        <div className="fd-panel">
+          <div className="tblwrap" style={{ border: "none", background: "transparent" }}>
+            <table className="t">
+              <tbody>
+                <SkeletonRowsTable cols={10} rows={8} />
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       {filas && filas.length === 0 && <Vacio msg="sin operaciones para ese filtro" />}
 
       {filas && filas.length > 0 && (
-        <div className="tblwrap">
+        <div className="fd-panel">
+        <div className="tblwrap" style={{ border: "none", borderRadius: 0, background: "transparent" }}>
           <table className="t">
             <thead>
               <tr>
@@ -253,6 +290,7 @@ export default function HistorialPage() {
               })}
             </tbody>
           </table>
+        </div>
         </div>
       )}
 
@@ -302,7 +340,7 @@ function FilaConDetalle({
         <td className="mono hide-sm" style={{ textAlign: "right" }}>{f.dias_libres ?? "—"}</td>
         <td className="mono hide-sm" style={{ textAlign: "right" }}>{f.demora ?? "—"}</td>
         <td className="mono" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-          {costo == null ? "—" : fmtUSD(costo)}
+          {costo == null ? "—" : costo > 0 ? <span className="fd-usd">{fmtUSD(costo)}</span> : <span style={{ color: "var(--text-muted)" }}>USD 0</span>}
           {f.sin_cargo && (
             <span className="badge" style={{ marginLeft: 6 }} title="excepción de cargo (waiver)">
               sin cargo
