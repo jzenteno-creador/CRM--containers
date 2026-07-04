@@ -23,10 +23,13 @@ import {
   hoyAR,
   fmtFecha,
   fmtFechaHora,
+  fmtUSD,
   ESTADO_LABELS,
   TIPO_CIERRE_LABELS,
   EVENTO_LABELS,
 } from "@/lib/format";
+import { RadialTimer } from "@/components/fd/radial-timer";
+import { semaforoAColor } from "@/components/fd/status-badge";
 import type {
   Contenedor,
   MovimientoPlanta,
@@ -36,6 +39,8 @@ import type {
   Planta,
   ReforzadoEstado,
   TipoEvento,
+  VistaAlerta,
+  VistaCostoCerrado,
 } from "@/lib/types";
 
 type OpFicha = Omit<Operacion, "contenedores" | "plantas"> & {
@@ -105,6 +110,9 @@ export default function FichaOperacionPage() {
   const puedeGestionar = session.rol === "supervisor" || session.rol === "administrador";
 
   const [op, setOp] = useState<OpFicha | null>(null);
+  // freetime/costo calculados por la DB (vista_alertas si está abierta, vista_costos_cerrados si cerró)
+  const [ft, setFt] = useState<VistaAlerta | null>(null);
+  const [cerrada, setCerrada] = useState<VistaCostoCerrado | null>(null);
   const [eventos, setEventos] = useState<OperacionEvento[]>([]);
   const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoPlanta[]>([]);
@@ -137,12 +145,14 @@ export default function FichaOperacionPage() {
   const fetchTodo = useCallback(async () => {
     setError(null);
     try {
-      const [opRes, evRes, incRes, movRes] = await Promise.all([
+      const [opRes, ftRes, cerRes, evRes, incRes, movRes] = await Promise.all([
         supabase
           .from("operaciones")
           .select("*, contenedores(*, navieras(nombre)), plantas(nombre)")
           .eq("id", opId)
           .single(),
+        supabase.from("vista_alertas").select("*").eq("operacion_id", opId).maybeSingle(),
+        supabase.from("vista_costos_cerrados").select("*").eq("operacion_id", opId).maybeSingle(),
         supabase
           .from("operacion_eventos")
           .select("*")
@@ -166,6 +176,9 @@ export default function FichaOperacionPage() {
       const opData = opRes.data as unknown as OpFicha;
       setOp(opData);
       setRefEstado(opData.contenedores.reforzado_estado);
+      // vistas de costo: pueden no tener fila (anulada / naviera sin tarifa) — no es error
+      setFt(!ftRes.error && ftRes.data ? (ftRes.data as VistaAlerta) : null);
+      setCerrada(!cerRes.error && cerRes.data ? (cerRes.data as VistaCostoCerrado) : null);
       setEventos((evRes.data ?? []) as unknown as OperacionEvento[]);
       setIncidencias((incRes.data ?? []) as unknown as Incidencia[]);
       setMovimientos((movRes.data ?? []) as unknown as MovimientoPlanta[]);
@@ -322,6 +335,75 @@ export default function FichaOperacionPage() {
   const puedeMover = op.estado === "en_planta" || op.estado === "cargado";
   const puedeAnular = puedeGestionar && op.estado !== "cerrado" && op.estado !== "anulada";
 
+  // ---- derivaciones de PRESENTACIÓN (días/costos ya calculados por las vistas de la DB) ----
+  const abiertaOp = op.estado !== "cerrado" && op.estado !== "anulada";
+  const diasLibres = ft?.dias_libres ?? cerrada?.dias_libres ?? null;
+  const tarifa = ft?.tarifa_usd_dia ?? cerrada?.tarifa_usd_dia ?? null;
+  const estadiaDias = ft?.dias_estadia ?? cerrada?.estadia ?? null;
+  const demoraDias = ft
+    ? ft.dias_restantes != null && ft.dias_restantes < 0
+      ? -ft.dias_restantes
+      : 0
+    : (cerrada?.demora ?? 0);
+  const costoTotal = ft ? ft.costo_proyectado : cerrada ? cerrada.costo_usd : null;
+  const sinCargo = ft?.sin_cargo ?? false;
+  const diasConsumidos = ft ? ft.dias_transcurridos : (cerrada?.estadia ?? null);
+  const gaugePct =
+    diasLibres && diasLibres > 0 && diasConsumidos != null
+      ? Math.min(100, (diasConsumidos / diasLibres) * 100)
+      : 0;
+  const gaugeColor = ft ? semaforoAColor(ft.estado_semaforo) : demoraDias > 0 ? "red" : "green";
+  // HITO fin de free time: fecha_retiro + dias_libres (marcador visual, no recalcula negocio)
+  const finFreetime =
+    diasLibres != null && op.fecha_retiro
+      ? new Date(new Date(op.fecha_retiro).getTime() + diasLibres * 86400000)
+      : null;
+
+  // timeline: eventos reales + HITO fin free time intercalado cronológico + nodo "en curso"
+  type NodoTL = {
+    key: string;
+    fecha: string | null;
+    titulo: string;
+    detalle?: string;
+    tipo: "done" | "hito" | "actual" | "rojo";
+  };
+  const nodos: NodoTL[] = eventos.map((ev) => ({
+    key: ev.id,
+    fecha: ev.fecha,
+    titulo: EVENTO_LABELS[ev.tipo_evento] ?? ev.tipo_evento,
+    detalle: detalleLegible(ev.detalle),
+    tipo: ev.tipo_evento === "anulacion" || ev.tipo_evento === "incidencia" ? "rojo" : "done",
+  }));
+  if (finFreetime) {
+    const iso = finFreetime.toISOString();
+    const hito: NodoTL = {
+      key: "hito-freetime",
+      fecha: iso,
+      titulo: "fin del free time",
+      detalle: `${diasLibres} días libres desde el retiro`,
+      tipo: "hito",
+    };
+    const idx = nodos.findIndex((n) => n.fecha != null && n.fecha > iso);
+    if (idx === -1) nodos.push(hito);
+    else nodos.splice(idx, 0, hito);
+  }
+  if (abiertaOp) {
+    nodos.push({
+      key: "en-curso",
+      fecha: null,
+      titulo: ESTADO_LABELS[op.estado] ?? op.estado,
+      detalle: "estado actual",
+      tipo: "actual",
+    });
+  }
+
+  const DOT_TL: Record<NodoTL["tipo"], React.CSSProperties> = {
+    done: { background: "var(--text-success)" },
+    rojo: { background: "var(--text-danger)" },
+    hito: { background: "transparent", border: "2px solid var(--text-danger)" },
+    actual: { background: "var(--text-danger)", boxShadow: "var(--shadow-glow-red)" },
+  };
+
   return (
     <div>
       {/* 1 · header */}
@@ -360,59 +442,186 @@ export default function FichaOperacionPage() {
             </div>
           )}
         </div>
-        <Link href="/contenedores" className="pill" style={{ textDecoration: "none" }}>
-          <i className="ti ti-arrow-left" aria-hidden /> volver a la planilla
-        </Link>
-      </div>
-
-      {/* 2 · datos de la operación */}
-      <div className="crm-card">
-        <h4>
-          <i className="ti ti-clipboard-text" aria-hidden /> datos de la operación
-        </h4>
-        <div className="grid">
-          <Dato label="retiro de" valor={op.retiro_de} />
-          <Dato label="booking retiro" valor={op.booking_retiro} />
-          <Dato label="fecha retiro" valor={fmtFecha(op.fecha_retiro)} />
-          <Dato label="booking asignado" valor={op.booking_asignado} />
-          <Dato label="buque" valor={op.buque} />
-          <Dato label="destino" valor={op.destino} />
-          <Dato label="orden" valor={op.orden} />
-          <Dato label="SHP" valor={op.shp} />
-          <Dato label="tipo cierre" valor={TIPO_CIERRE_LABELS[op.tipo_cierre] ?? op.tipo_cierre} />
-          <Dato label="fecha egreso planta" valor={fmtFecha(op.fecha_egreso_planta)} />
-          <Dato label="fecha devolución" valor={fmtFecha(op.fecha_devolucion)} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <Link href="/contenedores" className="pill" style={{ textDecoration: "none" }}>
+            <i className="ti ti-arrow-left" aria-hidden /> planilla
+          </Link>
+          {abiertaOp && (
+            <Link
+              href="/egreso"
+              className="btn-primary"
+              style={{ padding: "7px 12px", borderRadius: 9, textDecoration: "none", fontSize: 12.5, display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              Registrar egreso <i className="ti ti-arrow-right" aria-hidden />
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* 3 · timeline */}
-      <div className="crm-card">
-        <h4>
-          <i className="ti ti-timeline" aria-hidden /> timeline
-        </h4>
-        {eventos.length === 0 ? (
-          <Vacio msg="sin eventos registrados" />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {eventos.map((ev) => {
-              const detalle = detalleLegible(ev.detalle);
-              return (
-                <div key={ev.id} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span className={dotEvento(ev.tipo_evento)} style={{ flexShrink: 0 }} />
-                  <div>
-                    <strong style={{ fontWeight: 500 }}>
-                      {EVENTO_LABELS[ev.tipo_evento] ?? ev.tipo_evento}
-                    </strong>{" "}
-                    <span className="mono" style={{ fontSize: 12 }}>
-                      {fmtFechaHora(ev.fecha)}
+      {/* 2 · spec strip (artboard 2c): datos de la operación en celdas label→valor */}
+      <div className="fd-panel" style={{ marginBottom: 16 }}>
+        <div
+          className="fd-panel-body"
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(132px, 1fr))", gap: "12px 18px" }}
+        >
+          {(
+            [
+              ["booking retiro", op.booking_retiro ?? "—"],
+              ["booking asignado", op.booking_asignado ?? "—"],
+              ["buque", op.buque ?? "—"],
+              ["destino", op.destino ?? "—"],
+              ["orden", op.orden ?? "—"],
+              ["shp", op.shp ?? "—"],
+              ["retiro de", op.retiro_de ?? "—"],
+              ["fecha retiro", fmtFecha(op.fecha_retiro)],
+              ["tipo cierre", TIPO_CIERRE_LABELS[op.tipo_cierre] ?? op.tipo_cierre],
+              ["egreso planta", fmtFecha(op.fecha_egreso_planta)],
+              ["devolución", fmtFecha(op.fecha_devolucion)],
+              [
+                "tarifa vigente",
+                tarifa != null ? `USD ${tarifa}/día · ${diasLibres ?? "—"} libres` : "sin cargo de origen",
+              ],
+            ] as const
+          ).map(([k, v]) => (
+            <div key={k} style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+              <span className="fd-label">{k}</span>
+              <span className="mono" style={{ fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {v}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 3 · timeline | gauge + desglose (artboard 2c) */}
+      <div className="fd-cc" style={{ marginBottom: 16 }}>
+        <div className="fd-panel">
+          <div className="fd-panel-title">
+            <i className="ti ti-timeline" aria-hidden /> timeline del ciclo
+          </div>
+          <div className="fd-panel-body">
+            {nodos.length === 0 ? (
+              <Vacio msg="sin eventos registrados" />
+            ) : (
+              nodos.map((n, i) => (
+                <div key={n.key} style={{ display: "grid", gridTemplateColumns: "96px 24px 1fr", gap: 8 }}>
+                  <span
+                    className="mono"
+                    style={{ fontSize: 11.5, color: "var(--text-muted)", textAlign: "right", paddingTop: 2, whiteSpace: "nowrap" }}
+                  >
+                    {n.fecha ? fmtFechaHora(n.fecha) : "hoy"}
+                  </span>
+                  <span style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <span
+                      className={n.tipo === "actual" ? "fd-dot-pulse" : undefined}
+                      style={{ width: 12, height: 12, borderRadius: "50%", flexShrink: 0, marginTop: 3, ...DOT_TL[n.tipo] }}
+                    />
+                    {i < nodos.length - 1 && (
+                      <span style={{ width: 2, flex: 1, minHeight: 14, background: "var(--border-strong)" }} />
+                    )}
+                  </span>
+                  <div style={{ paddingBottom: 16, minWidth: 0 }}>
+                    <span
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        color: n.tipo === "hito" ? "var(--text-warning)" : "var(--text-primary)",
+                      }}
+                    >
+                      {n.titulo}
                     </span>
-                    {detalle && <div className="note" style={{ marginTop: 2 }}>{detalle}</div>}
+                    {n.tipo === "hito" && (
+                      <span className="badge badge-danger" style={{ marginLeft: 8, fontSize: 10 }}>HITO</span>
+                    )}
+                    {n.tipo === "actual" && (
+                      <span className="badge badge-danger" style={{ marginLeft: 8, fontSize: 10 }}>EN CURSO</span>
+                    )}
+                    {n.detalle && (
+                      <div style={{ fontSize: 12, color: "var(--color-text-label)", marginTop: 2 }}>{n.detalle}</div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
-        )}
+        </div>
+
+        <div style={{ minWidth: 0 }}>
+          <div className="fd-panel">
+            <div className="fd-panel-title">
+              <i className="ti ti-clock-hour-4" aria-hidden /> freetime
+            </div>
+            <div className="fd-panel-body" style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+              <RadialTimer
+                pct={gaugePct}
+                color={gaugeColor}
+                size={148}
+                label={diasConsumidos != null ? `${diasConsumidos}/${diasLibres ?? "∞"}` : "—"}
+                sublabel="días"
+              />
+              <div style={{ display: "grid", gap: 8, flex: 1, minWidth: 120 }}>
+                {(
+                  [
+                    ["estadía", estadiaDias != null ? `${estadiaDias} d` : "—"],
+                    ["free time", diasLibres != null ? `${diasLibres} d` : "—"],
+                    ["en demora", demoraDias > 0 ? `${demoraDias} d` : "no"],
+                    ...(ft?.dias_restantes != null ? ([["restantes", `${ft.dias_restantes} d`]] as const) : []),
+                  ] as readonly (readonly [string, string])[]
+                ).map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span className="fd-label">{k}</span>
+                    <span className="mono" style={{ fontSize: 13, color: k === "en demora" && demoraDias > 0 ? "var(--text-danger)" : undefined }}>
+                      {v}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="fd-panel">
+            <div className="fd-panel-title">
+              <i className="ti ti-receipt-2" aria-hidden /> desglose de cargos
+            </div>
+            <div className="fd-panel-body">
+              {tarifa == null ? (
+                <p className="empty" style={{ textAlign: "left", padding: 0 }}>
+                  la naviera no tiene cargo de origen aplicable a esta operación
+                </p>
+              ) : (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5 }}>
+                    <span>detention</span>
+                    <span className="mono" style={{ color: "var(--text-muted)" }}>
+                      {demoraDias} d × USD {tarifa}
+                    </span>
+                    <span className="mono">{fmtUSD(demoraDias * Number(tarifa))}</span>
+                  </div>
+                  {sinCargo && (
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, marginTop: 6 }}>
+                      <span style={{ color: "var(--text-success)" }}>waiver autorizado (sin cargo)</span>
+                      <span className="mono" style={{ color: "var(--text-success)" }}>
+                        −{fmtUSD(demoraDias * Number(tarifa))}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ borderTop: "1px solid var(--border)", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span className="fd-label">total {abiertaOp ? "proyectado a hoy" : "facturado"}</span>
+                    <span
+                      className="mono fd-usd"
+                      style={{ fontSize: 24, fontWeight: 700, textShadow: "0 0 12px rgba(248,81,73,0.35)" }}
+                    >
+                      {fmtUSD(Number(costoTotal ?? 0))}
+                    </span>
+                  </div>
+                  <p className="note" style={{ marginTop: 8 }}>
+                    tarifa de la versión vigente a la fecha de retiro (freetime versionado — nunca se pisa)
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 4 · movimiento entre plantas — form solo en_planta|cargado; los pendientes
