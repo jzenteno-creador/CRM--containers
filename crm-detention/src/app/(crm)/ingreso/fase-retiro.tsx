@@ -242,10 +242,12 @@ export function FaseRetiro({
   }
 
   return (
-    <section className="crm-card">
-      <h4>
-        <span className="num">1</span> Tanda de retiro
-      </h4>
+    <section className="fd-panel" style={{ marginBottom: 16 }}>
+      <div className="fd-panel-title">
+        <span className="num">1</span> tanda de retiro
+        <span className="fd-count">encabezado único · arranca freetime</span>
+      </div>
+      <div className="fd-panel-body">
 
       <div className="grid">
         <div className="f">
@@ -318,7 +320,15 @@ export function FaseRetiro({
       </div>
 
       <div className="f" style={{ marginTop: 10 }}>
-        <label>contenedores — pegá uno por línea</label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+          <label>contenedores — pegá uno por línea</label>
+          {parseadas.length > 0 && (
+            <span className="mono" style={{ fontSize: 11.5, color: verificando ? "var(--text-muted)" : "var(--text-accent)" }}>
+              {verificando ? "verificando… · " : ""}
+              {filasValidas.length} válidos / {parseadas.length} líneas
+            </span>
+          )}
+        </div>
         <textarea
           className="mono"
           rows={5}
@@ -450,6 +460,7 @@ export function FaseRetiro({
 
       {okMsg && <div className="ok">{okMsg}</div>}
       {errMsg && <div className="err">{errMsg}</div>}
+      </div>
     </section>
   );
 }

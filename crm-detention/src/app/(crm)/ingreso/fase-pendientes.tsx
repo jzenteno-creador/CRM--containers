@@ -6,8 +6,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg, Paginacion } from "@/components/ui";
+import { Vacio, ErrorMsg, Paginacion } from "@/components/ui";
 import { ContainerNumber } from "@/components/container-number";
+import { SkeletonRowsTable } from "@/components/fd/skeleton-row";
 import { hoyAR, fmtFecha, diasDesde } from "@/lib/format";
 import { mensajeDeError } from "./errores";
 
@@ -142,14 +143,21 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
   }
 
   return (
-    <section className="crm-card">
-      <h4>
-        <span className="num">2</span> Pendientes de ingreso a planta
-      </h4>
-      <p className="note">retiros en tránsito largo, esperando llegada.</p>
+    <section className="fd-panel">
+      <div className="fd-panel-title">
+        <span className="num">2</span> pendientes de ingreso a planta
+        <span className="fd-count">tránsito largo, esperando llegada</span>
+      </div>
+      <div className="fd-panel-body">
 
       {cargando ? (
-        <Cargando msg="cargando pendientes…" />
+        <div className="tblwrap">
+          <table className="t">
+            <tbody>
+              <SkeletonRowsTable cols={7} rows={4} />
+            </tbody>
+          </table>
+        </div>
       ) : error ? (
         <ErrorMsg msg={error} onRetry={() => void cargar()} />
       ) : visibles.length === 0 ? (
@@ -236,6 +244,7 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
 
       {okMsg && <div className="ok">{okMsg}</div>}
       {errMsg && <div className="err">{errMsg}</div>}
+      </div>
     </section>
   );
 }
