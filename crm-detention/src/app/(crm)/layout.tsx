@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { SessionProvider } from "@/components/session-context";
-import { CrmNav } from "@/components/nav";
+import { FdChrome } from "@/components/nav";
 import { logout } from "@/app/login/actions";
 
 export default async function CrmLayout({
@@ -16,32 +16,10 @@ export default async function CrmLayout({
       : "todas las plantas";
 
   return (
-    <div className="crm-wrap">
-      <div className="crm-top">
-        <div className="crm-brand">
-          <span className="dot-logo">S</span>
-          <span>
-            SSB<b>·</b>DETENTION
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span className="chip">
-            <i className="ti ti-map-pin" aria-hidden /> {scope}
-          </span>
-          <span className="chip">
-            <i className="ti ti-user" aria-hidden /> {session.nombre} · {session.rol}
-          </span>
-          <form action={logout}>
-            <button type="submit" title="Cerrar sesión">
-              <i className="ti ti-logout" aria-hidden /> salir
-            </button>
-          </form>
-        </div>
-      </div>
-      <SessionProvider session={session}>
-        <CrmNav />
-        <main className="crm-screen">{children}</main>
-      </SessionProvider>
-    </div>
+    <SessionProvider session={session}>
+      <FdChrome scope={scope} logout={logout}>
+        {children}
+      </FdChrome>
+    </SessionProvider>
   );
 }
