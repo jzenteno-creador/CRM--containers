@@ -1,7 +1,7 @@
 "use client";
 
 // Login institucional (guía crm-detention-diseno): panel de marca + form.
-// Los logos reales de SSB/Dow van en los .logo-slot (los suma John aparte).
+// Logos reales SSB/Dow en el footer (.logo-slot) desde /public/logos/.
 
 import { useActionState } from "react";
 import { login } from "./actions";
@@ -28,10 +28,10 @@ export default function LoginPage() {
         </div>
         <div className="login-foot">
           <span>Operado por</span>
-          <span className="logo-slot">SSB</span>
+          <img src="/logos/ssb-white.svg" alt="SSB International" className="logo-slot" />
           <span>·</span>
           <span>en asociación con</span>
-          <span className="logo-slot">Dow</span>
+          <img src="/logos/dow.png" alt="Dow" className="logo-slot" />
         </div>
       </div>
 
