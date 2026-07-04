@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "./session-context";
+import { CommandPalette } from "./fd/command-palette";
 
 const TABS = [
   { href: "/inicio", label: "Inicio", icon: "ti-layout-dashboard" },
@@ -59,6 +60,7 @@ export function FdChrome({
 
   return (
     <div className="fd-shell">
+      <CommandPalette />
       {/* rail desktop */}
       <aside className="fd-rail">
         <span className="dot-logo fd-rail-logo" title="SSB · DETENTION">
