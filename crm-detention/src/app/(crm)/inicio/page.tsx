@@ -5,7 +5,7 @@
 // operación abierta: semáforo/costos calculados en la DB, acá NO se recalcula nada) +
 // feed de operacion_eventos. Realtime sobre operaciones refresca todo.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
@@ -110,78 +110,226 @@ const EVENTO_LABEL: Record<string, string> = {
   incidencia: "incidencia",
 };
 
+/** Fila de ranking (lenguaje único para navieras e histórico): label fijo + track
+ *  full-width + valor mono tabular. Banca disparidad extrema (558k vs 0): aunque la
+ *  barra sea invisible, label y valor siguen legibles. */
+function FilaBarra({
+  label,
+  valor,
+  pct,
+  destacada = false,
+  title,
+}: {
+  label: string;
+  valor: string;
+  pct: number;
+  destacada?: boolean;
+  title?: string;
+}) {
+  return (
+    <div
+      title={title}
+      style={{ display: "grid", gridTemplateColumns: "118px minmax(0,1fr) 78px", gap: 12, alignItems: "center", minHeight: 30 }}
+    >
+      <span
+        style={{
+          fontSize: 11.5,
+          fontWeight: destacada ? 600 : 400,
+          color: destacada ? "var(--text-primary)" : "var(--text-muted)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </span>
+      <div style={{ height: 10, background: "var(--surface-0)", borderRadius: 5, overflow: "hidden" }}>
+        <div
+          style={{
+            width: `${Math.max(pct, 0.6)}%`,
+            height: "100%",
+            borderRadius: 5,
+            background: destacada
+              ? "linear-gradient(90deg, var(--color-accent-muted), var(--text-accent))"
+              : "var(--text-accent)",
+            opacity: destacada ? 1 : 0.5,
+          }}
+        />
+      </div>
+      <span
+        className="mono"
+        style={{
+          fontSize: 12.5,
+          fontWeight: destacada ? 600 : 400,
+          textAlign: "right",
+          fontVariantNumeric: "tabular-nums",
+          color: destacada ? "var(--text-primary)" : "var(--text-secondary)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {valor}
+      </span>
+    </div>
+  );
+}
+
 function BarrasNavieras({ datos }: { datos: CostoNaviera[] }) {
   if (!datos || datos.length === 0) return <Vacio msg="sin costos registrados" />;
-  const max = Math.max(...datos.map((d) => Number(d.costo) || 0), 1);
+  const ordenados = [...datos].sort((a, b) => (Number(b.costo) || 0) - (Number(a.costo) || 0));
+  const max = Math.max(...ordenados.map((d) => Number(d.costo) || 0), 1);
+  const total = ordenados.reduce((s, d) => s + (Number(d.costo) || 0), 0);
   return (
-    <div style={{ overflowX: "auto" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 18, minHeight: 170, padding: "4px 6px 0" }}>
-        {datos.map((d) => {
-          const costo = Number(d.costo) || 0;
-          const alto = Math.max(6, Math.round((costo / max) * 110));
-          return (
-            <div key={d.naviera} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <span className="mono" style={{ fontSize: 11, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-                {fmtUsdCorto(costo)}
-              </span>
-              <div
-                style={{
-                  width: 22,
-                  height: alto,
-                  background: "var(--text-accent)",
-                  borderRadius: "4px 4px 0 0",
-                  opacity: 0.85,
-                }}
-                title={`${d.naviera}: ${fmtUSD(costo)}`}
-              />
-              <span
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-muted)",
-                  maxWidth: 74,
-                  textAlign: "center",
-                  overflowWrap: "break-word",
-                }}
-              >
-                {d.naviera}
-              </span>
-            </div>
-          );
-        })}
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, justifyContent: "space-evenly" }}>
+      {ordenados.map((d, i) => {
+        const costo = Number(d.costo) || 0;
+        return (
+          <FilaBarra
+            key={d.naviera}
+            label={d.naviera}
+            valor={fmtUsdCorto(costo)}
+            pct={(costo / max) * 100}
+            destacada={i === 0 && costo > 0}
+            title={`${d.naviera}: ${fmtUSD(costo)}`}
+          />
+        );
+      })}
+      <div
+        style={{
+          paddingTop: 12,
+          borderTop: "1px solid var(--border)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          gap: 8,
+        }}
+      >
+        <span className="fd-label">total historial</span>
+        <span className="mono" style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+          {fmtUSD(total)}
+        </span>
       </div>
     </div>
   );
 }
 
 function TendenciaMensual({ datos }: { datos: TendenciaMes[] }) {
+  // viewBox = ancho REAL del contenedor (ResizeObserver) → escala SIEMPRE 1:1:
+  // stroke y tipografía se renderizan al tamaño declarado en todo viewport
+  // (el viejo 200x96 escalaba 3.12x en desktop; uno fijo de 720 dejaba 0.42x en mobile).
+  const contRef = useRef<HTMLDivElement>(null);
+  const [anchoCont, setAnchoCont] = useState(0);
+  useEffect(() => {
+    const el = contRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const cw = Math.round(entries[0].contentRect.width);
+      if (cw > 0) setAnchoCont(cw);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   if (!datos || datos.length === 0) return <Vacio msg="sin datos de tendencia" />;
+  const W = Math.max(300, anchoCont);
+  const compacto = W < 480;
+  const H = compacto ? 200 : 240;
+  const ML = compacto ? 44 : 54; // margen para labels USD del eje Y
+  const MR = compacto ? 34 : 46; // aire para el label del último punto
+  const MT = 16;
+  const MB = 30;
   const vals = datos.map((d) => Number(d.costo) || 0);
-  const min = Math.min(...vals);
-  const max = Math.max(...vals);
-  const span = max - min || 1;
-  const n = datos.length;
-  const px = (i: number) => (n <= 1 ? 100 : 10 + (i * 180) / (n - 1));
-  const py = (v: number) => 76 - ((v - min) / span) * 62;
-  const puntos = vals.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
-  const paso = Math.max(1, Math.ceil(n / 6));
+  const max = Math.max(...vals, 1);
+  const n = vals.length;
+  const px = (i: number) => ML + (n <= 1 ? (W - ML - MR) / 2 : (i * (W - ML - MR)) / (n - 1));
+  // baseline en 0: montos absolutos, la forma no miente
+  const py = (v: number) => MT + (1 - v / max) * (H - MT - MB);
+  const linea = vals.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
+  const area = `${px(0).toFixed(1)},${py(0).toFixed(1)} ${linea} ${px(n - 1).toFixed(1)},${py(0).toFixed(1)}`;
+  const ticks = [0, 1 / 3, 2 / 3, 1].map((f) => f * max);
+  const paso = Math.max(1, Math.ceil(n / Math.max(3, Math.floor(W / 90))));
+  const iUlt = n - 1;
   return (
-    <svg viewBox="0 0 200 96" style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label="tendencia mensual de costo en USD">
+    <div ref={contRef} style={{ width: "100%", minWidth: 0 }}>
+    {anchoCont > 0 && (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width="100%"
+      height={H}
+      style={{ display: "block", fontFamily: "var(--font-mono)" }}
+      role="img"
+      aria-label="tendencia mensual de costo en USD"
+    >
+      <defs>
+        <linearGradient id="fd-grad-tendencia" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--text-accent)" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="var(--text-accent)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* gridlines + labels USD */}
+      {ticks.map((t) => (
+        <g key={t}>
+          <line
+            x1={ML}
+            y1={py(t)}
+            x2={W - MR}
+            y2={py(t)}
+            stroke={t === 0 ? "var(--border-strong)" : "var(--border)"}
+            strokeWidth={1}
+          />
+          <text x={ML - 8} y={py(t) + 3.5} textAnchor="end" fontSize={10} fill="var(--color-text-faint)">
+            {fmtUsdCorto(t)}
+          </text>
+        </g>
+      ))}
+      {/* area + línea */}
+      {n > 1 && <polygon points={area} fill="url(#fd-grad-tendencia)" />}
       {n > 1 && (
-        <polyline points={puntos} fill="none" stroke="var(--text-accent)" strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" />
+        <polyline
+          points={linea}
+          fill="none"
+          stroke="var(--text-accent)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
       )}
+      {/* puntos con tooltip nativo */}
       {vals.map((v, i) => (
-        <circle key={datos[i].mes} cx={px(i)} cy={py(v)} r={1.8} fill="var(--text-accent)">
+        <circle
+          key={datos[i].mes}
+          cx={px(i)}
+          cy={py(v)}
+          r={i === iUlt ? 4.5 : 2.6}
+          fill={i === iUlt ? "var(--text-accent)" : "var(--surface-0)"}
+          stroke="var(--text-accent)"
+          strokeWidth={1.6}
+        >
           <title>{`${mesCorto(datos[i].mes)}: ${fmtUSD(v)}`}</title>
         </circle>
       ))}
+      {/* valor del último punto (el dato vivo del mes en curso) */}
+      <text
+        x={Math.min(px(iUlt) + 10, W - 4)}
+        y={py(vals[iUlt]) - 10}
+        textAnchor="end"
+        fontSize={11.5}
+        fontWeight={600}
+        fill="var(--text-primary)"
+      >
+        {fmtUsdCorto(vals[iUlt])}
+      </text>
+      {/* meses */}
       {datos.map((d, i) =>
-        i % paso === 0 || i === n - 1 ? (
-          <text key={d.mes} x={px(i)} y={90} textAnchor="middle" fontSize={7} fill="var(--text-muted)">
+        i % paso === 0 || i === iUlt ? (
+          <text key={d.mes} x={px(i)} y={H - 8} textAnchor="middle" fontSize={10.5} fill="var(--color-text-label)">
             {mesCorto(d.mes)}
           </text>
         ) : null
       )}
     </svg>
+    )}
+    </div>
   );
 }
 
@@ -223,27 +371,16 @@ function HistoricoAgregado() {
         <i className="ti ti-archive" aria-hidden /> histórico agregado 2020-2026
         <span className="fd-count">{fmtUsdCorto(total)} total</span>
       </div>
-      <div className="fd-panel-body">
+      <div className="fd-panel-body" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {serie.map((s) => (
-          <div key={s.anio} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
-            <span className="mono" style={{ width: 38, fontSize: 12, color: "var(--text-secondary)" }}>
-              {s.anio}
-            </span>
-            <div style={{ flex: 1, height: 8, background: "var(--surface-0)", borderRadius: 4, overflow: "hidden" }}>
-              <div
-                style={{
-                  width: `${Math.max(1, Math.round((s.costo / max) * 100))}%`,
-                  height: "100%",
-                  background: "var(--text-accent)",
-                  opacity: 0.85,
-                  borderRadius: 4,
-                }}
-              />
-            </div>
-            <span className="mono" style={{ width: 86, textAlign: "right", fontSize: 12 }}>
-              {fmtUsdCorto(s.costo)}
-            </span>
-          </div>
+          <FilaBarra
+            key={s.anio}
+            label={String(s.anio)}
+            valor={fmtUsdCorto(s.costo)}
+            pct={(s.costo / max) * 100}
+            destacada={s.costo === max}
+            title={`${s.anio}: ${fmtUSD(s.costo)}`}
+          />
         ))}
         <p className="note">
           serie semanal registrada por operaciones (hoja COSTOS HISTORICOS) · total {fmtUSD(total)} ·
@@ -596,19 +733,21 @@ export default function InicioPage() {
       </div>
 
       <div className="twocol" style={{ marginTop: 16 }}>
-        <div className="fd-panel">
+        {/* display:flex en el panel + flex:1 en el body: el contenido LLENA el alto que el
+            grid estira (antes las barras quedaban arrinconadas con 60% del panel vacío) */}
+        <div className="fd-panel" style={{ display: "flex", flexDirection: "column" }}>
           <div className="fd-panel-title">
             <i className="ti ti-chart-bar" aria-hidden /> costo por naviera — historial ({desdeLbl} → hoy)
           </div>
-          <div className="fd-panel-body">
+          <div className="fd-panel-body" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <BarrasNavieras datos={datos.costo_por_naviera ?? []} />
           </div>
         </div>
-        <div className="fd-panel">
+        <div className="fd-panel" style={{ display: "flex", flexDirection: "column" }}>
           <div className="fd-panel-title">
             <i className="ti ti-chart-line" aria-hidden /> tendencia mensual (USD) — historial ({desdeLbl} → hoy)
           </div>
-          <div className="fd-panel-body">
+          <div className="fd-panel-body" style={{ flex: 1, display: "flex", alignItems: "center" }}>
             <TendenciaMensual datos={datos.tendencia_mensual ?? []} />
           </div>
         </div>
