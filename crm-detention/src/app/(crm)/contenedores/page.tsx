@@ -18,9 +18,10 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Paginacion, ContainerIcon } from "@/components/ui";
-import { fmtFecha, diasEstadia, ESTADO_LABELS } from "@/lib/format";
+import { fmtFecha, fmtUSD, diasEstadia, ESTADO_LABELS } from "@/lib/format";
 import { ContainerNumber } from "@/components/container-number";
-import type { Naviera, OperacionEstado, Planta, ReforzadoEstado } from "@/lib/types";
+import { SkeletonRowsTable } from "@/components/fd/skeleton-row";
+import type { Naviera, OperacionEstado, Planta, ReforzadoEstado, VistaAlerta } from "@/lib/types";
 
 const PAGE_SIZE = 50;
 const SEARCH_CAP = 200; // tope por query en modo búsqueda (merge client-side)
@@ -56,30 +57,9 @@ function BadgeEstado({ estado }: { estado: OperacionEstado }) {
       : estado === "en_planta"
         ? " badge-success"
         : estado === "cerrado"
-          ? ""
+          ? " badge-neutro"
           : " badge-accent";
   return <span className={`badge${extra}`}>{ESTADO_LABELS[estado] ?? estado}</span>;
-}
-
-function CeldaReforzado({ estado }: { estado: ReforzadoEstado }) {
-  switch (estado) {
-    case "confirmado_reforzado":
-      return (
-        <span className="chip chip-success" title="confirmado reforzado">
-          <i className="ti ti-check" aria-hidden /> sí
-        </span>
-      );
-    case "confirmado_no_reforzado":
-      return (
-        <span className="chip" title="confirmado no reforzado">
-          <i className="ti ti-x" aria-hidden /> no
-        </span>
-      );
-    case "discrepancia":
-      return <span className="badge badge-danger">discrepancia</span>;
-    default:
-      return <span className="badge">pendiente</span>;
-  }
 }
 
 export default function ContenedoresPage() {
@@ -107,6 +87,27 @@ export default function ContenedoresPage() {
   const [page, setPage] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // freetime por operación de la página (vista_alertas, read-only): dot semáforo,
+  // libres/restantes/costo del artboard 2b. Cerradas/anuladas no están en la vista → "—".
+  type FreetimeFila = Pick<
+    VistaAlerta,
+    "operacion_id" | "dias_estadia" | "dias_libres" | "dias_restantes" | "tarifa_usd_dia" | "costo_proyectado" | "estado_semaforo" | "sin_cargo"
+  >;
+  const [freetime, setFreetime] = useState<Map<string, FreetimeFila>>(new Map());
+
+  const cargarFreetime = useCallback(async (rows: FilaOperacion[]) => {
+    const ids = rows.map((r) => r.id);
+    if (ids.length === 0) {
+      setFreetime(new Map());
+      return;
+    }
+    const { data } = await supabase
+      .from("vista_alertas")
+      .select("operacion_id, dias_estadia, dias_libres, dias_restantes, tarifa_usd_dia, costo_proyectado, estado_semaforo, sin_cargo")
+      .in("operacion_id", ids);
+    setFreetime(new Map(((data ?? []) as FreetimeFila[]).map((a) => [a.operacion_id, a])));
+  }, []);
 
   // debounce búsqueda (350 ms)
   useEffect(() => {
@@ -159,8 +160,10 @@ export default function ContenedoresPage() {
           .order("fecha_retiro", { ascending: false })
           .range(desde, desde + PAGE_SIZE - 1);
         if (err) throw err;
-        setFilas((data ?? []) as unknown as FilaOperacion[]);
+        const rows = (data ?? []) as unknown as FilaOperacion[];
+        setFilas(rows);
         setTotal(count ?? 0);
+        void cargarFreetime(rows);
       } else {
         // con búsqueda → dos queries en paralelo + merge por id (ver nota al inicio)
         const safe = q.replace(/[,()]/g, " ").trim();
@@ -189,14 +192,16 @@ export default function ContenedoresPage() {
           a.fecha_retiro < b.fecha_retiro ? 1 : a.fecha_retiro > b.fecha_retiro ? -1 : 0,
         );
         setTotal(merged.length);
-        setFilas(merged.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE));
+        const pageRows = merged.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+        setFilas(pageRows);
+        void cargarFreetime(pageRows);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "error al cargar la planilla");
     } finally {
       setCargando(false);
     }
-  }, [q, page, buildBase]);
+  }, [q, page, buildBase, cargarFreetime]);
 
   useEffect(() => {
     void fetchFilas();
@@ -225,14 +230,67 @@ export default function ContenedoresPage() {
 
   const resetPagina = () => setPage(0);
 
+  // chips de filtros activos — representación removible de los estados existentes (cero lógica nueva)
+  const chips: { key: string; label: string; clear: () => void }[] = [];
+  if (q) chips.push({ key: "q", label: `búsqueda: ${q}`, clear: () => setQInput("") });
+  if (fPlanta)
+    chips.push({
+      key: "planta",
+      label: `planta: ${plantas.find((p) => p.id === fPlanta)?.nombre ?? fPlanta}`,
+      clear: () => {
+        setFPlanta("");
+        resetPagina();
+      },
+    });
+  if (fNaviera)
+    chips.push({
+      key: "naviera",
+      label: `naviera: ${navieras.find((n) => n.id === fNaviera)?.nombre ?? fNaviera}`,
+      clear: () => {
+        setFNaviera("");
+        resetPagina();
+      },
+    });
+  if (fEstado && !soloVacios)
+    chips.push({
+      key: "estado",
+      label: `estado: ${ESTADO_LABELS[fEstado as OperacionEstado] ?? fEstado}`,
+      clear: () => {
+        setFEstado("");
+        resetPagina();
+      },
+    });
+  if (soloVacios)
+    chips.push({
+      key: "vacios",
+      label: "solo stock de vacíos",
+      clear: () => {
+        setSoloVacios(false);
+        resetPagina();
+      },
+    });
+
   return (
     <div>
-      <div className="crm-card">
-        <h4>
-          <ContainerIcon /> planilla de contenedores
-        </h4>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <ContainerIcon size={17} />
+        <h2 className="fd-display" style={{ margin: 0, fontSize: 15 }}>
+          planilla de contenedores
+        </h2>
+        <span className="pill mono">{total.toLocaleString("es-AR")} operaciones</span>
+        <span style={{ flex: 1 }} />
+        <Link
+          href="/ingreso"
+          className="btn-primary"
+          style={{ padding: "7px 12px", borderRadius: 9, textDecoration: "none", fontSize: 12.5, display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          <i className="ti ti-plus" aria-hidden /> Registrar retiro
+        </Link>
+      </div>
 
-        <div className="filters">
+      <div className="fd-panel">
+        <div className="fd-panel-body" style={{ paddingBottom: 8 }}>
+        <div className="filters" style={{ marginBottom: chips.length ? 8 : 0 }}>
           <input
             type="search"
             placeholder="buscar contenedor, orden, booking…"
@@ -302,39 +360,84 @@ export default function ContenedoresPage() {
           </label>
         </div>
 
+        {chips.length > 0 && (
+          <div className="filters" style={{ marginBottom: 0 }}>
+            {chips.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={c.clear}
+                className="chip"
+                style={{
+                  color: "var(--text-accent)",
+                  borderColor: "var(--border-accent)",
+                  background: "var(--bg-accent)",
+                  cursor: "pointer",
+                }}
+                title="quitar filtro"
+              >
+                {c.label} <i className="ti ti-x" aria-hidden style={{ fontSize: 11 }} />
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setQInput("");
+                setFPlanta("");
+                setFNaviera("");
+                setFEstado("");
+                setSoloVacios(false);
+                resetPagina();
+              }}
+              style={{ border: "none", background: "transparent", fontSize: 12, color: "var(--text-muted)" }}
+            >
+              limpiar filtros
+            </button>
+          </div>
+        )}
+
         {esOperador && (
           <p className="note">
             <i className="ti ti-map-pin" aria-hidden /> viendo solo operaciones en tu planta:{" "}
             {session.plantaNombre ?? "—"}
           </p>
         )}
+        </div>
 
-        {error && <ErrorMsg msg={error} onRetry={() => void fetchFilas()} />}
-        {cargando && !error && <Cargando msg="cargando planilla…" />}
+        {error && (
+          <div style={{ padding: "0 16px 12px" }}>
+            <ErrorMsg msg={error} onRetry={() => void fetchFilas()} />
+          </div>
+        )}
         {!cargando && !error && filas.length === 0 && (
           <Vacio msg="sin operaciones para los filtros elegidos" />
         )}
 
-        {!cargando && !error && filas.length > 0 && (
+        {!error && (cargando || filas.length > 0) && (
           <>
-            <div className="tblwrap">
+            <div className="tblwrap" style={{ border: "none", borderRadius: 0, background: "transparent" }}>
               <table className="t">
                 <thead>
                   <tr>
+                    <th aria-label="semáforo" style={{ width: 30 }} />
                     <th>n° contenedor</th>
-                    <th>naviera</th>
-                    <th>tipo</th>
-                    <th>planta</th>
-                    <th>estado</th>
-                    <th>fecha retiro</th>
-                    <th>estadía (días)</th>
-                    <th>reforzado</th>
-                    <th aria-label="acciones" />
+                    <th className="hide-sm">naviera</th>
+                    <th className="hide-sm">tipo</th>
+                    <th className="hide-sm">posición</th>
+                    <th className="hide-sm">estado ciclo</th>
+                    <th className="hide-sm">retiro</th>
+                    <th>estadía</th>
+                    <th className="hide-sm">libres</th>
+                    <th>restantes</th>
+                    <th>costo proy.</th>
+                    <th aria-label="acciones" className="hide-sm" />
                   </tr>
                 </thead>
                 <tbody>
-                  {filas.map((f) => {
+                  {cargando && <SkeletonRowsTable cols={12} rows={8} />}
+                  {!cargando && filas.map((f) => {
                     const abiertaEsta = abierta === f.id;
+                    const ft = freetime.get(f.id);
                     return (
                       <Fragment key={f.id}>
                         <tr
@@ -345,6 +448,13 @@ export default function ContenedoresPage() {
                             setAbierta(abiertaEsta ? null : f.id);
                           }}
                         >
+                          <td style={{ width: 30 }}>
+                            {ft ? (
+                              <span className={`dot dot-${ft.estado_semaforo}`} />
+                            ) : (
+                              <span className="dot dot-neutro" style={{ opacity: 0.35 }} />
+                            )}
+                          </td>
                           <td className="mono">
                             <Link href={`/contenedores/${f.id}`} style={{ textDecoration: "none" }}>
                               <ContainerNumber value={f.contenedores.numero_contenedor} />
@@ -353,20 +463,45 @@ export default function ContenedoresPage() {
                           <td className="hide-sm">{f.contenedores.navieras?.nombre ?? "—"}</td>
                           <td className="hide-sm">{f.contenedores.tipo}</td>
                           <td className="hide-sm">{f.plantas?.nombre ?? "—"}</td>
-                          <td>
+                          <td className="hide-sm">
                             <BadgeEstado estado={f.estado} />
                           </td>
-                          <td className="hide-sm">{fmtFecha(f.fecha_retiro)}</td>
-                          <td>
+                          <td className="mono hide-sm">{fmtFecha(f.fecha_retiro)}</td>
+                          <td className="mono">
                             {/* dwell siempre visible en abiertas (retiro = día 1, zona AR) */}
-                            {f.estado === "cerrado" || f.estado === "anulada"
-                              ? "—"
-                              : diasEstadia(f.fecha_retiro)}
+                            {ft?.dias_estadia ??
+                              (f.estado === "cerrado" || f.estado === "anulada"
+                                ? "—"
+                                : diasEstadia(f.fecha_retiro))}
                           </td>
-                          <td className="hide-sm">
-                            <CeldaReforzado estado={f.contenedores.reforzado_estado} />
+                          <td className="mono hide-sm">{ft?.dias_libres ?? "—"}</td>
+                          <td
+                            className="mono"
+                            style={{
+                              color:
+                                ft?.estado_semaforo === "rojo"
+                                  ? "var(--text-danger)"
+                                  : ft?.estado_semaforo === "amarillo"
+                                    ? "var(--text-warning)"
+                                    : undefined,
+                            }}
+                          >
+                            {ft?.dias_restantes ?? "—"}
                           </td>
-                          <td style={{ whiteSpace: "nowrap" }}>
+                          <td className="mono">
+                            {ft && ft.costo_proyectado != null ? (
+                              Number(ft.costo_proyectado) > 0 ? (
+                                <span className="fd-usd">{fmtUSD(ft.costo_proyectado)}</span>
+                              ) : (
+                                <span style={{ color: "var(--text-muted)" }}>
+                                  USD 0{ft.sin_cargo ? " · s/c" : ""}
+                                </span>
+                              )
+                            ) : (
+                              <span style={{ color: "var(--color-text-faint)" }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ whiteSpace: "nowrap" }} className="hide-sm">
                             <button
                               type="button"
                               className="ft-plus"
@@ -379,7 +514,7 @@ export default function ContenedoresPage() {
                         </tr>
                         {abiertaEsta && (
                           <tr>
-                            <td colSpan={9} style={{ padding: "4px 8px 10px" }}>
+                            <td colSpan={12} style={{ padding: "4px 8px 10px" }}>
                               <div
                                 style={{
                                   display: "grid",
@@ -441,13 +576,15 @@ export default function ContenedoresPage() {
                 </tbody>
               </table>
             </div>
-            <Paginacion page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
-            {q && total >= SEARCH_CAP && (
-              <p className="note">
-                la búsqueda muestra hasta {SEARCH_CAP} resultados por criterio — refiná el término
-                si no encontrás lo que buscás
-              </p>
-            )}
+            <div style={{ padding: "4px 16px 12px" }}>
+              <Paginacion page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+              {q && total >= SEARCH_CAP && (
+                <p className="note">
+                  la búsqueda muestra hasta {SEARCH_CAP} resultados por criterio — refiná el término
+                  si no encontrás lo que buscás
+                </p>
+              )}
+            </div>
           </>
         )}
       </div>

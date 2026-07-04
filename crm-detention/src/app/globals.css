@@ -301,6 +301,7 @@ table.t tbody tr:hover td { background: var(--surface-3); }
 .badge-accent { background: var(--bg-accent); color: var(--text-accent); }
 .badge-success { background: var(--bg-success); color: var(--text-success); }
 .badge-danger { background: var(--bg-danger); color: var(--text-danger); }
+.badge-neutro { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-strong); }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .actbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 10px; }
 .toggle {
@@ -441,7 +442,7 @@ tr.expandible:hover .ft-plus { background: var(--bg-accent); color: var(--text-a
     width: 22px; height: 22px;
   }
   table.t input[type="checkbox"] { width: 24px; height: 24px; }
-  table.t th, table.t td { padding: 10px 6px; }
+  table.t th, table.t td { padding: 10px 4px; }
   .ft-plus { min-height: 0; }
   .actbar { align-items: stretch; }
   .actbar > button { width: 100%; }
