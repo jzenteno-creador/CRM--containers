@@ -7,7 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg, Paginacion } from "@/components/ui";
+import { Vacio, ErrorMsg, Paginacion } from "@/components/ui";
+import { SkeletonRow } from "@/components/fd/skeleton-row";
 import { hoyAR, fmtFecha, ESTADO_LABELS } from "@/lib/format";
 import { ContainerNumber } from "@/components/container-number";
 
@@ -348,10 +349,12 @@ export default function IncidenciasPage() {
   return (
     <>
       {/* ============ nueva incidencia ============ */}
-      <div className="crm-card">
-        <h4>
+      <div className="fd-panel" style={{ marginBottom: 16 }}>
+        <div className="fd-panel-title">
           <span className="num">1</span> nueva incidencia
-        </h4>
+          <span className="fd-count">con fotos · queda en el timeline de la operación</span>
+        </div>
+        <div className="fd-panel-body">
         <form onSubmit={registrar}>
           <div className="grid">
             <div className="f" style={{ position: "relative", gridColumn: "span 2" }}>
@@ -434,11 +437,22 @@ export default function IncidenciasPage() {
             </div>
             <div className="f">
               <label>tipo</label>
-              <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoIncidencia)}>
-                <option value="averia_sufrida">avería sufrida</option>
-                <option value="averia_recepcionada">avería recepcionada</option>
-                <option value="otro">otro</option>
-              </select>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }} role="radiogroup" aria-label="tipo de incidencia">
+                {(Object.keys(TIPO_INCIDENCIA_LABELS) as TipoIncidencia[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={tipo === t}
+                    onClick={() => setTipo(t)}
+                    className={tipo === t ? TIPO_INCIDENCIA_CHIP[t] : "chip"}
+                    style={{ cursor: "pointer", opacity: tipo === t ? 1 : 0.6 }}
+                  >
+                    {tipo === t && <i className="ti ti-check" aria-hidden style={{ fontSize: 11 }} />}
+                    {TIPO_INCIDENCIA_LABELS[t]}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="f">
               <label>fecha</label>
@@ -551,13 +565,16 @@ export default function IncidenciasPage() {
           {formErr && <div className="err">{formErr}</div>}
           {formOk && <div className="ok">{formOk}</div>}
         </form>
+        </div>
       </div>
 
-      {/* ============ historial ============ */}
-      <div className="crm-card">
-        <h4>
+      {/* ============ historial (feed de actividad, patrón 2a) ============ */}
+      <div className="fd-panel">
+        <div className="fd-panel-title">
           <span className="num">2</span> historial
-        </h4>
+          <span className="fd-count">{total} incidencias</span>
+        </div>
+        <div className="fd-panel-body">
         <div className="filters">
           <input
             type="text"
@@ -567,11 +584,14 @@ export default function IncidenciasPage() {
             style={{ minWidth: 220 }}
             spellCheck={false}
           />
-          <span className="pill">{total} incidencias</span>
         </div>
 
         {histCargando ? (
-          <Cargando msg="cargando incidencias…" />
+          <div>
+            {Array.from({ length: 4 }, (_, i) => (
+              <SkeletonRow key={i} cols="90px 1fr 120px" index={i} height={44} />
+            ))}
+          </div>
         ) : histErr ? (
           <ErrorMsg msg={histErr} onRetry={() => void fetchHistorial()} />
         ) : filas.length === 0 ? (
@@ -583,71 +603,73 @@ export default function IncidenciasPage() {
             }
           />
         ) : (
-          <div className="tblwrap">
-            <table className="t">
-              <thead>
-                <tr>
-                  <th>fecha</th>
-                  <th>contenedor</th>
-                  <th>tipo</th>
-                  <th>descripción</th>
-                  <th>fotos</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filas.map((r) => (
-                  <tr key={r.id}>
-                    <td style={{ whiteSpace: "nowrap" }}>{fmtFecha(r.fecha)}</td>
-                    <td>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {filas.map((r) => {
+              const dotColor =
+                r.tipo === "averia_sufrida"
+                  ? "var(--text-danger)"
+                  : r.tipo === "averia_recepcionada"
+                    ? "var(--text-warning)"
+                    : "var(--text-muted)";
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "76px 18px 1fr",
+                    gap: 8,
+                    padding: "10px 0",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  <span className="mono" style={{ fontSize: 11.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                    {fmtFecha(r.fecha)}
+                  </span>
+                  <span
+                    aria-hidden
+                    style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor, marginTop: 4, justifySelf: "center" }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <Link href={`/contenedores/${r.operacion_id}`} className="mono" style={{ textDecoration: "none" }}>
                         <ContainerNumber value={r.numero_contenedor} />
                       </Link>
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
                       <span className={TIPO_INCIDENCIA_CHIP[r.tipo] ?? "chip"}>
                         {TIPO_INCIDENCIA_LABELS[r.tipo] ?? r.tipo}
                       </span>
-                    </td>
-                    <td>{r.descripcion || "—"}</td>
-                    <td>
-                      {r.fotos.length === 0 ? (
-                        "—"
-                      ) : (
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                          {r.fotos.map((f) => {
-                            const url = urlPublica(f.storage_path);
-                            return (
-                              <a
-                                key={f.storage_path}
-                                href={url}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="ver foto completa"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={url}
-                                  alt={`foto de incidencia ${r.numero_contenedor}`}
-                                  loading="lazy"
-                                  style={{
-                                    width: 48,
-                                    height: 48,
-                                    objectFit: "cover",
-                                    borderRadius: 6,
-                                    border: "0.5px solid var(--border)",
-                                    display: "block",
-                                  }}
-                                />
-                              </a>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                    {r.descripcion && (
+                      <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 3 }}>{r.descripcion}</div>
+                    )}
+                    {r.fotos.length > 0 && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+                        {r.fotos.map((f) => {
+                          const url = urlPublica(f.storage_path);
+                          return (
+                            <a key={f.storage_path} href={url} target="_blank" rel="noreferrer" title="ver foto completa">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt={`foto de incidencia ${r.numero_contenedor}`}
+                                loading="lazy"
+                                style={{
+                                  width: 56,
+                                  height: 56,
+                                  objectFit: "cover",
+                                  borderRadius: 9,
+                                  border: "1px solid var(--border-strong)",
+                                  display: "block",
+                                }}
+                              />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
         <Paginacion page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
@@ -655,6 +677,7 @@ export default function IncidenciasPage() {
           el filtro por contenedor se aplica en servidor (ilike sobre el embed operaciones →
           contenedores), así la paginación y el total quedan consistentes.
         </p>
+        </div>
       </div>
     </>
   );
