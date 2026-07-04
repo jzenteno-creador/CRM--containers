@@ -201,6 +201,47 @@ a { color: var(--text-accent); }
 .fd-content { flex: 1; padding: 16px 20px 20px; }
 .fd-bottombar { display: none; }
 
+/* ---- command center (/inicio, artboard 2a) ---- */
+.fd-kpistrip {
+  display: grid; grid-template-columns: 1fr 1fr 1.3fr 1fr;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1);
+  margin-bottom: 16px; overflow: hidden;
+}
+.fd-kpistrip > * + * { border-left: 1px solid var(--border); }
+.fd-cc { display: grid; grid-template-columns: 1fr 372px; gap: 16px; align-items: start; }
+.fd-panel {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.fd-panel + .fd-panel { margin-top: 16px; }
+.fd-panel-title {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary);
+}
+.fd-panel-title .fd-count { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+.fd-panel-body { padding: 12px 16px; }
+.fd-ccrow {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr) 70px 80px 110px;
+  gap: 12px; align-items: center; min-height: 40px; padding: 2px 16px;
+  border-bottom: 1px solid var(--border); border-left: 2px solid transparent;
+  font-size: 12.5px; color: var(--text-secondary); text-decoration: none;
+  transition: background 150ms var(--ease-out-expo);
+}
+.fd-ccrow:hover { background: var(--surface-2); }
+.fd-ccrow:last-of-type { border-bottom: none; }
+@media (max-width: 640px) {
+  .fd-ccrow { grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; padding: 2px 10px; }
+}
+@media (max-width: 1100px) {
+  .fd-cc { grid-template-columns: 1fr; }
+  .fd-kpistrip { grid-template-columns: 1fr 1fr; }
+  .fd-kpistrip > * + * { border-left: none; }
+  .fd-kpistrip > *:nth-child(even) { border-left: 1px solid var(--border); }
+  .fd-kpistrip > *:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+
 /* ---- componentes ---- */
 .crm-card {
   background: var(--surface-2); border: 1px solid var(--border);
