@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #060708; }
+  * { box-sizing: border-box; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes popIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+</style>
+</helmet>
+
+<section style="display: flex; flex-direction: column; gap: 40px; padding: 48px; font-family: 'Archivo', sans-serif;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px; max-width: 1240px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #22D3EE; letter-spacing: 0.14em;">TURNO 2 · DIRECCIÓN 1A</span>
+      <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #E6EAF0; font-stretch: 115%;">CRM-DETENTION · Flight Deck — sistema completo</h1>
+    </div>
+    <p style="margin: 0; font-size: 13.5px; color: #8A94A6; line-height: 1.5;"><a href="#2a" style="color: #22D3EE; text-decoration: none;">2a command center</a> · <a href="#2b" style="color: #22D3EE; text-decoration: none;">2b planilla</a> · <a href="#2c" style="color: #22D3EE; text-decoration: none;">2c detalle de contenedor</a> · <a href="#2d" style="color: #22D3EE; text-decoration: none;">2d alertas</a> · <a href="#2e" style="color: #22D3EE; text-decoration: none;">2e command palette</a> · <a href="#2f" style="color: #22D3EE; text-decoration: none;">2f design system para handoff</a></p>
+  </div>
+
+  <!-- ════════ 2A — COMMAND CENTER ════════ -->
+  <div id="2a" style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <a href="#2a" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #06090B; background: #22D3EE; padding: 3px 9px; border-radius: 5px; text-decoration: none;">2a</a>
+      <span style="font-size: 14px; font-weight: 600; color: #E6EAF0;">Command center</span>
+      <span style="font-size: 12.5px; color: #6B7585;">home del operador — qué quema plata y qué vence, en un vistazo</span>
+    </div>
+
+    <div data-screen-label="2a — Command center" style="width: 1512px; height: 940px; background: #0A0C10; border: 1px solid #1A1F27; border-radius: 12px; overflow: hidden; display: flex; color: #E6EAF0; font-family: 'Archivo', sans-serif;">
+
+      <!-- rail -->
+      <div style="width: 60px; flex-shrink: 0; background: #07090C; border-right: 1px solid #151A21; display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0E7490, #22D3EE); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #06090B; margin-bottom: 14px;">S</div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; background: #10161D; border: 1px solid #1C2530; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="position: absolute; left: -11px; top: 10px; width: 3px; height: 20px; border-radius: 2px; background: #22D3EE;"></span>
+          <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="#22D3EE" stroke-width="1.4"></rect><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="#22D3EE" stroke-width="1.4"></rect><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="#22D3EE" stroke-width="1.4"></rect><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="#22D3EE" stroke-width="1.4"></rect></svg>
+        </div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><path d="M4.5 6.5v3.5M8 6.5v3.5M11.5 6.5v3.5" stroke="#5A6474" stroke-width="1.2"></path></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; position: relative;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.5L2.8 11h10.4L12 8.5V6a4 4 0 0 0-4-4Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="#5A6474" stroke-width="1.4"></path></svg><span style="position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #F85149; border: 1.5px solid #07090C;"></span></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9M2.5 8H1m1.5 0 1.2 1.5M8 5v3.2l2.2 1.3" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2 14.5 13H1.5L8 2Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M8 6.5v3M8 11.5v.2" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="flex: 1;"></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="#5A6474" stroke-width="1.4"></circle><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="#5A6474" stroke-width="1.3" stroke-linecap="round"></path></svg></div>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+        <div style="height: 58px; flex-shrink: 0; border-bottom: 1px solid #151A21; display: flex; align-items: center; gap: 20px; padding: 0 24px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+            <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; font-stretch: 120%;">COMMAND CENTER</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #34D399; letter-spacing: 0.08em;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #34D399; animation: pulseDot 2.4s ease-in-out infinite;"></span>EN VIVO</span>
+          </div>
+          <div style="flex: 1; max-width: 620px; display: flex; align-items: center; gap: 10px; background: #0E1218; border: 1px solid #1C2530; border-radius: 9px; padding: 8px 14px;" style-hover="border-color: #22D3EE;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5 9.4 6 14 7.5 9.4 9 8 13.5 6.6 9 2 7.5 6.6 6 8 1.5Z" fill="#22D3EE"></path></svg>
+            <span style="font-size: 13px; color: #5A6474;">mostrame los Maersk con más de 5 días de demora…</span>
+            <span style="flex: 1;"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #22D3EE; border: 1px solid #164E5F; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.06em;">IA</span>
+          </div>
+          <span style="flex: 1;"></span>
+          <span style="display: inline-flex; gap: 4px; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8A94A6;"><kbd style="background: #10161D; border: 1px solid #1C2530; border-radius: 5px; padding: 3px 7px; font-family: inherit; font-size: 11px; color: #B8C0CC;">⌘</kbd><kbd style="background: #10161D; border: 1px solid #1C2530; border-radius: 5px; padding: 3px 7px; font-family: inherit; font-size: 11px; color: #B8C0CC;">K</kbd></span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #B8C0CC; font-variant-numeric: tabular-nums;">{{ hora }}</span>
+          <div style="width: 30px; height: 30px; border-radius: 50%; background: #10161D; border: 1px solid #1C2530; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #8A94A6;">JZ</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1.3fr 1fr; border-bottom: 1px solid #151A21; flex-shrink: 0;">
+          <div style="padding: 18px 24px 16px; border-right: 1px solid #151A21;">
+            <div style="font-size: 10.5px; letter-spacing: 0.13em; color: #6B7585; text-transform: uppercase; margin-bottom: 8px;">Contenedores activos</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;">{{ kActivos }}</div>
+            <div style="font-size: 11.5px; color: #6B7585; margin-top: 8px;">en ciclo abierto · Bahía + Abbott</div>
+          </div>
+          <div style="padding: 18px 24px 16px; border-right: 1px solid #151A21;">
+            <div style="font-size: 10.5px; letter-spacing: 0.13em; color: #6B7585; text-transform: uppercase; margin-bottom: 8px;">Días de demora acum.</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;">{{ kDemora }}</div>
+            <div style="font-size: 11.5px; color: #F85149; margin-top: 8px;">▲ +5 vs. ayer</div>
+          </div>
+          <div style="padding: 18px 24px 16px; border-right: 1px solid #151A21; background: linear-gradient(180deg, rgba(248,81,73,0.05), transparent 70%);">
+            <div style="font-size: 10.5px; letter-spacing: 0.13em; color: #F85149; text-transform: uppercase; margin-bottom: 8px;">Costo proyectado abiertas</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: #FF8A83;"><span style="font-size: 20px; font-weight: 500; color: #B05A55; vertical-align: 14px; margin-right: 6px;">US$</span>{{ kCosto }}</div>
+            <div style="font-size: 11.5px; color: #8A94A6; margin-top: 8px;">5 contenedores acumulando cargo hoy</div>
+          </div>
+          <div style="padding: 18px 24px 16px;">
+            <div style="font-size: 10.5px; letter-spacing: 0.13em; color: #D9A23C; text-transform: uppercase; margin-bottom: 8px;">Deadlines &lt; 72 h</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: #F0B849;">{{ kDeadlines }}</div>
+            <div style="font-size: 11.5px; color: #8A94A6; margin-top: 8px;">próximo: <span style="font-family: 'JetBrains Mono', monospace; color: #F0B849;"><span style="user-select: all;">SUDU1184724</span> · 38 h</span></div>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: grid; grid-template-columns: 1fr 372px; gap: 16px; padding: 16px 20px 20px; min-height: 0;">
+          <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+            <div style="background: #0E1218; border-radius: 12px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 14px 18px 12px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #F85149; box-shadow: 0 0 10px rgba(248,81,73,0.6); animation: pulseDot 2s ease-in-out infinite;"></span>
+                <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">EN DEMORA</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #F85149;">5</span>
+                <span style="flex: 1;"></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FF8A83; font-variant-numeric: tabular-nums;">US$ 3.085 acumulado</span>
+                <span style="font-size: 12px; color: #22D3EE; cursor: pointer;" style-hover="text-decoration: underline;">ver planilla →</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 190px 1fr 150px 92px 96px 110px; gap: 0 12px; padding: 6px 18px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #5A6474; border-bottom: 1px solid #151A21;">
+                <span>Contenedor</span><span>Naviera</span><span>Posición</span><span style="text-align: right;">Demora</span><span style="text-align: right;">Tarifa/d</span><span style="text-align: right;">Acumulado</span>
+              </div>
+              <sc-for list="{{ criticos }}" as="c" hint-placeholder-count="5">
+                <div style="display: grid; grid-template-columns: 190px 1fr 150px 92px 96px 110px; gap: 0 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #10141B; border-left: 2px solid #F85149; cursor: pointer;" style-hover="background: #12161E;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">{{ c.pre }}</span><span>{{ c.ser }}</span><span style="color: #5A6474;">{{ c.chk }}</span></span>
+                  <span style="font-size: 12.5px; color: #B8C0CC;">{{ c.naviera }}</span>
+                  <span style="font-size: 12.5px; color: #8A94A6;">{{ c.pos }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 600; color: #F85149; text-align: right; font-variant-numeric: tabular-nums;">{{ c.demora }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A94A6; text-align: right; font-variant-numeric: tabular-nums;">{{ c.tarifa }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 600; color: #FF8A83; text-align: right; font-variant-numeric: tabular-nums;">{{ c.acum }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background: #0E1218; border-radius: 12px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 14px 18px 12px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #F0B849;"></span>
+                <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">POR VENCER — &lt;72 H</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #F0B849;">4</span>
+              </div>
+              <sc-for list="{{ ambar }}" as="a" hint-placeholder-count="4">
+                <div style="display: grid; grid-template-columns: 190px 1fr 150px 1fr 84px; gap: 0 12px; align-items: center; padding: 9px 18px; border-bottom: 1px solid #10141B; cursor: pointer;" style-hover="background: #12161E;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">{{ a.pre }}</span><span>{{ a.ser }}</span><span style="color: #5A6474;">{{ a.chk }}</span></span>
+                  <span style="font-size: 12.5px; color: #B8C0CC;">{{ a.naviera }}</span>
+                  <span style="font-size: 12.5px; color: #8A94A6;">{{ a.pos }}</span>
+                  <span style="height: 4px; border-radius: 2px; background: #1A1F27; position: relative; overflow: hidden;"><span style="position: absolute; inset: 0; border-radius: 2px; background: #F0B849; width: {{ a.pct }};"></span></span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 600; color: #F0B849; text-align: right; font-variant-numeric: tabular-nums;">{{ a.resta }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background: #0E1218; border-radius: 12px; overflow: hidden; flex: 1; min-height: 0; display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 14px 18px 10px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399;"></span>
+                <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">EN FREE TIME</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #34D399;">33</span>
+                <span style="flex: 1;"></span>
+                <span style="font-size: 11.5px; color: #6B7585;">sin cargo proyectado · por naviera</span>
+              </div>
+              <div style="flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); align-items: stretch; padding: 0 18px 16px; gap: 10px;">
+                <sc-for list="{{ verdes }}" as="v" hint-placeholder-count="6">
+                  <div style="background: #10141B; border-radius: 9px; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+                    <span style="font-size: 11.5px; color: #8A94A6;">{{ v.naviera }}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;">{{ v.n }}</span>
+                    <span style="height: 4px; border-radius: 2px; background: #151A21; position: relative;"><span style="position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #34D399; opacity: 0.85; width: {{ v.pct }};"></span></span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #4E9F7E; font-variant-numeric: tabular-nums;">min {{ v.min }} restantes</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px; min-height: 0;">
+            <div style="background: #0E1218; border-radius: 12px; padding: 14px 18px 16px;">
+              <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%; margin-bottom: 12px;">POSICIÓN DE FLOTA</div>
+              <sc-for list="{{ posicion }}" as="p" hint-placeholder-count="5">
+                <div style="display: grid; grid-template-columns: 128px 1fr 28px; gap: 10px; align-items: center; margin-bottom: 9px;">
+                  <span style="font-size: 12px; color: #B8C0CC;">{{ p.lugar }}</span>
+                  <span style="height: 6px; border-radius: 3px; background: #151A21; position: relative;"><span style="position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: {{ p.color }}; width: {{ p.pct }};"></span></span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums;">{{ p.n }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background: #0E1218; border-radius: 12px; padding: 14px 18px; flex: 1; min-height: 0; overflow: hidden;">
+              <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%; margin-bottom: 12px;">ACTIVIDAD</div>
+              <sc-for list="{{ feed }}" as="f" hint-placeholder-count="6">
+                <div style="display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid #10141B;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5A6474; flex-shrink: 0; padding-top: 2px; font-variant-numeric: tabular-nums;">{{ f.t }}</span>
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: {{ f.color }}; flex-shrink: 0; margin-top: 6px;"></span>
+                  <span style="font-size: 12.5px; color: #B8C0CC; line-height: 1.45;">{{ f.txt }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 2B — PLANILLA ════════ -->
+  <div id="2b" style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <a href="#2b" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #06090B; background: #22D3EE; padding: 3px 9px; border-radius: 5px; text-decoration: none;">2b</a>
+      <span style="font-size: 14px; font-weight: 600; color: #E6EAF0;">Planilla de contenedores</span>
+      <span style="font-size: 12.5px; color: #6B7585;">tabla densa · sort por días restantes · semáforo glanceable en cada fila</span>
+    </div>
+
+    <div data-screen-label="2b — Planilla de contenedores" style="width: 1512px; height: 940px; background: #0A0C10; border: 1px solid #1A1F27; border-radius: 12px; overflow: hidden; display: flex; color: #E6EAF0; font-family: 'Archivo', sans-serif;">
+      <div style="width: 60px; flex-shrink: 0; background: #07090C; border-right: 1px solid #151A21; display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0E7490, #22D3EE); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #06090B; margin-bottom: 14px;">S</div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; background: #10161D; border: 1px solid #1C2530; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="position: absolute; left: -11px; top: 10px; width: 3px; height: 20px; border-radius: 2px; background: #22D3EE;"></span>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5" stroke="#22D3EE" stroke-width="1.4"></rect><path d="M4.5 6.5v3.5M8 6.5v3.5M11.5 6.5v3.5" stroke="#22D3EE" stroke-width="1.2"></path></svg>
+        </div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; position: relative;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.5L2.8 11h10.4L12 8.5V6a4 4 0 0 0-4-4Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="#5A6474" stroke-width="1.4"></path></svg><span style="position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #F85149; border: 1.5px solid #07090C;"></span></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9M2.5 8H1m1.5 0 1.2 1.5M8 5v3.2l2.2 1.3" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2 14.5 13H1.5L8 2Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M8 6.5v3M8 11.5v.2" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="flex: 1;"></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="#5A6474" stroke-width="1.4"></circle><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="#5A6474" stroke-width="1.3" stroke-linecap="round"></path></svg></div>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+        <div style="height: 58px; flex-shrink: 0; border-bottom: 1px solid #151A21; display: flex; align-items: center; gap: 16px; padding: 0 24px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; font-stretch: 120%;">PLANILLA DE CONTENEDORES</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #6B7585;">47 abiertas · 214 cerradas</span>
+          <span style="flex: 1;"></span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #06090B; background: #22D3EE; border-radius: 8px; padding: 8px 14px; cursor: pointer;" style-hover="background: #4ADEF5;">+ Registrar retiro</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #B8C0CC; font-variant-numeric: tabular-nums;">{{ hora }}</span>
+        </div>
+
+        <!-- filtros -->
+        <div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 12px 24px; border-bottom: 1px solid #151A21;">
+          <div style="flex: 1; max-width: 460px; display: flex; align-items: center; gap: 10px; background: #0E1218; border: 1px solid #1C2530; border-radius: 9px; padding: 7px 14px;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5 9.4 6 14 7.5 9.4 9 8 13.5 6.6 9 2 7.5 6.6 6 8 1.5Z" fill="#22D3EE"></path></svg>
+            <span style="font-size: 13px; color: #E6EAF0;">maersk con más de 5 días de demora</span>
+            <span style="flex: 1;"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #22D3EE; border: 1px solid #164E5F; border-radius: 4px; padding: 2px 6px;">IA</span>
+          </div>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #22D3EE; background: #0C1A20; border: 1px solid #164E5F; border-radius: 7px; padding: 6px 12px;">naviera: Maersk <span style="color: #5A6474; cursor: pointer;">✕</span></span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #22D3EE; background: #0C1A20; border: 1px solid #164E5F; border-radius: 7px; padding: 6px 12px;">demora &gt; 5 d <span style="color: #5A6474; cursor: pointer;">✕</span></span>
+          <span style="font-size: 12px; color: #8A94A6; border: 1px solid #1C2530; border-radius: 7px; padding: 6px 12px; cursor: pointer;" style-hover="color: #E6EAF0; border-color: #22D3EE;">planta ▾</span>
+          <span style="font-size: 12px; color: #8A94A6; border: 1px solid #1C2530; border-radius: 7px; padding: 6px 12px; cursor: pointer;" style-hover="color: #E6EAF0; border-color: #22D3EE;">estado ▾</span>
+          <span style="font-size: 12px; color: #8A94A6; border: 1px solid #1C2530; border-radius: 7px; padding: 6px 12px; cursor: pointer;" style-hover="color: #E6EAF0; border-color: #22D3EE;">semáforo ▾</span>
+          <span style="flex: 1;"></span>
+          <span style="font-size: 11.5px; color: #6B7585; cursor: pointer;" style-hover="color: #22D3EE;">limpiar filtros</span>
+        </div>
+
+        <!-- header tabla -->
+        <div style="flex-shrink: 0; display: grid; grid-template-columns: 30px 176px 116px 58px 1fr 138px 76px 68px 68px 92px 84px 108px; gap: 0 12px; padding: 9px 24px; font-size: 10px; letter-spacing: 0.11em; text-transform: uppercase; color: #5A6474; border-bottom: 1px solid #151A21; background: #0C0E13;">
+          <span></span>
+          <span>Contenedor ↕</span>
+          <span>Naviera ↕</span>
+          <span>Tipo</span>
+          <span>Posición</span>
+          <span>Estado ciclo</span>
+          <span style="text-align: right;">Retiro ↕</span>
+          <span style="text-align: right;">Estadía</span>
+          <span style="text-align: right;">Libres</span>
+          <span style="text-align: right; color: #22D3EE;">Restantes ↑</span>
+          <span style="text-align: right;">Tarifa/d</span>
+          <span style="text-align: right;">Costo proy.</span>
+        </div>
+
+        <!-- filas -->
+        <div style="flex: 1; overflow: hidden;">
+          <sc-for list="{{ filas }}" as="r" hint-placeholder-count="14">
+            <div style="display: grid; grid-template-columns: 30px 176px 116px 58px 1fr 138px 76px 68px 68px 92px 84px 108px; gap: 0 12px; align-items: center; padding: 8px 24px; border-bottom: 1px solid #10141B; cursor: pointer;" style-hover="background: #10141B;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ r.sem }}; box-shadow: {{ r.glow }};"></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #E6EAF0; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">{{ r.pre }}</span><span>{{ r.ser }}</span><span style="color: #5A6474;">{{ r.chk }}</span></span>
+              <span style="font-size: 12.5px; color: #B8C0CC;">{{ r.naviera }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8A94A6;">{{ r.tipo }}</span>
+              <span style="font-size: 12.5px; color: #8A94A6;">{{ r.pos }}</span>
+              <span><span style="font-size: 11px; color: {{ r.estCol }}; background: {{ r.estBg }}; border-radius: 5px; padding: 3px 8px;">{{ r.estado }}</span></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A94A6; text-align: right; font-variant-numeric: tabular-nums;">{{ r.retiro }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums;">{{ r.estadia }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #8A94A6; text-align: right; font-variant-numeric: tabular-nums;">{{ r.libres }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: {{ r.restCol }}; text-align: right; font-variant-numeric: tabular-nums;">{{ r.rest }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A94A6; text-align: right; font-variant-numeric: tabular-nums;">{{ r.tarifa }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: {{ r.costoCol }}; text-align: right; font-variant-numeric: tabular-nums;">{{ r.costo }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex-shrink: 0; display: flex; align-items: center; gap: 14px; padding: 12px 24px; border-top: 1px solid #151A21; font-size: 12px; color: #6B7585;">
+          <span>22 resultados con filtros · <span style="color: #B8C0CC;">47 operaciones abiertas en total</span></span>
+          <span style="flex: 1;"></span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px;">página 1 / 1 · 50 por página</span>
+          <span style="display: inline-flex; gap: 6px;"><span style="border: 1px solid #1C2530; border-radius: 6px; padding: 4px 10px; color: #5A6474;">←</span><span style="border: 1px solid #1C2530; border-radius: 6px; padding: 4px 10px; color: #5A6474;">→</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 2C — DETALLE ════════ -->
+  <div id="2c" style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <a href="#2c" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #06090B; background: #22D3EE; padding: 3px 9px; border-radius: 5px; text-decoration: none;">2c</a>
+      <span style="font-size: 14px; font-weight: 600; color: #E6EAF0;">Detalle de contenedor</span>
+      <span style="font-size: 12.5px; color: #6B7585;">timeline del ciclo · gauge de free time · desglose de cargos</span>
+    </div>
+
+    <div data-screen-label="2c — Detalle MSKU4829103" style="width: 1512px; height: 940px; background: #0A0C10; border: 1px solid #1A1F27; border-radius: 12px; overflow: hidden; display: flex; color: #E6EAF0; font-family: 'Archivo', sans-serif;">
+      <div style="width: 60px; flex-shrink: 0; background: #07090C; border-right: 1px solid #151A21; display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0E7490, #22D3EE); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #06090B; margin-bottom: 14px;">S</div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; background: #10161D; border: 1px solid #1C2530; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="position: absolute; left: -11px; top: 10px; width: 3px; height: 20px; border-radius: 2px; background: #22D3EE;"></span>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5" stroke="#22D3EE" stroke-width="1.4"></rect><path d="M4.5 6.5v3.5M8 6.5v3.5M11.5 6.5v3.5" stroke="#22D3EE" stroke-width="1.2"></path></svg>
+        </div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; position: relative;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.5L2.8 11h10.4L12 8.5V6a4 4 0 0 0-4-4Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="#5A6474" stroke-width="1.4"></path></svg><span style="position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #F85149; border: 1.5px solid #07090C;"></span></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9M2.5 8H1m1.5 0 1.2 1.5M8 5v3.2l2.2 1.3" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2 14.5 13H1.5L8 2Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M8 6.5v3M8 11.5v.2" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="flex: 1;"></div>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+        <!-- header detalle -->
+        <div style="flex-shrink: 0; border-bottom: 1px solid #151A21; padding: 16px 28px 14px; display: flex; align-items: center; gap: 16px;">
+          <span style="width: 34px; height: 34px; border-radius: 9px; border: 1px solid #1C2530; display: flex; align-items: center; justify-content: center; color: #8A94A6; cursor: pointer; font-size: 15px;" style-hover="border-color: #22D3EE; color: #22D3EE;">←</span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>482910</span><span style="color: #5A6474;">3</span></span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #F85149; background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.35); border-radius: 6px; padding: 4px 10px; box-shadow: 0 0 12px rgba(248,81,73,0.15);"><span style="width: 6px; height: 6px; border-radius: 50%; background: #F85149; animation: pulseDot 2s ease-in-out infinite;"></span>EN DEMORA · +6 D</span>
+              <span style="font-size: 11px; color: #8A94A6; border: 1px solid #1C2530; border-radius: 6px; padding: 4px 10px; font-family: 'JetBrains Mono', monospace;">40HC</span>
+              <span style="font-size: 11px; color: #34D399; border: 1px solid rgba(52,211,153,0.3); border-radius: 6px; padding: 4px 10px;">✓ reforzado</span>
+            </div>
+            <span style="font-size: 12.5px; color: #6B7585;">Maersk · ciclo abierto hace 21 días · cargado en Planta Bahía</span>
+          </div>
+          <span style="flex: 1;"></span>
+          <span style="font-size: 12.5px; color: #8A94A6; border: 1px solid #1C2530; border-radius: 8px; padding: 8px 14px; cursor: pointer;" style-hover="color: #E6EAF0; border-color: #22D3EE;">Solicitar waiver</span>
+          <span style="font-size: 12.5px; font-weight: 600; color: #06090B; background: #22D3EE; border-radius: 8px; padding: 8px 14px; cursor: pointer;" style-hover="background: #4ADEF5;">Registrar egreso →</span>
+        </div>
+
+        <!-- spec strip -->
+        <div style="flex-shrink: 0; display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid #151A21;">
+          <sc-for list="{{ specs }}" as="s" hint-placeholder-count="7">
+            <div style="padding: 12px 20px; border-right: 1px solid #10141B; display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #5A6474;">{{ s.k }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #E6EAF0;">{{ s.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- cuerpo detalle -->
+        <div style="flex: 1; display: grid; grid-template-columns: 1fr 420px; gap: 16px; padding: 16px 24px 20px; min-height: 0;">
+          <!-- timeline -->
+          <div style="background: #0E1218; border-radius: 12px; padding: 18px 24px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px;">
+              <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">CICLO DE LA OPERACIÓN</span>
+              <span style="font-size: 11.5px; color: #6B7585;">retiro → carga → demora → embarque</span>
+            </div>
+            <sc-for list="{{ timeline }}" as="e" hint-placeholder-count="7">
+              <div style="display: grid; grid-template-columns: 96px 26px 1fr; gap: 0 14px; align-items: stretch; flex: 1; min-height: 0;">
+                <div style="text-align: right; padding-top: 1px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{ e.fechaCol }}; font-variant-numeric: tabular-nums;">{{ e.fecha }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #5A6474;">{{ e.horaEv }}</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                  <span style="width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid {{ e.dot }}; background: {{ e.dotFill }}; flex-shrink: 0; margin-top: 2px; box-shadow: {{ e.dotGlow }};"></span>
+                  <span style="width: 2px; flex: 1; background: {{ e.linea }}; margin-top: 3px; margin-bottom: 3px;"></span>
+                </div>
+                <div style="padding-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 13.5px; font-weight: 600; color: {{ e.titCol }};">{{ e.titulo }}</span>
+                    <sc-if value="{{ e.chip }}" hint-placeholder-val="{{ false }}"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: {{ e.chipCol }}; border: 1px solid {{ e.chipBorde }}; border-radius: 5px; padding: 2px 7px;">{{ e.chip }}</span></sc-if>
+                  </div>
+                  <div style="font-size: 12px; color: #6B7585; margin-top: 3px; line-height: 1.5;">{{ e.det }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- col derecha -->
+          <div style="display: flex; flex-direction: column; gap: 16px; min-height: 0;">
+            <!-- gauge -->
+            <div style="background: #0E1218; border-radius: 12px; padding: 18px 24px; display: flex; align-items: center; gap: 24px;">
+              <svg width="148" height="148" viewBox="0 0 36 36" style="flex-shrink: 0;">
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#151A21" stroke-width="2.6"></circle>
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F85149" stroke-width="2.6" stroke-dasharray="{{ gaugeDash }}" transform="rotate(-90 18 18)" style="filter: drop-shadow(0 0 5px rgba(248,81,73,0.5)); transition: stroke-dasharray 0.8s cubic-bezier(0.16,1,0.3,1);"></circle>
+                <text x="18" y="16.4" text-anchor="middle" font-size="8" font-weight="700" fill="#F85149" font-family="JetBrains Mono, monospace">{{ gaugeLabel }}</text>
+                <text x="18" y="22.5" text-anchor="middle" font-size="3.1" fill="#8A94A6" font-family="Archivo, sans-serif">de demora</text>
+                <text x="18" y="26" text-anchor="middle" font-size="2.6" fill="#5A6474" font-family="JetBrains Mono, monospace">free time agotado 26/06</text>
+              </svg>
+              <div style="display: flex; flex-direction: column; gap: 12px; flex: 1;">
+                <div><div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #5A6474;">Estadía total</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums;">21 d</div></div>
+                <div><div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #5A6474;">Free time</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; color: #8A94A6; font-variant-numeric: tabular-nums;">14 d</div></div>
+                <div><div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #F85149;">En demora</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: #F85149; font-variant-numeric: tabular-nums;">6 d</div></div>
+              </div>
+            </div>
+
+            <!-- cargos -->
+            <div style="background: #0E1218; border-radius: 12px; padding: 18px 24px; flex: 1;">
+              <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%; margin-bottom: 14px;">DESGLOSE DE CARGOS</div>
+              <sc-for list="{{ cargos }}" as="g" hint-placeholder-count="3">
+                <div style="display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid #10141B;">
+                  <div style="flex: 1;">
+                    <div style="font-size: 12.5px; color: #B8C0CC;">{{ g.item }}</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5A6474; margin-top: 2px;">{{ g.calc }}</div>
+                  </div>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 14.5px; font-weight: 600; color: {{ g.col }}; font-variant-numeric: tabular-nums;">{{ g.monto }}</span>
+                </div>
+              </sc-for>
+              <div style="display: flex; align-items: baseline; gap: 10px; padding: 14px 0 4px;">
+                <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: #E6EAF0;">TOTAL PROYECTADO</span>
+                <span style="flex: 1;"></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: #FF8A83; font-variant-numeric: tabular-nums; text-shadow: 0 0 18px rgba(248,81,73,0.25);">US$ 1.890</span>
+              </div>
+              <div style="font-size: 11px; color: #5A6474; line-height: 1.5; margin-top: 10px; border-top: 1px solid #10141B; padding-top: 10px;">Tarifa Maersk detention export AR: US$ 210/día tras 14 días libres · vigente 01/01/26 → 31/12/26. La proyección asume gate-in en la ETA del 07/07.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 2D — ALERTAS ════════ -->
+  <div id="2d" style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <a href="#2d" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #06090B; background: #22D3EE; padding: 3px 9px; border-radius: 5px; text-decoration: none;">2d</a>
+      <span style="font-size: 14px; font-weight: 600; color: #E6EAF0;">Alertas de vencimiento</span>
+      <span style="font-size: 12.5px; color: #6B7585;">agrupadas por criticidad · orden por días restantes ↑ · timers radiales</span>
+    </div>
+
+    <div data-screen-label="2d — Alertas de vencimiento" style="width: 1512px; height: 940px; background: #0A0C10; border: 1px solid #1A1F27; border-radius: 12px; overflow: hidden; display: flex; color: #E6EAF0; font-family: 'Archivo', sans-serif;">
+      <div style="width: 60px; flex-shrink: 0; background: #07090C; border-right: 1px solid #151A21; display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0E7490, #22D3EE); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #06090B; margin-bottom: 14px;">S</div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5" stroke="#5A6474" stroke-width="1.4"></rect><path d="M4.5 6.5v3.5M8 6.5v3.5M11.5 6.5v3.5" stroke="#5A6474" stroke-width="1.2"></path></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; background: #10161D; border: 1px solid #1C2530; display: flex; align-items: center; justify-content: center; position: relative;">
+          <span style="position: absolute; left: -11px; top: 10px; width: 3px; height: 20px; border-radius: 2px; background: #22D3EE;"></span>
+          <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.5L2.8 11h10.4L12 8.5V6a4 4 0 0 0-4-4Z" stroke="#22D3EE" stroke-width="1.4" stroke-linejoin="round"></path><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="#22D3EE" stroke-width="1.4"></path></svg>
+          <span style="position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #F85149; border: 1.5px solid #07090C;"></span>
+        </div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9M2.5 8H1m1.5 0 1.2 1.5M8 5v3.2l2.2 1.3" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2 14.5 13H1.5L8 2Z" stroke="#5A6474" stroke-width="1.4" stroke-linejoin="round"></path><path d="M8 6.5v3M8 11.5v.2" stroke="#5A6474" stroke-width="1.4" stroke-linecap="round"></path></svg></div>
+        <div style="flex: 1;"></div>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+        <div style="height: 58px; flex-shrink: 0; border-bottom: 1px solid #151A21; display: flex; align-items: center; gap: 16px; padding: 0 24px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; font-stretch: 120%;">ALERTAS DE VENCIMIENTO</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F85149;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #F85149; animation: pulseDot 2s ease-in-out infinite;"></span>5 en demora</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #F0B849;">4 vencen &lt;72 h</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8A94A6;">6 en 3–7 días</span>
+          <span style="flex: 1;"></span>
+          <span style="font-size: 11.5px; color: #6B7585;">orden: días restantes ↑</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #B8C0CC; font-variant-numeric: tabular-nums;">{{ hora }}</span>
+        </div>
+
+        <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 24px 20px; min-height: 0;">
+          <!-- col rojos -->
+          <div style="background: #0E1218; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 14px 20px 10px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #F85149; box-shadow: 0 0 10px rgba(248,81,73,0.6);"></span>
+              <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">EN DEMORA — ACUMULANDO CARGO</span>
+              <span style="flex: 1;"></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FF8A83;">US$ 515 / día</span>
+            </div>
+            <sc-for list="{{ alertasRojas }}" as="c" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-top: 1px solid #10141B; border-left: 2px solid #F85149; cursor: pointer; flex: 1; min-height: 0;" style-hover="background: #12161E;">
+                <svg width="44" height="44" viewBox="0 0 36 36" style="flex-shrink: 0;">
+                  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#151A21" stroke-width="3"></circle>
+                  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F85149" stroke-width="3" stroke-dasharray="100 0" transform="rotate(-90 18 18)" style="filter: drop-shadow(0 0 4px rgba(248,81,73,0.5));"></circle>
+                  <text x="18" y="21.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#F85149" font-family="JetBrains Mono, monospace">{{ c.demora }}</text>
+                </svg>
+                <div style="display: flex; flex-direction: column; gap: 3px; flex: 1;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">{{ c.pre }}</span><span>{{ c.ser }}</span><span style="color: #5A6474;">{{ c.chk }}</span></span>
+                  <span style="font-size: 11.5px; color: #6B7585;">{{ c.naviera }} · {{ c.pos }}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600; color: #FF8A83; font-variant-numeric: tabular-nums;">{{ c.acum }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #6B7585; font-variant-numeric: tabular-nums;">+US$ {{ c.tarifa }} mañana</span>
+                </div>
+              </div>
+            </sc-for>
+            <div style="padding: 12px 20px; border-top: 1px solid #151A21; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 11.5px; color: #6B7585;">acción sugerida:</span>
+              <span style="font-size: 12px; color: #22D3EE; cursor: pointer;" style-hover="text-decoration: underline;">priorizar egreso de los 2 con tarifa ≥ US$ 180 →</span>
+            </div>
+          </div>
+
+          <!-- col ámbar + horizonte -->
+          <div style="display: flex; flex-direction: column; gap: 16px; min-height: 0;">
+            <div style="background: #0E1218; border-radius: 12px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 14px 20px 10px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #F0B849;"></span>
+                <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">VENCEN EN &lt;72 H</span>
+                <span style="flex: 1;"></span>
+                <span style="font-size: 11.5px; color: #6B7585;">timer = free time consumido</span>
+              </div>
+              <sc-for list="{{ alertasAmbar }}" as="a" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 16px; padding: 9px 20px; border-top: 1px solid #10141B; cursor: pointer;" style-hover="background: #12161E;">
+                  <svg width="40" height="40" viewBox="0 0 36 36" style="flex-shrink: 0;">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#151A21" stroke-width="3"></circle>
+                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0B849" stroke-width="3" stroke-dasharray="{{ a.dash }}" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+                    <text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="600" fill="#F0B849" font-family="JetBrains Mono, monospace">{{ a.hrs }}</text>
+                  </svg>
+                  <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 500; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">{{ a.pre }}</span><span>{{ a.ser }}</span><span style="color: #5A6474;">{{ a.chk }}</span></span>
+                    <span style="font-size: 11.5px; color: #6B7585;">{{ a.naviera }} · {{ a.pos }}</span>
+                  </div>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #F0B849; font-variant-numeric: tabular-nums;">vence {{ a.vence }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background: #0E1218; border-radius: 12px; overflow: hidden; flex: 1; display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 14px 20px 10px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #8A94A6;"></span>
+                <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 115%;">HORIZONTE 3–7 DÍAS</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A94A6;">6</span>
+              </div>
+              <sc-for list="{{ alertasProx }}" as="x" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 170px 1fr 140px 1fr 70px; gap: 0 12px; align-items: center; padding: 8px 20px; border-top: 1px solid #10141B; cursor: pointer; flex: 1; min-height: 0;" style-hover="background: #12161E;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">{{ x.pre }}</span><span>{{ x.ser }}</span><span style="color: #5A6474;">{{ x.chk }}</span></span>
+                  <span style="font-size: 12px; color: #B8C0CC;">{{ x.naviera }}</span>
+                  <span style="font-size: 12px; color: #8A94A6;">{{ x.pos }}</span>
+                  <span style="height: 4px; border-radius: 2px; background: #151A21; position: relative;"><span style="position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #34D399; opacity: 0.8; width: {{ x.pct }};"></span></span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #34D399; text-align: right; font-variant-numeric: tabular-nums;">{{ x.rest }}</span>
+                </div>
+              </sc-for>
+              <div style="padding: 12px 20px; border-top: 1px solid #151A21; font-size: 11.5px; color: #5A6474;">+ 27 contenedores en free time &gt;7 días — sin acción requerida</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 2E — COMMAND PALETTE ════════ -->
+  <div id="2e" style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <a href="#2e" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #06090B; background: #22D3EE; padding: 3px 9px; border-radius: 5px; text-decoration: none;">2e</a>
+      <span style="font-size: 14px; font-weight: 600; color: #E6EAF0;">Command palette (⌘K)</span>
+      <span style="font-size: 12.5px; color: #6B7585;">abre con scale 0.98→1 + fade, 200 ms ease-out · backdrop blur</span>
+    </div>
+
+    <div data-screen-label="2e — Command palette abierta" style="width: 1512px; height: 720px; background: #0A0C10; border: 1px solid #1A1F27; border-radius: 12px; overflow: hidden; position: relative; color: #E6EAF0; font-family: 'Archivo', sans-serif;">
+      <!-- backdrop atenuado -->
+      <div style="position: absolute; inset: 0; opacity: 0.35; filter: blur(2px); display: flex; flex-direction: column;">
+        <div style="height: 58px; border-bottom: 1px solid #151A21; display: flex; align-items: center; padding: 0 24px; gap: 20px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; font-stretch: 120%;">COMMAND CENTER</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid #151A21;">
+          <div style="padding: 18px 24px;"><div style="font-size: 10.5px; color: #6B7585; text-transform: uppercase; letter-spacing: 0.13em;">Contenedores activos</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600;">47</div></div>
+          <div style="padding: 18px 24px;"><div style="font-size: 10.5px; color: #6B7585; text-transform: uppercase; letter-spacing: 0.13em;">Días demora</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600;">128</div></div>
+          <div style="padding: 18px 24px;"><div style="font-size: 10.5px; color: #F85149; text-transform: uppercase; letter-spacing: 0.13em;">Costo proyectado</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 700; color: #FF8A83;">18.640</div></div>
+          <div style="padding: 18px 24px;"><div style="font-size: 10.5px; color: #D9A23C; text-transform: uppercase; letter-spacing: 0.13em;">Deadlines</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600; color: #F0B849;">9</div></div>
+        </div>
+      </div>
+      <div style="position: absolute; inset: 0; background: rgba(4,5,7,0.55);"></div>
+
+      <!-- palette -->
+      <div style="position: absolute; left: 50%; top: 72px; transform: translateX(-50%); width: 640px; background: #0E1218; border: 1px solid #1C2530; border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(34,211,238,0.06); overflow: hidden; animation: popIn 0.2s cubic-bezier(0.16,1,0.3,1) both;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #151A21;">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#22D3EE" stroke-width="1.5"></circle><path d="m10.5 10.5 3 3" stroke="#22D3EE" stroke-width="1.5" stroke-linecap="round"></path></svg>
+          <span style="font-size: 14px; color: #E6EAF0;">msku<span style="display: inline-block; width: 2px; height: 16px; background: #22D3EE; margin-left: 2px; vertical-align: -3px; animation: pulseDot 1.1s steps(2) infinite;"></span></span>
+          <span style="flex: 1;"></span>
+          <kbd style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5A6474; border: 1px solid #1C2530; border-radius: 4px; padding: 2px 6px;">ESC</kbd>
+        </div>
+        <div style="padding: 8px 8px 4px;">
+          <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #5A6474; padding: 6px 12px 4px;">Contenedores</div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px; background: #10202A; border-left: 2px solid #22D3EE;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #F85149; flex-shrink: 0;"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>482910</span><span style="color: #5A6474;">3</span></span>
+            <span style="font-size: 11.5px; color: #8A94A6;">Maersk · en demora +6 d · US$ 1.260</span>
+            <span style="flex: 1;"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #22D3EE;">↵ abrir</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px;" style-hover="background: #10141B;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399; flex-shrink: 0;"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>771029</span><span style="color: #5A6474;">4</span></span>
+            <span style="font-size: 11.5px; color: #8A94A6;">Maersk · en free time · 5 d restantes</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px;" style-hover="background: #10141B;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399; flex-shrink: 0;"></span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>402113</span><span style="color: #5A6474;">6</span></span>
+            <span style="font-size: 11.5px; color: #8A94A6;">Maersk · cerrado — gate-in 14:32</span>
+          </div>
+          <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #5A6474; padding: 10px 12px 4px;">Acciones</div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px;" style-hover="background: #10141B;">
+            <span style="color: #22D3EE; font-size: 13px;">→</span>
+            <span style="font-size: 13px; color: #B8C0CC;">Registrar egreso de planta…</span>
+            <span style="flex: 1;"></span>
+            <kbd style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5A6474; border: 1px solid #1C2530; border-radius: 4px; padding: 2px 6px;">E</kbd>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px;" style-hover="background: #10141B;">
+            <span style="color: #22D3EE; font-size: 13px;">→</span>
+            <span style="font-size: 13px; color: #B8C0CC;">Registrar retiro de vacío…</span>
+            <span style="flex: 1;"></span>
+            <kbd style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5A6474; border: 1px solid #1C2530; border-radius: 4px; padding: 2px 6px;">R</kbd>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 8px;" style-hover="background: #10141B;">
+            <span style="color: #22D3EE; font-size: 13px;">✦</span>
+            <span style="font-size: 13px; color: #B8C0CC;">Preguntar a la IA: "msku…"</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-top: 1px solid #151A21; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #5A6474;">
+          <span>↑↓ navegar</span><span>↵ abrir</span><span>tab acciones</span>
+          <span style="flex: 1;"></span>
+          <span style="color: #22D3EE;">⌘K</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 2F — DESIGN SYSTEM ════════ -->
+  <div id="2f" style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <a href="#2f" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #06090B; background: #22D3EE; padding: 3px 9px; border-radius: 5px; text-decoration: none;">2f</a>
+      <span style="font-size: 14px; font-weight: 600; color: #E6EAF0;">Design system — handoff Next.js + Tailwind</span>
+    </div>
+
+    <div data-screen-label="2f — Design system" style="width: 1512px; background: #0A0C10; border: 1px solid #1A1F27; border-radius: 12px; overflow: hidden; color: #E6EAF0; font-family: 'Archivo', sans-serif; padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 24px;">
+
+      <div style="display: flex; align-items: baseline; gap: 14px;">
+        <span style="font-size: 17px; font-weight: 700; letter-spacing: 0.1em; font-stretch: 120%;">FLIGHT DECK — TOKENS</span>
+        <span style="font-size: 12px; color: #6B7585;">nombres listos para tailwind.config · Archivo (display/UI) + JetBrains Mono (números, IDs, timestamps — siempre tabular-nums)</span>
+      </div>
+
+      <!-- color -->
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+        <div style="background: #0E1218; border-radius: 12px; padding: 18px 22px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 12px;">SUPERFICIES Y TEXTO</div>
+          <sc-for list="{{ tokensBase }}" as="t" hint-placeholder-count="10">
+            <div style="display: grid; grid-template-columns: 26px 190px 92px 1fr; gap: 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid #10141B;">
+              <span style="width: 24px; height: 24px; border-radius: 6px; background: {{ t.hex }}; border: 1px solid #1C2530;"></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #22D3EE;">{{ t.token }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A94A6;">{{ t.hex }}</span>
+              <span style="font-size: 11.5px; color: #6B7585;">{{ t.uso }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background: #0E1218; border-radius: 12px; padding: 18px 22px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 12px;">ACCIÓN Y ESTADOS (SEMÁFORO)</div>
+          <sc-for list="{{ tokensEstado }}" as="t" hint-placeholder-count="9">
+            <div style="display: grid; grid-template-columns: 26px 190px 92px 1fr; gap: 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid #10141B;">
+              <span style="width: 24px; height: 24px; border-radius: 6px; background: {{ t.hex }}; border: 1px solid #1C2530;"></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #22D3EE;">{{ t.token }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A94A6;">{{ t.hex }}</span>
+              <span style="font-size: 11.5px; color: #6B7585;">{{ t.uso }}</span>
+            </div>
+          </sc-for>
+          <div style="font-size: 11px; color: #5A6474; margin-top: 10px; line-height: 1.5;">Glow solo en crítico: <span style="font-family: 'JetBrains Mono', monospace; color: #8A94A6;">shadow-glow-red = 0 0 10px rgba(248,81,73,.6)</span> · nunca sobre texto de datos.</div>
+        </div>
+      </div>
+
+      <!-- tipo + spacing + motion -->
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 20px;">
+        <div style="background: #0E1218; border-radius: 12px; padding: 18px 22px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 12px;">TIPOGRAFÍA</div>
+          <sc-for list="{{ tipo }}" as="t" hint-placeholder-count="6">
+            <div style="display: flex; align-items: baseline; gap: 14px; padding: 7px 0; border-bottom: 1px solid #10141B;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE; width: 128px; flex-shrink: 0;">{{ t.token }}</span>
+              <span style="{{ t.css }}">{{ t.demo }}</span>
+              <span style="flex: 1;"></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #5A6474; text-align: right;">{{ t.spec }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background: #0E1218; border-radius: 12px; padding: 18px 22px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 12px;">SPACING · RADII</div>
+          <sc-for list="{{ spacing }}" as="s" hint-placeholder-count="7">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid #10141B;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #22D3EE; width: 92px;">{{ s.token }}</span>
+              <span style="height: 10px; background: #164E5F; border-radius: 2px; width: {{ s.w }};"></span>
+              <span style="flex: 1;"></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8A94A6;">{{ s.px }}</span>
+            </div>
+          </sc-for>
+          <div style="font-size: 11px; color: #5A6474; margin-top: 10px;">radius: 6 (chips) · 9 (inputs, cells) · 12 (paneles) · escala base 4px</div>
+        </div>
+        <div style="background: #0E1218; border-radius: 12px; padding: 18px 22px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 12px;">MOTION</div>
+          <sc-for list="{{ motion }}" as="m" hint-placeholder-count="6">
+            <div style="display: flex; align-items: baseline; gap: 12px; padding: 6px 0; border-bottom: 1px solid #10141B;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #22D3EE; width: 128px; flex-shrink: 0;">{{ m.token }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8A94A6;">{{ m.val }}</span>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 11px; color: #5A6474; text-align: right;">{{ m.uso }}</span>
+            </div>
+          </sc-for>
+          <div style="font-size: 11px; color: #5A6474; margin-top: 10px; line-height: 1.5;">Regla: motion comunica causalidad — nada anima si no cambió un dato o una vista. Skeletons, jamás spinners.</div>
+        </div>
+      </div>
+
+      <!-- componentes -->
+      <div style="background: #0E1218; border-radius: 12px; padding: 18px 22px;">
+        <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 16px;">COMPONENTES CLAVE</div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;KpiCard&gt;</span>
+            <div style="background: #0A0C10; border: 1px solid #151A21; border-radius: 10px; padding: 14px 18px;">
+              <div style="font-size: 10.5px; letter-spacing: 0.13em; color: #6B7585; text-transform: uppercase; margin-bottom: 6px;">Costo proyectado</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; color: #FF8A83; font-variant-numeric: tabular-nums;"><span style="font-size: 15px; color: #B05A55; vertical-align: 10px; margin-right: 4px;">US$</span>18.640</div>
+              <div style="font-size: 11px; color: #8A94A6; margin-top: 5px;">count-up 1.3 s al montar</div>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">label uppercase text-2xs/muted · valor mono 42/tabular · variante crítica tiñe valor y fondo (grad 5%)</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;StatusBadge&gt; · 4 estados</span>
+            <div style="background: #0A0C10; border: 1px solid #151A21; border-radius: 10px; padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+              <span style="font-size: 11px; font-weight: 600; color: #34D399; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.3); border-radius: 6px; padding: 4px 10px;">EN FREE TIME</span>
+              <span style="font-size: 11px; font-weight: 600; color: #F0B849; background: rgba(240,184,73,0.08); border: 1px solid rgba(240,184,73,0.3); border-radius: 6px; padding: 4px 10px;">VENCE &lt;72 H</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #F85149; background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.35); border-radius: 6px; padding: 4px 10px; box-shadow: 0 0 12px rgba(248,81,73,0.15);"><span style="width: 6px; height: 6px; border-radius: 50%; background: #F85149; animation: pulseDot 2s ease-in-out infinite;"></span>EN DEMORA</span>
+              <span style="font-size: 11px; font-weight: 600; color: #8A94A6; background: rgba(138,148,166,0.08); border: 1px solid #1C2530; border-radius: 6px; padding: 4px 10px;">CERRADO</span>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">transición verde→ámbar→rojo: cross-fade de color 250 ms ease-out · solo rojo lleva dot pulsante + glow</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;RadialTimer&gt;</span>
+            <div style="background: #0A0C10; border: 1px solid #151A21; border-radius: 10px; padding: 14px 18px; display: flex; gap: 18px; align-items: center;">
+              <svg width="52" height="52" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9155" fill="none" stroke="#151A21" stroke-width="3"></circle><circle cx="18" cy="18" r="15.9155" fill="none" stroke="#34D399" stroke-width="3" stroke-dasharray="42 58" stroke-linecap="round" transform="rotate(-90 18 18)"></circle><text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="600" fill="#34D399" font-family="JetBrains Mono, monospace">8d</text></svg>
+              <svg width="52" height="52" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9155" fill="none" stroke="#151A21" stroke-width="3"></circle><circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0B849" stroke-width="3" stroke-dasharray="82 18" stroke-linecap="round" transform="rotate(-90 18 18)"></circle><text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="600" fill="#F0B849" font-family="JetBrains Mono, monospace">52h</text></svg>
+              <svg width="52" height="52" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9155" fill="none" stroke="#151A21" stroke-width="3"></circle><circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F85149" stroke-width="3" stroke-dasharray="100 0" transform="rotate(-90 18 18)" style="filter: drop-shadow(0 0 4px rgba(248,81,73,0.5));"></circle><text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="600" fill="#F85149" font-family="JetBrains Mono, monospace">+6d</text></svg>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">r=15.9155, stroke 3, dasharray = "pct 100-pct" · anima dasharray 800 ms cubic-bezier(.16,1,.3,1) · rojo = 100% + glow, sin linecap</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;DataRow&gt;</span>
+            <div style="background: #0A0C10; border: 1px solid #151A21; border-radius: 10px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 24px 1fr 60px 76px; gap: 10px; align-items: center; padding: 9px 14px; border-left: 2px solid #F85149; border-bottom: 1px solid #10141B;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #F85149; box-shadow: 0 0 8px rgba(248,81,73,0.5);"></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>482910</span><span style="color: #5A6474;">3</span></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #F85149; text-align: right;">−6</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #FF8A83; text-align: right;">1.260</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 24px 1fr 60px 76px; gap: 10px; align-items: center; padding: 9px 14px; background: #10141B;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #34D399;"></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>771029</span><span style="color: #5A6474;">4</span></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #34D399; text-align: right;">5</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #5A6474; text-align: right;">—</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">altura 36 px · hover bg-surface-2 · border-left 2 px solo en rojo · dot semáforo siempre col 1 · números right-aligned tabular</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;CommandPalette&gt;</span>
+            <div style="background: #0A0C10; border: 1px solid #1C2530; border-radius: 10px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.5);">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #151A21;">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#22D3EE" stroke-width="1.5"></circle><path d="m10.5 10.5 3 3" stroke="#22D3EE" stroke-width="1.5" stroke-linecap="round"></path></svg>
+                <span style="font-size: 12.5px; color: #5A6474;">buscar contenedor, acción o vista…</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #10202A; border-left: 2px solid #22D3EE;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>482910</span><span style="color: #5A6474;">3</span></span>
+                <span style="flex: 1;"></span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #22D3EE;">↵</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">640 px · abre scale(.98)→1 + fade 200 ms cubic-bezier(.16,1,.3,1) · backdrop rgba(4,5,7,.55) · selección bg #10202A + border-left accent</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;ContainerNumber&gt;</span>
+            <div style="background: #0A0C10; border: 1px solid #151A21; border-radius: 10px; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; user-select: all;"><span style="color: #22D3EE;">MSKU</span><span>482910</span><span style="color: #5A6474;">3</span></span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-variant-numeric: tabular-nums; user-select: all; color: #B8C0CC;">MSKU4829103</span>
+              <span style="font-size: 10.5px; color: #4E9F7E;">✓ un click selecciona todo · copiar devuelve "MSKU4829103"</span>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">API: value: string — recibe numero_contenedor ENTERO (campo único en DB, sin adapter) y parte interno con slice(0,4) / slice(4,10) / slice(10,11) · spans adyacentes SIN whitespace: en JSX van en líneas distintas (el newline se elimina); un espacio en la misma línea rompe el copy · user-select: all + mono tabular · colorize=false → span único · solo display: no toca lib/iso6346.ts</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #22D3EE;">&lt;SkeletonRow&gt; · loading</span>
+            <div style="background: #0A0C10; border: 1px solid #151A21; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 12px; align-items: center;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #151A21;"></span><span style="height: 10px; width: 38%; border-radius: 5px; background: linear-gradient(90deg, #10141B, #1A2029, #10141B); background-size: 200% 100%; animation: pulseDot 1.4s ease-in-out infinite;"></span><span style="flex: 1;"></span><span style="height: 10px; width: 15%; border-radius: 5px; background: #10141B;"></span></div>
+              <div style="display: flex; gap: 12px; align-items: center;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #151A21;"></span><span style="height: 10px; width: 46%; border-radius: 5px; background: linear-gradient(90deg, #10141B, #1A2029, #10141B); background-size: 200% 100%; animation: pulseDot 1.4s ease-in-out 0.15s infinite;"></span><span style="flex: 1;"></span><span style="height: 10px; width: 12%; border-radius: 5px; background: #10141B;"></span></div>
+            </div>
+            <span style="font-size: 11px; color: #5A6474; line-height: 1.5;">shimmer 1.4 s, stagger 150 ms por fila · misma grilla que la fila real para evitar layout shift · estados vacío/error: mensaje 13 px + acción de retry en accent</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;animaciones&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Motion&quot; }
+}">
+class Component extends DCLogic {
+  state = { p: 0, hora: "" };
+
+  componentDidMount() {
+    this._setHora();
+    this._t = setInterval(() => this._setHora(), 30000);
+    if ((this.props.animaciones ?? true) === false) { this.setState({ p: 1 }); return; }
+    const t0 = performance.now(), dur = 1300;
+    const step = (t) => {
+      const x = Math.min(1, (t - t0) / dur);
+      this.setState({ p: 1 - Math.pow(1 - x, 3) });
+      if (x < 1) this._raf = requestAnimationFrame(step);
+    };
+    this._raf = requestAnimationFrame(step);
+  }
+
+  componentWillUnmount() { clearInterval(this._t); if (this._raf) cancelAnimationFrame(this._raf); }
+
+  _setHora() {
+    this.setState({ hora: new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) });
+  }
+
+  // ISO 6346: check digit real (letras 10-38 salteando múltiplos de 11, pesos 2^i, mod 11 mod 10)
+  _cn(base) {
+    if (!this._M) {
+      const M = {}; let v = 10;
+      for (const ch of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") { if (v % 11 === 0) v++; M[ch] = v; v++; }
+      this._M = M;
+    }
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+      const ch = base[i];
+      sum += (ch >= "0" && ch <= "9" ? +ch : this._M[ch]) * Math.pow(2, i);
+    }
+    const chk = String(sum % 11 % 10);
+    return { id: base + chk, pre: base.slice(0, 4), ser: base.slice(4, 10), chk };
+  }
+
+  renderVals() {
+    const p = this.state.p;
+    const n = (v) => Math.round(v * p).toLocaleString("es-AR");
+    const C = (b) => this._cn(b);
+
+    const criticos = [
+      { ...C("MSKU482910"), naviera: "Maersk",      pos: "Planta Bahía",  demora: "+6 d", tarifa: "210", acum: "US$ 1.260" },
+      { ...C("TCLU903184"), naviera: "MSC",         pos: "Planta Abbott", demora: "+4 d", tarifa: "180", acum: "US$ 720" },
+      { ...C("HLBU229045"), naviera: "Hapag-Lloyd", pos: "Planta Bahía",  demora: "+3 d", tarifa: "165", acum: "US$ 495" },
+      { ...C("CMAU771263"), naviera: "CMA CGM",     pos: "Planta Bahía",  demora: "+2 d", tarifa: "165", acum: "US$ 330" },
+      { ...C("ONEU550912"), naviera: "ONE",         pos: "Planta Abbott", demora: "+2 d", tarifa: "140", acum: "US$ 280" }
+    ];
+    const ambar = [
+      { ...C("SUDU118472"), naviera: "Maersk",      pos: "Planta Bahía",  resta: "38 h", pct: "89%", hrs: "38h", dash: "89 11", vence: "sáb 09:00" },
+      { ...C("MEDU664201"), naviera: "MSC",         pos: "Planta Abbott", resta: "52 h", pct: "82%", hrs: "52h", dash: "82 18", vence: "sáb 23:00" },
+      { ...C("HLXU040913"), naviera: "Hapag-Lloyd", pos: "Tránsito → terminal", resta: "61 h", pct: "77%", hrs: "61h", dash: "77 23", vence: "dom 08:00" },
+      { ...C("EGHU887320"), naviera: "Evergreen",   pos: "Planta Bahía",  resta: "70 h", pct: "73%", hrs: "70h", dash: "73 27", vence: "dom 17:00" }
+    ];
+    const verdes = [
+      { naviera: "Maersk",      n: "12", pct: "100%", min: "5 d" },
+      { naviera: "MSC",         n: "8",  pct: "67%",  min: "4 d" },
+      { naviera: "Hapag-Lloyd", n: "6",  pct: "50%",  min: "6 d" },
+      { naviera: "CMA CGM",     n: "4",  pct: "33%",  min: "7 d" },
+      { naviera: "ONE",         n: "2",  pct: "17%",  min: "5 d" },
+      { naviera: "Evergreen",   n: "1",  pct: "8%",   min: "9 d" }
+    ];
+    const posicion = [
+      { lugar: "Planta Bahía",       n: "18", pct: "100%", color: "#22D3EE" },
+      { lugar: "Planta Abbott",      n: "11", pct: "61%",  color: "#22D3EE" },
+      { lugar: "Depósito (vacíos)",  n: "9",  pct: "50%",  color: "#3D4654" },
+      { lugar: "En tránsito",        n: "6",  pct: "33%",  color: "#3D4654" },
+      { lugar: "Terminal (gate-in)", n: "3",  pct: "17%",  color: "#3D4654" }
+    ];
+    const feed = [
+      { t: "14:32", color: "#34D399", txt: "Gate-in terminal " + C("MSKU402113").id + " (Maersk) — reloj detenido" },
+      { t: "13:57", color: "#22D3EE", txt: "Egreso planta Bahía " + C("TCLU771834").id + " → terminal, camión" },
+      { t: "13:04", color: "#F0B849", txt: C("SUDU118472").id + " pasó a ámbar — quedan 38 h de free time" },
+      { t: "11:48", color: "#8A94A6", txt: "Retiro de vacío " + C("CMAU902241").id + " en depósito Loginter" },
+      { t: "10:15", color: "#8A94A6", txt: "Booking 254118732 asignado a 4 contenedores (MSC)" },
+      { t: "09:31", color: "#F85149", txt: C("ONEU550912").id + " entró en demora — tarifa US$ 140/día" }
+    ];
+
+    const RED = "#F85149", AMB = "#F0B849", GRN = "#34D399";
+    const glowR = "0 0 8px rgba(248,81,73,0.5)", noGlow = "none";
+    const mk = (sem, base, naviera, tipo, pos, estado, estCol, estBg, retiro, estadia, libres, rest, restCol, tarifa, costo, costoCol, glow) =>
+      Object.assign({ sem, naviera, tipo, pos, estado, estCol, estBg, retiro, estadia, libres, rest, restCol, tarifa, costo, costoCol, glow }, C(base));
+    const eN = "#8A94A6", eNbg = "rgba(138,148,166,0.08)", eC = "#22D3EE", eCbg = "rgba(34,211,238,0.08)", eG = "#34D399", eGbg = "rgba(52,211,153,0.08)";
+    const filas = [
+      mk(RED, "MSKU482910", "Maersk", "40HC", "Planta Bahía", "cargado", eC, eCbg, "12/06", "21", "14", "−6", RED, "210", "1.260", "#FF8A83", glowR),
+      mk(RED, "TCLU903184", "MSC", "40HC", "Planta Abbott", "en planta", eG, eGbg, "14/06", "19", "15", "−4", RED, "180", "720", "#FF8A83", glowR),
+      mk(RED, "HLBU229045", "Hapag-Lloyd", "40DC", "Planta Bahía", "cargado", eC, eCbg, "16/06", "17", "14", "−3", RED, "165", "495", "#FF8A83", glowR),
+      mk(RED, "CMAU771263", "CMA CGM", "40HC", "Planta Bahía", "en planta", eG, eGbg, "17/06", "16", "14", "−2", RED, "165", "330", "#FF8A83", glowR),
+      mk(RED, "ONEU550912", "ONE", "40HC", "Planta Abbott", "cargado", eC, eCbg, "18/06", "15", "13", "−2", RED, "140", "280", "#FF8A83", glowR),
+      mk(AMB, "SUDU118472", "Maersk", "40HC", "Planta Bahía", "cargado", eC, eCbg, "22/06", "11", "14", "2", AMB, "210", "—", "#5A6474", noGlow),
+      mk(AMB, "MEDU664201", "MSC", "40DC", "Planta Abbott", "en planta", eG, eGbg, "23/06", "10", "15", "3", AMB, "180", "—", "#5A6474", noGlow),
+      mk(AMB, "HLXU040913", "Hapag-Lloyd", "40HC", "Tránsito → terminal", "en tránsito", eN, eNbg, "24/06", "9", "14", "3", AMB, "165", "—", "#5A6474", noGlow),
+      mk(AMB, "EGHU887320", "Evergreen", "40HC", "Planta Bahía", "cargado", eC, eCbg, "25/06", "8", "12", "3", AMB, "150", "—", "#5A6474", noGlow),
+      mk(GRN, "MSKU771029", "Maersk", "40HC", "Planta Bahía", "en planta", eG, eGbg, "27/06", "6", "14", "5", GRN, "210", "—", "#5A6474", noGlow),
+      mk(GRN, "MSCU448210", "MSC", "40DC", "Tránsito → planta", "en tránsito", eN, eNbg, "28/06", "5", "15", "6", GRN, "180", "—", "#5A6474", noGlow),
+      mk(GRN, "HLBU990241", "Hapag-Lloyd", "40HC", "Planta Bahía", "en planta", eG, eGbg, "29/06", "4", "14", "6", GRN, "165", "—", "#5A6474", noGlow),
+      mk(GRN, "CMAU220154", "CMA CGM", "40HC", "Planta Bahía", "en planta", eG, eGbg, "30/06", "3", "14", "7", GRN, "165", "—", "#5A6474", noGlow),
+      mk(GRN, "ONEU483920", "ONE", "40HC", "Planta Abbott", "en planta", eG, eGbg, "01/07", "2", "13", "8", GRN, "140", "—", "#5A6474", noGlow),
+      mk(GRN, "MSCU991042", "MSC", "40HC", "Planta Abbott", "en planta", eG, eGbg, "01/07", "2", "15", "9", GRN, "180", "—", "#5A6474", noGlow),
+      mk(GRN, "MSKU320471", "Maersk", "40DC", "Planta Bahía", "en planta", eG, eGbg, "02/07", "1", "14", "13", GRN, "210", "—", "#5A6474", noGlow),
+      mk(GRN, "TCLU508172", "MSC", "40HC", "Tránsito → planta", "en tránsito", eN, eNbg, "02/07", "1", "15", "14", GRN, "180", "—", "#5A6474", noGlow),
+      mk(GRN, "HLXU772910", "Hapag-Lloyd", "40HC", "Planta Bahía", "en planta", eG, eGbg, "02/07", "1", "14", "13", GRN, "165", "—", "#5A6474", noGlow),
+      mk(GRN, "CMAU660391", "CMA CGM", "40DC", "Planta Abbott", "en planta", eG, eGbg, "03/07", "1", "14", "13", GRN, "165", "—", "#5A6474", noGlow),
+      mk(GRN, "ONEU220183", "ONE", "40HC", "Planta Bahía", "en planta", eG, eGbg, "03/07", "1", "13", "12", GRN, "140", "—", "#5A6474", noGlow),
+      mk(GRN, "EGHU431209", "Evergreen", "40HC", "Planta Bahía", "en planta", eG, eGbg, "03/07", "1", "12", "11", GRN, "150", "—", "#5A6474", noGlow),
+      mk(GRN, "SUDU990013", "Maersk", "40HC", "Planta Abbott", "en planta", eG, eGbg, "03/07", "1", "14", "13", GRN, "210", "—", "#5A6474", noGlow)
+    ];
+
+    const specs = [
+      { k: "Booking", v: "254118732" },
+      { k: "Buque / viaje", v: "MAERSK LOTA 428S" },
+      { k: "Destino", v: "Rotterdam, NL" },
+      { k: "Orden", v: "EXP-2611" },
+      { k: "SHP", v: "SHP-88412" },
+      { k: "Retiro de", v: "Dep. Loginter" },
+      { k: "Tarifa vigente", v: "US$ 210 / día" }
+    ];
+
+    const gris = "#3D4654", grisTxt = "#8A94A6";
+    const timeline = [
+      { fecha: "12/06", horaEv: "09:40", titulo: "Retiro de vacío", det: "Depósito Loginter, Bahía Blanca · booking retiro 254118732 · camión", dot: GRN, dotFill: GRN, dotGlow: "none", linea: "#22303B", titCol: "#E6EAF0", fechaCol: grisTxt, chip: "", chipCol: "", chipBorde: "" },
+      { fecha: "13/06", horaEv: "08:15", titulo: "Ingreso a planta Bahía", det: "Confirmado por operador · inicio de free time: día 1 de 14", dot: GRN, dotFill: GRN, dotGlow: "none", linea: "#22303B", titCol: "#E6EAF0", fechaCol: grisTxt, chip: "", chipCol: "", chipBorde: "" },
+      { fecha: "18/06", horaEv: "16:20", titulo: "Carga completada", det: "PE grado film · 26,4 t · precinto AR-99213 · reforzado confirmado", dot: GRN, dotFill: GRN, dotGlow: "none", linea: "#3A2A22", titCol: "#E6EAF0", fechaCol: grisTxt, chip: "", chipCol: "", chipBorde: "" },
+      { fecha: "26/06", horaEv: "00:00", titulo: "Fin del free time", det: "14 días libres consumidos — el reloj de detention empieza a correr", dot: RED, dotFill: "#0E1218", dotGlow: "none", linea: "#3A1D1E", titCol: "#F0B849", fechaCol: "#F0B849", chip: "HITO", chipCol: "#F0B849", chipBorde: "rgba(240,184,73,0.35)" },
+      { fecha: "HOY", horaEv: "03/07", titulo: "Día 6 de demora", det: "US$ 1.260 acumulados · US$ 210 se suman cada día que no egresa", dot: RED, dotFill: RED, dotGlow: "0 0 10px rgba(248,81,73,0.7)", linea: "#22303B", titCol: "#F85149", fechaCol: "#F85149", chip: "EN CURSO", chipCol: "#F85149", chipBorde: "rgba(248,81,73,0.4)" },
+      { fecha: "05/07", horaEv: "est.", titulo: "Egreso a terminal", det: "Programado · camión asignado pendiente de confirmación", dot: gris, dotFill: "#0E1218", dotGlow: "none", linea: "#22303B", titCol: grisTxt, fechaCol: "#5A6474", chip: "", chipCol: "", chipBorde: "" },
+      { fecha: "07/07", horaEv: "est.", titulo: "Gate-in / embarque", det: "MAERSK LOTA 428S → Rotterdam · el gate-in detiene el reloj", dot: gris, dotFill: "#0E1218", dotGlow: "none", linea: "transparent", titCol: grisTxt, fechaCol: "#5A6474", chip: "", chipCol: "", chipBorde: "" }
+    ];
+
+    const cargos = [
+      { item: "Detention acumulado", calc: "6 días × US$ 210", monto: "US$ 1.260", col: "#FF8A83" },
+      { item: "Proyección hasta gate-in", calc: "3 días est. × US$ 210", monto: "US$ 630", col: "#F0B849" },
+      { item: "Waiver / descuentos", calc: "sin waiver solicitado", monto: "US$ 0", col: "#8A94A6" }
+    ];
+
+    const alertasRojas = criticos.map((c) => ({ id: c.id, naviera: c.naviera, pos: c.pos, demora: c.demora, tarifa: c.tarifa, acum: c.acum }));
+    const alertasProx = [
+      { ...C("MSKU771029"), naviera: "Maersk",      pos: "Planta Bahía",  pct: "64%", rest: "5 d" },
+      { ...C("MSCU448210"), naviera: "MSC",         pos: "Tránsito → planta", pct: "60%", rest: "6 d" },
+      { ...C("HLBU990241"), naviera: "Hapag-Lloyd", pos: "Planta Bahía",  pct: "57%", rest: "6 d" },
+      { ...C("CMAU220154"), naviera: "CMA CGM",     pos: "Planta Bahía",  pct: "50%", rest: "7 d" },
+      { ...C("ONEU483920"), naviera: "ONE",         pos: "Planta Abbott", pct: "46%", rest: "8 d" },
+      { ...C("EGHU112904"), naviera: "Evergreen",   pos: "Planta Bahía",  pct: "42%", rest: "9 d" }
+    ];
+
+    const tokensBase = [
+      { token: "bg-base",        hex: "#0A0C10", uso: "fondo de app" },
+      { token: "bg-rail",        hex: "#07090C", uso: "rail de navegación (nivel −1)" },
+      { token: "surface-1",      hex: "#0E1218", uso: "paneles (nivel +1)" },
+      { token: "surface-2",      hex: "#10141B", uso: "celdas anidadas, hover de fila" },
+      { token: "border-subtle",  hex: "#151A21", uso: "divisores estructurales" },
+      { token: "border-strong",  hex: "#1C2530", uso: "inputs, chips, controles" },
+      { token: "text-primary",   hex: "#E6EAF0", uso: "datos y títulos" },
+      { token: "text-secondary", hex: "#B8C0CC", uso: "celdas secundarias" },
+      { token: "text-muted",     hex: "#8A94A6", uso: "metadata" },
+      { token: "text-faint",     hex: "#5A6474", uso: "labels de columna, hints" }
+    ];
+    const tokensEstado = [
+      { token: "accent-500",   hex: "#22D3EE", uso: "acciones, foco, filtros activos, sort" },
+      { token: "accent-hover", hex: "#4ADEF5", uso: "hover de botón primario" },
+      { token: "accent-muted", hex: "#164E5F", uso: "bordes de chips accent" },
+      { token: "status-green", hex: "#34D399", uso: "en free time" },
+      { token: "status-amber", hex: "#F0B849", uso: "vence <72 h" },
+      { token: "status-red",   hex: "#F85149", uso: "en demora — dot, borde de fila, demora" },
+      { token: "status-red-soft", hex: "#FF8A83", uso: "montos USD en rojo (legible sobre dark)" },
+      { token: "amber-deep",   hex: "#D9A23C", uso: "labels ámbar uppercase" },
+      { token: "green-dim",    hex: "#4E9F7E", uso: "metadata verde secundaria" }
+    ];
+    const tipo = [
+      { token: "display-lg",  demo: "COMMAND CENTER", css: { fontFamily: "'Archivo', sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: "0.12em", fontStretch: "120%", color: "#E6EAF0" }, spec: "Archivo 700 · wdth 120 · track .12em" },
+      { token: "display-sm",  demo: "EN DEMORA", css: { fontFamily: "'Archivo', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", fontStretch: "115%", color: "#E6EAF0" }, spec: "Archivo 700 · wdth 115" },
+      { token: "num-hero",    demo: "18.640", css: { fontFamily: "'JetBrains Mono', monospace", fontSize: 34, fontWeight: 700, color: "#E6EAF0", fontVariantNumeric: "tabular-nums" }, spec: "JB Mono 700 · 42px real · tabular" },
+      { token: "num-cell",    demo: "1.260", css: { fontFamily: "'JetBrains Mono', monospace", fontSize: 13.5, fontWeight: 600, color: "#E6EAF0", fontVariantNumeric: "tabular-nums" }, spec: "JB Mono 600 · 13.5px" },
+      { token: "body",        demo: "Planta Bahía Blanca", css: { fontFamily: "'Archivo', sans-serif", fontSize: 12.5, color: "#B8C0CC" }, spec: "Archivo 400 · 12.5px" },
+      { token: "label-micro", demo: "COSTO PROYECTADO", css: { fontFamily: "'Archivo', sans-serif", fontSize: 10.5, letterSpacing: "0.13em", color: "#6B7585", textTransform: "uppercase" }, spec: "Archivo 400 · 10.5px · track .13em" }
+    ];
+    const spacing = [
+      { token: "space-1", px: "4px",  w: "4px" },
+      { token: "space-2", px: "8px",  w: "8px" },
+      { token: "space-3", px: "12px", w: "12px" },
+      { token: "space-4", px: "16px", w: "16px" },
+      { token: "space-5", px: "20px", w: "20px" },
+      { token: "space-6", px: "24px", w: "24px" },
+      { token: "row-h",   px: "36px", w: "36px" }
+    ];
+    const motion = [
+      { token: "duration-fast",  val: "150ms", uso: "hover, focus, chips" },
+      { token: "duration-base",  val: "200ms", uso: "palette, dropdowns, badges" },
+      { token: "duration-slow",  val: "250ms", uso: "view transitions" },
+      { token: "ease-out",       val: "cubic-bezier(.16,1,.3,1)", uso: "todo lo que entra" },
+      { token: "count-up",       val: "1300ms ease-out-cubic", uso: "KPIs al montar" },
+      { token: "stagger-row",    val: "40ms/fila · máx 10", uso: "reveal de listas" }
+    ];
+
+    return {
+      hora: this.state.hora || "—",
+      kActivos: n(47), kDemora: n(128), kCosto: n(18640), kDeadlines: n(9),
+      gaugeDash: p < 1 ? Math.round(p * 100) + " " + (100 - Math.round(p * 100)) : "100 0",
+      gaugeLabel: "+6 d",
+      criticos, ambar, verdes, posicion, feed, filas, specs, timeline, cargos,
+      alertasRojas, alertasAmbar: ambar, alertasProx,
+      tokensBase, tokensEstado, tipo, spacing, motion
+    };
+  }
+}
+</script>
+</body>
+</html>
