@@ -1,3 +1,8 @@
 node_modules/
 .next/
 *.Zone.Identifier
+
+# env files (nunca commitear secrets)
+.env
+.env.local
+.env*.local
