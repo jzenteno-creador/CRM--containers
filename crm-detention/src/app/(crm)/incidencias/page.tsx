@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Paginacion } from "@/components/ui";
 import { hoyAR, fmtFecha, ESTADO_LABELS } from "@/lib/format";
+import { ContainerNumber } from "@/components/container-number";
 
 const PAGE_SIZE = 25;
 
@@ -410,7 +411,7 @@ export default function IncidenciasPage() {
                           background: "transparent",
                         }}
                       >
-                        <span className="mono">{s.numero}</span>
+                        <span className="mono"><ContainerNumber value={s.numero} /></span>
                         <span className="badge badge-accent">
                           {ESTADO_LABELS[s.estado] ?? s.estado}
                         </span>
@@ -422,7 +423,7 @@ export default function IncidenciasPage() {
               {opSel ? (
                 <span className="note" style={{ marginTop: 4 }}>
                   <i className="ti ti-check" aria-hidden /> operación seleccionada:{" "}
-                  <span className="mono">{opSel.numero}</span> ·{" "}
+                  <span className="mono"><ContainerNumber value={opSel.numero} /></span> ·{" "}
                   {ESTADO_LABELS[opSel.estado] ?? opSel.estado}
                 </span>
               ) : (
@@ -598,8 +599,8 @@ export default function IncidenciasPage() {
                   <tr key={r.id}>
                     <td style={{ whiteSpace: "nowrap" }}>{fmtFecha(r.fecha)}</td>
                     <td>
-                      <Link href={`/contenedores/${r.operacion_id}`} className="mono">
-                        {r.numero_contenedor}
+                      <Link href={`/contenedores/${r.operacion_id}`} className="mono" style={{ textDecoration: "none" }}>
+                        <ContainerNumber value={r.numero_contenedor} />
                       </Link>
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>

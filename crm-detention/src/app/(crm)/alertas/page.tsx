@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Semaforo, Paginacion, ContainerIcon, FreetimeMeter } from "@/components/ui";
 import { fmtUSD, ESTADO_LABELS } from "@/lib/format";
+import { ContainerNumber } from "@/components/container-number";
 import type { VistaAlerta, Naviera } from "@/lib/types";
 
 const PAGE_SIZE = 50;
@@ -274,7 +275,9 @@ export default function AlertasPage() {
                 {filas.map((a) => (
                   <tr key={a.operacion_id}>
                     <td className="mono">
-                      <Link href={`/contenedores/${a.operacion_id}`}>{a.numero_contenedor}</Link>
+                      <Link href={`/contenedores/${a.operacion_id}`} style={{ textDecoration: "none" }}>
+                        <ContainerNumber value={a.numero_contenedor} />
+                      </Link>
                     </td>
                     <td className="hide-sm">{a.naviera}</td>
                     <td className="hide-sm">{a.planta_actual ?? "—"}</td>

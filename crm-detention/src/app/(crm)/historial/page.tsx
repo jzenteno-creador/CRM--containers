@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg } from "@/components/ui";
 import { fmtFecha, fmtUSD, TIPO_CIERRE_LABELS } from "@/lib/format";
+import { ContainerNumber } from "@/components/container-number";
 
 const POR_PAGINA = 50;
 
@@ -292,7 +293,7 @@ function FilaConDetalle({
   return (
     <>
       <tr onClick={onToggle} style={{ cursor: "pointer" }} aria-expanded={abierta}>
-        <td className="mono">{f.numero_contenedor}</td>
+        <td className="mono"><ContainerNumber value={f.numero_contenedor} /></td>
         <td className="hide-sm">{f.naviera}</td>
         <td className="mono hide-sm">{fmtFecha(f.fecha_retiro)}</td>
         <td className="mono">{fmtFecha(f.fecha_devolucion)}</td>

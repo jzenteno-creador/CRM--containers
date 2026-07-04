@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { parsearListaContenedores } from "@/lib/iso6346";
+import { ContainerNumber } from "@/components/container-number";
 import { hoyAR } from "@/lib/format";
 import type { Naviera, Planta, ReforzadoEstado } from "@/lib/types";
 import { mensajeDeError } from "./errores";
@@ -354,7 +355,7 @@ export function FaseRetiro({
             <tbody>
               {filas.map((f) => (
                 <tr key={f.numero}>
-                  <td className="mono">{f.numero}</td>
+                  <td className="mono"><ContainerNumber value={f.numero} /></td>
                   <td>{f.existente ? f.existente.navieras?.nombre ?? "—" : f.estado === "error" ? "—" : navieraNombre}</td>
                   <td>{f.existente ? f.existente.tipo : f.estado === "error" ? "—" : tipo}</td>
                   <td>

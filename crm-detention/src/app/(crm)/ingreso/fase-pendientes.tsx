@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Paginacion } from "@/components/ui";
+import { ContainerNumber } from "@/components/container-number";
 import { hoyAR, fmtFecha, diasDesde } from "@/lib/format";
 import { mensajeDeError } from "./errores";
 
@@ -188,7 +189,13 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
                           aria-label={`seleccionar ${r.contenedores?.numero_contenedor ?? r.id}`}
                         />
                       </td>
-                      <td className="mono">{r.contenedores?.numero_contenedor ?? "—"}</td>
+                      <td className="mono">
+                        {r.contenedores?.numero_contenedor ? (
+                          <ContainerNumber value={r.contenedores.numero_contenedor} />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>{r.contenedores?.navieras?.nombre ?? "—"}</td>
                       <td>{r.retiro_de}</td>
                       <td>{mov?.plantas?.nombre ?? "—"}</td>

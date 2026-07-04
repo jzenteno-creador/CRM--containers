@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Paginacion, ContainerIcon } from "@/components/ui";
 import { fmtFecha, diasEstadia, ESTADO_LABELS } from "@/lib/format";
+import { ContainerNumber } from "@/components/container-number";
 import type { Naviera, OperacionEstado, Planta, ReforzadoEstado } from "@/lib/types";
 
 const PAGE_SIZE = 50;
@@ -345,8 +346,8 @@ export default function ContenedoresPage() {
                           }}
                         >
                           <td className="mono">
-                            <Link href={`/contenedores/${f.id}`}>
-                              {f.contenedores.numero_contenedor}
+                            <Link href={`/contenedores/${f.id}`} style={{ textDecoration: "none" }}>
+                              <ContainerNumber value={f.contenedores.numero_contenedor} />
                             </Link>
                           </td>
                           <td className="hide-sm">{f.contenedores.navieras?.nombre ?? "—"}</td>

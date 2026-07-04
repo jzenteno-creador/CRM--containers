@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg, Semaforo, Paginacion } from "@/components/ui";
 import { parsearListaContenedores } from "@/lib/iso6346";
+import { ContainerNumber } from "@/components/container-number";
 import { hoyAR, fmtFecha, diasDesde, TIPO_CIERRE_LABELS } from "@/lib/format";
 import type { VistaAlerta, Planta, TipoCierre } from "@/lib/types";
 
@@ -407,7 +408,7 @@ export default function EgresoPage() {
                           aria-label={`seleccionar ${r.numero_contenedor}`}
                         />
                       </td>
-                      <td className="mono">{r.numero_contenedor}</td>
+                      <td className="mono"><ContainerNumber value={r.numero_contenedor} /></td>
                       <td>{r.naviera}</td>
                       <td>{r.planta_actual ?? "—"}</td>
                       <td>
@@ -587,7 +588,13 @@ export default function EgresoPage() {
                           aria-label={`seleccionar ${r.contenedores?.numero_contenedor ?? r.id}`}
                         />
                       </td>
-                      <td className="mono">{r.contenedores?.numero_contenedor ?? "—"}</td>
+                      <td className="mono">
+                        {r.contenedores?.numero_contenedor ? (
+                          <ContainerNumber value={r.contenedores.numero_contenedor} />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>{TIPO_CIERRE_LABELS[r.tipo_cierre] ?? r.tipo_cierre}</td>
                       <td>{r.destino ?? "—"}</td>
                       <td>{fmtFecha(r.fecha_egreso_planta)}</td>

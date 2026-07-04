@@ -18,6 +18,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, ErrorMsg, Vacio } from "@/components/ui";
+import { ContainerNumber } from "@/components/container-number";
 import {
   hoyAR,
   fmtFecha,
@@ -336,7 +337,7 @@ export default function FichaOperacionPage() {
       >
         <div>
           <div className="mono" style={{ fontSize: 22, fontWeight: 600 }}>
-            {cont.numero_contenedor}
+            <ContainerNumber value={cont.numero_contenedor} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
             <span className="chip">
