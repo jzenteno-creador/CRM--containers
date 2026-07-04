@@ -17,7 +17,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, Vacio, ErrorMsg, Paginacion, ContainerIcon } from "@/components/ui";
+import { Vacio, ErrorMsg, Paginacion, ContainerIcon } from "@/components/ui";
 import { fmtFecha, fmtUSD, diasEstadia, ESTADO_LABELS } from "@/lib/format";
 import { ContainerNumber } from "@/components/container-number";
 import { SkeletonRowsTable } from "@/components/fd/skeleton-row";

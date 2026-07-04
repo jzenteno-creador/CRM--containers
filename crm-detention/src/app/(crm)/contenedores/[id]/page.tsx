@@ -38,7 +38,6 @@ import type {
   OperacionEvento,
   Planta,
   ReforzadoEstado,
-  TipoEvento,
   VistaAlerta,
   VistaCostoCerrado,
 } from "@/lib/types";
@@ -75,12 +74,6 @@ function chipReforzado(estado: ReforzadoEstado): string {
   return "chip";
 }
 
-function dotEvento(tipo: TipoEvento): string {
-  if (tipo === "anulacion") return "dot dot-rojo";
-  if (tipo === "incidencia") return "dot dot-amarillo";
-  return "dot dot-verde";
-}
-
 /** detalle jsonb → "clave: valor · clave: valor" (solo valores simples). */
 function detalleLegible(detalle: Record<string, unknown> | null): string {
   if (!detalle) return "";
@@ -92,15 +85,6 @@ function detalleLegible(detalle: Record<string, unknown> | null): string {
     }
   }
   return partes.join(" · ");
-}
-
-function Dato({ label, valor }: { label: string; valor: string | null | undefined }) {
-  return (
-    <div className="f">
-      <label>{label}</label>
-      <div>{valor && valor !== "" ? valor : "—"}</div>
-    </div>
-  );
 }
 
 export default function FichaOperacionPage() {

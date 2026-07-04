@@ -57,27 +57,35 @@ export function CommandPalette() {
     };
   }, []);
 
+  // el reset se hace al CERRAR (cerrar()), así abrir siempre encuentra estado limpio y el
+  // effect solo sincroniza con el DOM (focus) — regla react-hooks/set-state-in-effect
+  const cerrar = useCallback(() => {
+    setAbierta(false);
+    setQ("");
+    setResultados([]);
+    setSel(0);
+    setBuscando(false);
+  }, []);
+
   useEffect(() => {
     if (abierta) {
-      setQ("");
-      setResultados([]);
-      setSel(0);
       // focus después del mount del modal
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [abierta]);
 
-  // búsqueda debounced 250ms sobre vista_alertas (solo operaciones abiertas)
+  // búsqueda debounced 250ms sobre vista_alertas (solo operaciones abiertas).
+  // Todos los setState quedan dentro del timeout (regla react-hooks/set-state-in-effect).
   useEffect(() => {
     if (!abierta) return;
     const term = q.trim().replace(/[,()]/g, " ").trim();
-    if (!term) {
-      setResultados([]);
-      setBuscando(false);
-      return;
-    }
-    setBuscando(true);
     const t = setTimeout(async () => {
+      if (!term) {
+        setResultados([]);
+        setBuscando(false);
+        return;
+      }
+      setBuscando(true);
       let qy = supabase
         .from("vista_alertas")
         .select("*")
@@ -104,13 +112,13 @@ export function CommandPalette() {
       } else {
         router.push(ACCIONES[idx - resultados.length].href);
       }
-      setAbierta(false);
+      cerrar();
     },
-    [resultados, router],
+    [resultados, router, cerrar],
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") setAbierta(false);
+    if (e.key === "Escape") cerrar();
     else if (e.key === "ArrowDown") {
       e.preventDefault();
       setSel((s) => Math.min(items - 1, s + 1));
@@ -127,7 +135,7 @@ export function CommandPalette() {
 
   return (
     <div
-      onClick={() => setAbierta(false)}
+      onClick={cerrar}
       style={{
         position: "fixed",
         inset: 0,
