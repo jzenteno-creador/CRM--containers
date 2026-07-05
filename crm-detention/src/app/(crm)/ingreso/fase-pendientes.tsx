@@ -51,16 +51,30 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
+  // Operador con planta asignada → el filtro de planta va en el query (embed !inner)
+  // para que count y paginación cuenten solo SUS pendientes, no los de todas las plantas.
+  const plantaOperadorId = session.rol === "operador" ? session.plantaId : null;
+  const esOperador = !!plantaOperadorId;
+
   const cargar = useCallback(async () => {
     setError(null);
     const desde = page * PAGE_SIZE;
-    const { data, error, count } = await supabase
+    const embed = plantaOperadorId
+      ? "movimientos_planta!inner(planta_destino_id, medio, estado, plantas!movimientos_planta_planta_destino_id_fkey(nombre))"
+      : "movimientos_planta(planta_destino_id, medio, estado, plantas!movimientos_planta_planta_destino_id_fkey(nombre))";
+    let q = supabase
       .from("operaciones")
       .select(
-        "id, retiro_de, fecha_retiro, contenedores(numero_contenedor, navieras(nombre)), movimientos_planta(planta_destino_id, medio, estado, plantas!movimientos_planta_planta_destino_id_fkey(nombre))",
+        `id, retiro_de, fecha_retiro, contenedores(numero_contenedor, navieras(nombre)), ${embed}`,
         { count: "exact" }
       )
-      .eq("estado", "en_transito_a_planta")
+      .eq("estado", "en_transito_a_planta");
+    if (plantaOperadorId) {
+      q = q
+        .eq("movimientos_planta.estado", "en_transito")
+        .eq("movimientos_planta.planta_destino_id", plantaOperadorId);
+    }
+    const { data, error, count } = await q
       .order("fecha_retiro", { ascending: true })
       .range(desde, desde + PAGE_SIZE - 1);
     if (error) {
@@ -70,35 +84,44 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
       setTotal(count ?? 0);
     }
     setCargando(false);
-  }, [page]);
+  }, [page, plantaOperadorId]);
 
   useEffect(() => {
     setCargando(true);
     void cargar();
   }, [cargar, refreshTick]);
 
-  // Realtime: cualquier cambio en operaciones → refetch (sin recrear el canal)
+  // Realtime: cualquier cambio en operaciones → refetch (sin recrear el canal).
+  // Trailing debounce de 350ms: una tanda de N filas dispara N eventos → un solo refetch.
   const cargarRef = useRef(cargar);
   useEffect(() => {
     cargarRef.current = cargar;
   }, [cargar]);
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const ch = supabase
       .channel("ingreso-pendientes-operaciones")
       .on("postgres_changes", { event: "*", schema: "detention", table: "operaciones" }, () => {
-        void cargarRef.current();
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          void cargarRef.current();
+        }, 350);
       })
       .subscribe();
     return () => {
+      if (timer) clearTimeout(timer);
       void supabase.removeChannel(ch);
     };
   }, []);
 
-  // Operador → solo tandas cuyo movimiento en tránsito apunta a su planta
+  // Operador → el filtro de planta ya viene aplicado server-side en `cargar` (embed !inner);
+  // este filtro queda como red de seguridad para no seleccionar/confirmar filas de otra planta
+  // si el query devolviera algo inesperado.
   const visibles = useMemo(() => {
-    if (session.rol !== "operador" || !session.plantaId) return rows;
-    return rows.filter((r) => movEnTransito(r)?.planta_destino_id === session.plantaId);
-  }, [rows, session.rol, session.plantaId]);
+    if (!plantaOperadorId) return rows;
+    return rows.filter((r) => movEnTransito(r)?.planta_destino_id === plantaOperadorId);
+  }, [rows, plantaOperadorId]);
 
   const todasSeleccionadas = visibles.length > 0 && visibles.every((r) => sel.has(r.id));
 
@@ -161,7 +184,13 @@ export function FasePendientes({ refreshTick }: { refreshTick: number }) {
       ) : error ? (
         <ErrorMsg msg={error} onRetry={() => void cargar()} />
       ) : visibles.length === 0 ? (
-        <Vacio msg="sin retiros pendientes de ingreso" />
+        <Vacio
+          msg={
+            esOperador
+              ? "sin retiros pendientes de ingreso hacia tu planta"
+              : "sin retiros pendientes de ingreso"
+          }
+        />
       ) : (
         <>
           <div className="tblwrap">

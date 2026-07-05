@@ -51,6 +51,9 @@ export function FaseRetiro({
 }) {
   const session = useSession();
 
+  // Operador con planta asignada → planta destino fija (mismo patrón que Egreso fase 1)
+  const plantaFija = session.rol === "operador" && !!session.plantaId;
+
   // Encabezado (una vez para toda la tanda)
   const [navieraId, setNavieraId] = useState("");
   const [tipo, setTipo] = useState<(typeof TIPOS)[number]>("40HC");
@@ -68,6 +71,8 @@ export function FaseRetiro({
   const [prefijos, setPrefijos] = useState<Map<string, { armador: string; estado: string }>>(
     new Map()
   );
+  // Fail-visible: si la carga de prefijos falla, el chequeo de compliance NO corrió
+  const [prefijosError, setPrefijosError] = useState(false);
 
   // Verificación contra la base
   const [existentes, setExistentes] = useState<Map<string, ContenedorExistente>>(new Map());
@@ -88,19 +93,23 @@ export function FaseRetiro({
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("prefijos_restringidos")
         .select("prefijo, armador, estado");
-      if (!cancelado && data) {
-        setPrefijos(
-          new Map(
-            (data as { prefijo: string; armador: string; estado: string }[]).map((p) => [
-              p.prefijo,
-              { armador: p.armador, estado: p.estado },
-            ])
-          )
-        );
+      if (cancelado) return;
+      if (error || !data) {
+        setPrefijosError(true);
+        return;
       }
+      setPrefijosError(false);
+      setPrefijos(
+        new Map(
+          (data as { prefijo: string; armador: string; estado: string }[]).map((p) => [
+            p.prefijo,
+            { armador: p.armador, estado: p.estado },
+          ])
+        )
+      );
     })();
     return () => {
       cancelado = true;
@@ -295,14 +304,23 @@ export function FaseRetiro({
         )}
         <div className="f">
           <label>planta destino</label>
-          <select value={plantaDestinoId} onChange={(e) => setPlantaDestinoId(e.target.value)}>
-            <option value="">seleccioná…</option>
-            {plantas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
+          {plantaFija ? (
+            <span className="pill">
+              planta:{" "}
+              {session.plantaNombre ??
+                plantas.find((p) => p.id === session.plantaId)?.nombre ??
+                "—"}
+            </span>
+          ) : (
+            <select value={plantaDestinoId} onChange={(e) => setPlantaDestinoId(e.target.value)}>
+              <option value="">seleccioná…</option>
+              {plantas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="f">
           <label>booking de retiro</label>
@@ -339,6 +357,14 @@ export function FaseRetiro({
       </div>
 
       {errVerif && <div className="err">error verificando contenedores: {errVerif}</div>}
+
+      {prefijosError && (
+        <div className="err" role="alert">
+          <i className="ti ti-alert-triangle" aria-hidden />{" "}
+          no se pudo verificar prefijos restringidos para DOW — el chequeo de compliance no corrió;
+          validá manualmente con compliance antes de operar.
+        </div>
+      )}
 
       {restringidas.length > 0 && (
         <div className="err" role="alert">
