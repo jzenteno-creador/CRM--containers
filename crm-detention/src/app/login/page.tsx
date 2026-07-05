@@ -61,12 +61,6 @@ export default function LoginPage() {
               {pending ? "Ingresando…" : "Ingresar"}
             </button>
           </form>
-          <div className="note" style={{ marginTop: 18 }}>
-            <div style={{ marginBottom: 4 }}>usuarios demo:</div>
-            <div className="mono">admin@ssb.demo · admin123</div>
-            <div className="mono">supervisor@ssb.demo · super123</div>
-            <div className="mono">operador@ssb.demo · opera123</div>
-          </div>
         </div>
       </div>
     </div>
