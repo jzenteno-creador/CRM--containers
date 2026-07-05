@@ -9,10 +9,17 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Vacio, ErrorMsg } from "@/components/ui";
 import { SkeletonRowsTable } from "@/components/fd/skeleton-row";
-import { fmtFecha, fmtUSD, TIPO_CIERRE_LABELS } from "@/lib/format";
+import { fmtFecha, fmtUSD, hoyAR, TIPO_CIERRE_LABELS } from "@/lib/format";
 import { ContainerNumber } from "@/components/container-number";
+import { descargarCSV, type ColumnaCSV } from "@/lib/export-csv";
 
 const POR_PAGINA = 50;
+
+/** Columnas habilitadas para orden server-side por header (FE-04). */
+type ColumnaOrden = "numero_contenedor" | "naviera" | "fecha_devolucion" | "estadia" | "demora" | "costo_usd";
+
+/** Tope al traer TODO el filtro sin paginar (F-09 totales / F-01 export CSV). Hoy ~2.880 operaciones. */
+const LIMITE_SIN_PAGINAR = 5000;
 
 interface FilaCerrada {
   operacion_id: string;
@@ -93,12 +100,23 @@ function Detalle({ f }: { f: FilaCerrada }) {
 
 export default function HistorialPage() {
   const session = useSession();
+  const puedeExportar = session.rol === "supervisor" || session.rol === "administrador";
 
   const [navieras, setNavieras] = useState<string[]>([]);
   const [filas, setFilas] = useState<FilaCerrada[] | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
+  const [exportando, setExportando] = useState(false);
+
+  // F-09: totales agregados del filtro activo (costo, demora, estadía promedio)
+  const [totales, setTotales] = useState<{
+    n: number;
+    truncado: boolean;
+    sumCosto: number;
+    sumDemora: number;
+    avgEstadia: number;
+  } | null>(null);
 
   // Filtros
   const [q, setQ] = useState("");
@@ -108,15 +126,19 @@ export default function HistorialPage() {
   const [hasta, setHasta] = useState("");
   const [pagina, setPagina] = useState(0);
 
+  // FE-04: orden por columna (default igual al comportamiento previo: devolución desc)
+  const [ordenCol, setOrdenCol] = useState<ColumnaOrden>("fecha_devolucion");
+  const [ordenAsc, setOrdenAsc] = useState(false);
+
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 400);
     return () => clearTimeout(t);
   }, [q]);
 
-  // Al cambiar cualquier filtro se vuelve a la primera página
+  // Al cambiar cualquier filtro (o el orden) se vuelve a la primera página
   useEffect(() => {
     setPagina(0);
-  }, [qDebounced, naviera, desde, hasta]);
+  }, [qDebounced, naviera, desde, hasta, ordenCol, ordenAsc]);
 
   useEffect(() => {
     let cancelado = false;
@@ -134,8 +156,13 @@ export default function HistorialPage() {
       let query = supabase
         .from("vista_costos_cerrados")
         .select("*", { count: "exact" })
-        .order("fecha_devolucion", { ascending: false })
-        .order("numero_contenedor", { ascending: true });
+        .order(ordenCol, { ascending: ordenAsc });
+      if (ordenCol !== "numero_contenedor") {
+        query = query.order("numero_contenedor", { ascending: true });
+      }
+      // desempate final por PK: un mismo contenedor puede tener varios cierres históricos,
+      // así que ordenar solo por numero_contenedor no alcanza para que la paginación sea estable
+      query = query.order("operacion_id", { ascending: true });
 
       const term = limpiarBusqueda(qDebounced);
       if (term) {
@@ -159,15 +186,125 @@ export default function HistorialPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "error al cargar el historial");
     }
-  }, [qDebounced, naviera, desde, hasta, pagina, session.rol, session.plantaNombre]);
+  }, [qDebounced, naviera, desde, hasta, pagina, ordenCol, ordenAsc, session.rol, session.plantaNombre]);
+
+  // F-09: mismos filtros que `cargar` (naviera, rango, scope de planta), sin paginar.
+  // Approach: se probó el agregado nativo de PostgREST contra el proyecto —
+  // `.select("costo_usd.sum(),demora.sum(),estadia.avg()")` responde 400 PGRST123
+  // "Use of aggregate functions is not allowed" (agregados deshabilitados en este proyecto).
+  // Fallback usado: traer las 3 columnas numéricas de TODO el filtro (tope LIMITE_SIN_PAGINAR,
+  // sin range/paginar) y sumar/promediar client-side. `count: "exact"` viaja aparte (headers
+  // Content-Range de PostgREST) y no se ve afectado por `.limit()`, así que sirve para detectar
+  // si el filtro superó el tope y el cálculo quedó parcial.
+  const cargarTotales = useCallback(async () => {
+    try {
+      let query = supabase.from("vista_costos_cerrados").select("costo_usd, demora, estadia", { count: "exact" });
+
+      const term = limpiarBusqueda(qDebounced);
+      if (term) {
+        query = query.or(
+          `numero_contenedor.ilike.%${term}%,orden.ilike.%${term}%,booking_asignado.ilike.%${term}%,booking_retiro.ilike.%${term}%`
+        );
+      }
+      if (naviera) query = query.eq("naviera", naviera);
+      if (desde) query = query.gte("fecha_devolucion", `${desde}T00:00:00-03:00`);
+      if (hasta) query = query.lte("fecha_devolucion", `${hasta}T23:59:59-03:00`);
+      if (session.rol === "operador" && session.plantaNombre) {
+        query = query.eq("planta", session.plantaNombre);
+      }
+
+      const { data, error: qError, count } = await query.limit(LIMITE_SIN_PAGINAR);
+      if (qError) throw qError;
+      const numericas = (data ?? []) as { costo_usd: number | null; demora: number | null; estadia: number }[];
+      const n = numericas.length;
+      setTotales({
+        n,
+        truncado: (count ?? n) > n,
+        sumCosto: numericas.reduce((acc, f) => acc + (f.costo_usd ?? 0), 0),
+        sumDemora: numericas.reduce((acc, f) => acc + (f.demora ?? 0), 0),
+        avgEstadia: n === 0 ? 0 : numericas.reduce((acc, f) => acc + f.estadia, 0) / n,
+      });
+    } catch {
+      // los totales son un complemento — si falla, se oculta el strip y el error
+      // principal (si lo hay) ya lo muestra `cargar()` sobre la misma consulta base
+      setTotales(null);
+    }
+  }, [qDebounced, naviera, desde, hasta, session.rol, session.plantaNombre]);
+
+  // F-01: export CSV del filtro activo COMPLETO (no solo la página visible). Visible
+  // solo para supervisor/administrador (chequeo abajo con `puedeExportar`).
+  const exportarCSV = useCallback(async () => {
+    setExportando(true);
+    try {
+      let query = supabase
+        .from("vista_costos_cerrados")
+        .select(
+          "numero_contenedor, naviera, tipo_cierre, destino, fecha_retiro, fecha_devolucion, estadia, dias_libres, demora, tarifa_usd_dia, costo_usd"
+        )
+        .order(ordenCol, { ascending: ordenAsc });
+      if (ordenCol !== "numero_contenedor") {
+        query = query.order("numero_contenedor", { ascending: true });
+      }
+      query = query.order("operacion_id", { ascending: true });
+
+      const term = limpiarBusqueda(qDebounced);
+      if (term) {
+        query = query.or(
+          `numero_contenedor.ilike.%${term}%,orden.ilike.%${term}%,booking_asignado.ilike.%${term}%,booking_retiro.ilike.%${term}%`
+        );
+      }
+      if (naviera) query = query.eq("naviera", naviera);
+      if (desde) query = query.gte("fecha_devolucion", `${desde}T00:00:00-03:00`);
+      if (hasta) query = query.lte("fecha_devolucion", `${hasta}T23:59:59-03:00`);
+      if (session.rol === "operador" && session.plantaNombre) {
+        query = query.eq("planta", session.plantaNombre);
+      }
+
+      const { data, error: qError } = await query.limit(LIMITE_SIN_PAGINAR);
+      if (qError) throw qError;
+      const columnas: ColumnaCSV[] = [
+        { key: "numero_contenedor", label: "contenedor" },
+        { key: "naviera", label: "naviera" },
+        { key: "tipo_cierre", label: "tipo de cierre" },
+        { key: "destino", label: "destino" },
+        { key: "fecha_retiro", label: "fecha retiro" },
+        { key: "fecha_devolucion", label: "fecha devolución" },
+        { key: "estadia", label: "estadía" },
+        { key: "dias_libres", label: "días libres" },
+        { key: "demora", label: "demora" },
+        { key: "tarifa_usd_dia", label: "tarifa usd/día" },
+        { key: "costo_usd", label: "costo usd" },
+      ];
+      descargarCSV(`historial_${hoyAR()}`, columnas, (data ?? []) as Record<string, unknown>[]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "error al exportar CSV");
+    } finally {
+      setExportando(false);
+    }
+  }, [qDebounced, naviera, desde, hasta, ordenCol, ordenAsc, session.rol, session.plantaNombre]);
 
   useEffect(() => {
     void cargar();
-  }, [cargar]);
+    void cargarTotales();
+  }, [cargar, cargarTotales]);
 
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const desdeN = total === 0 ? 0 : pagina * POR_PAGINA + 1;
   const hastaN = Math.min(total, (pagina + 1) * POR_PAGINA);
+
+  // FE-04: un click en un header ya activo invierte el sentido; un header nuevo arranca asc
+  const toggleOrden = (col: ColumnaOrden) => {
+    if (ordenCol === col) {
+      setOrdenAsc((a) => !a);
+    } else {
+      setOrdenCol(col);
+      setOrdenAsc(true);
+    }
+  };
+  const ariaSort = (col: ColumnaOrden): "ascending" | "descending" | "none" =>
+    ordenCol === col ? (ordenAsc ? "ascending" : "descending") : "none";
+  const indicador = (col: ColumnaOrden) => (ordenCol === col ? (ordenAsc ? " ▲" : " ▼") : "");
+  const thOrdenable: React.CSSProperties = { cursor: "pointer", userSelect: "none" };
 
   return (
     <div>
@@ -182,8 +319,21 @@ export default function HistorialPage() {
         }}
       >
         <h2 className="fd-display" style={{ margin: 0, fontSize: 15 }}>historial de operaciones cerradas</h2>
-        <span className="pill mono">
-          {total.toLocaleString("es-AR")} operaciones · desde ago-2025
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+          <span className="pill mono">
+            {total.toLocaleString("es-AR")} operaciones · desde ago-2025
+          </span>
+          {puedeExportar && (
+            <button
+              type="button"
+              onClick={() => void exportarCSV()}
+              disabled={exportando || total === 0}
+              title="exportar el filtro activo a CSV"
+            >
+              <i className={exportando ? "ti ti-loader-2" : "ti ti-download"} aria-hidden style={{ marginRight: 5 }} />
+              {exportando ? "exportando…" : "exportar CSV"}
+            </button>
+          )}
         </span>
       </div>
 
@@ -244,6 +394,33 @@ export default function HistorialPage() {
         </div>
       )}
 
+      {totales && (
+        <div className="kpis">
+          <div className="kpi">
+            <div className="l">costo total del filtro</div>
+            <div className="v fd-usd">{fmtUSD(totales.sumCosto)}</div>
+          </div>
+          <div className="kpi">
+            <div className="l">demora total</div>
+            <div className="v">{totales.sumDemora.toLocaleString("es-AR")} días</div>
+          </div>
+          <div className="kpi">
+            <div className="l">estadía promedio</div>
+            <div className="v">
+              {totales.avgEstadia.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} días
+            </div>
+          </div>
+          {totales.truncado && (
+            <div className="kpi" style={{ display: "flex", alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                <i className="ti ti-alert-triangle" aria-hidden style={{ marginRight: 4 }} />
+                calculado sobre las primeras {totales.n.toLocaleString("es-AR")} filas — angostá el filtro para un total exacto
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <ErrorMsg msg={error} onRetry={() => void cargar()} />}
       {!filas && !error && (
         <div className="fd-panel">
@@ -264,15 +441,59 @@ export default function HistorialPage() {
           <table className="t">
             <thead>
               <tr>
-                <th>contenedor</th>
-                <th className="hide-sm">naviera</th>
+                <th
+                  onClick={() => toggleOrden("numero_contenedor")}
+                  style={thOrdenable}
+                  aria-sort={ariaSort("numero_contenedor")}
+                  title="ordenar"
+                >
+                  contenedor{indicador("numero_contenedor")}
+                </th>
+                <th
+                  className="hide-sm"
+                  onClick={() => toggleOrden("naviera")}
+                  style={thOrdenable}
+                  aria-sort={ariaSort("naviera")}
+                  title="ordenar"
+                >
+                  naviera{indicador("naviera")}
+                </th>
                 <th className="hide-sm">retiro</th>
-                <th>devolución</th>
+                <th
+                  onClick={() => toggleOrden("fecha_devolucion")}
+                  style={thOrdenable}
+                  aria-sort={ariaSort("fecha_devolucion")}
+                  title="ordenar"
+                >
+                  devolución{indicador("fecha_devolucion")}
+                </th>
                 <th className="hide-sm">cierre</th>
-                <th style={{ textAlign: "right" }}>estadía</th>
+                <th
+                  style={{ ...thOrdenable, textAlign: "right" }}
+                  onClick={() => toggleOrden("estadia")}
+                  aria-sort={ariaSort("estadia")}
+                  title="ordenar"
+                >
+                  estadía{indicador("estadia")}
+                </th>
                 <th className="hide-sm" style={{ textAlign: "right" }}>libres</th>
-                <th className="hide-sm" style={{ textAlign: "right" }}>demora</th>
-                <th style={{ textAlign: "right" }}>costo</th>
+                <th
+                  className="hide-sm"
+                  style={{ ...thOrdenable, textAlign: "right" }}
+                  onClick={() => toggleOrden("demora")}
+                  aria-sort={ariaSort("demora")}
+                  title="ordenar"
+                >
+                  demora{indicador("demora")}
+                </th>
+                <th
+                  style={{ ...thOrdenable, textAlign: "right" }}
+                  onClick={() => toggleOrden("costo_usd")}
+                  aria-sort={ariaSort("costo_usd")}
+                  title="ordenar"
+                >
+                  costo{indicador("costo_usd")}
+                </th>
                 <th aria-label="detalle" />
               </tr>
             </thead>
