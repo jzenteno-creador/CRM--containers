@@ -112,7 +112,9 @@ export type TipoEvento =
   | "egreso"
   | "devolucion"
   | "anulacion"
-  | "incidencia";
+  | "incidencia"
+  | "reapertura"
+  | "correccion";
 
 export interface OperacionEvento {
   id: string;

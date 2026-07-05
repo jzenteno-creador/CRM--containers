@@ -308,3 +308,20 @@ begin
     reforzado_validado_por = p_usuario, reforzado_fecha_validacion = now()
     where id = p_contenedor;
 end $function$
+
+-- F-02 (2026-07-05): reversa contable de un cierre por error. Revierte cerrado→en_transito_a_terminal,
+-- limpia fecha_devolucion y deja evento 'reapertura' con motivo. ux_operacion_abierta protege contra
+-- reabrir si el contenedor ya tiene otro ciclo abierto (unique_violation).
+CREATE OR REPLACE FUNCTION detention.crm_reabrir_operacion(p_operacion uuid, p_usuario uuid, p_motivo text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO 'detention', 'public'
+AS $function$
+begin
+  if p_motivo is null or length(trim(p_motivo)) = 0 then raise exception 'motivo obligatorio para reabrir'; end if;
+  update operaciones set estado='en_transito_a_terminal', fecha_devolucion=null, updated_at=now()
+   where id = p_operacion and estado='cerrado';
+  if not found then raise exception 'la operación no está cerrada (no se puede reabrir)'; end if;
+  insert into operacion_eventos(operacion_id, tipo_evento, fecha, usuario_id, detalle)
+   values (p_operacion, 'reapertura', now(), p_usuario, jsonb_build_object('motivo', p_motivo));
+end $function$

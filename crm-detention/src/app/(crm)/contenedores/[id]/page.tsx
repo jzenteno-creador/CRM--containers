@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Cargando, ErrorMsg, Vacio } from "@/components/ui";
+import { Cargando, ErrorMsg, Vacio, ConfirmDialog } from "@/components/ui";
 import { ContainerNumber } from "@/components/container-number";
 import {
   hoyAR,
@@ -119,6 +119,14 @@ export default function FichaOperacionPage() {
   const [anBusy, setAnBusy] = useState(false);
   const [anErr, setAnErr] = useState<string | null>(null);
   const [anOk, setAnOk] = useState<string | null>(null);
+  const [anConfirm, setAnConfirm] = useState(false);
+
+  // reabrir operación cerrada (F-02, reversa contable)
+  const [reMotivo, setReMotivo] = useState("");
+  const [reBusy, setReBusy] = useState(false);
+  const [reErr, setReErr] = useState<string | null>(null);
+  const [reOk, setReOk] = useState<string | null>(null);
+  const [reConfirm, setReConfirm] = useState(false);
 
   // validar reforzado
   const [refEstado, setRefEstado] = useState<ReforzadoEstado>("pendiente_validacion");
@@ -262,16 +270,21 @@ export default function FichaOperacionPage() {
     }
   }
 
-  async function anularOperacion(e: React.FormEvent) {
+  function pedirAnulacion(e: React.FormEvent) {
     e.preventDefault();
-    if (!op) return;
     setAnErr(null);
     setAnOk(null);
     if (!motivo.trim()) {
       setAnErr("indicá el motivo de la anulación");
       return;
     }
+    setAnConfirm(true);
+  }
+
+  async function ejecutarAnulacion() {
+    if (!op) return;
     setAnBusy(true);
+    setAnErr(null);
     try {
       const { error: err } = await supabase.rpc("crm_anular_operacion", {
         p_operacion_id: op.id,
@@ -279,13 +292,38 @@ export default function FichaOperacionPage() {
         p_usuario: session.id,
       });
       if (err) throw err;
+      setAnConfirm(false);
       setAnOk("operación anulada");
       setMotivo("");
       await fetchTodo();
     } catch (e2) {
+      setAnConfirm(false);
       setAnErr(e2 instanceof Error ? e2.message : "error al anular la operación");
     } finally {
       setAnBusy(false);
+    }
+  }
+
+  async function ejecutarReapertura() {
+    if (!op) return;
+    setReBusy(true);
+    setReErr(null);
+    try {
+      const { error: err } = await supabase.rpc("crm_reabrir_operacion", {
+        p_operacion: op.id,
+        p_usuario: session.id,
+        p_motivo: reMotivo.trim(),
+      });
+      if (err) throw err;
+      setReConfirm(false);
+      setReOk("operación reabierta — vuelve a estar en tránsito a terminal");
+      setReMotivo("");
+      await fetchTodo();
+    } catch (e2) {
+      setReConfirm(false);
+      setReErr(e2 instanceof Error ? e2.message : "error al reabrir la operación");
+    } finally {
+      setReBusy(false);
     }
   }
 
@@ -318,6 +356,7 @@ export default function FichaOperacionPage() {
   const movPendientes = movimientos.filter((m) => m.estado === "en_transito");
   const puedeMover = op.estado === "en_planta" || op.estado === "cargado";
   const puedeAnular = puedeGestionar && op.estado !== "cerrado" && op.estado !== "anulada";
+  const puedeReabrir = puedeGestionar && op.estado === "cerrado";
 
   // ---- derivaciones de PRESENTACIÓN (días/costos ya calculados por las vistas de la DB) ----
   const abiertaOp = op.estado !== "cerrado" && op.estado !== "anulada";
@@ -765,7 +804,7 @@ export default function FichaOperacionPage() {
           <h4>
             <i className="ti ti-ban" aria-hidden /> anular operación
           </h4>
-          <form onSubmit={anularOperacion}>
+          <form onSubmit={pedirAnulacion}>
             <div className="actbar" style={{ marginTop: 0 }}>
               <div className="f" style={{ flex: "1 1 260px" }}>
                 <label htmlFor="an-motivo">motivo</label>
@@ -778,13 +817,77 @@ export default function FichaOperacionPage() {
                 />
               </div>
               <button type="submit" className="btn-danger" disabled={anBusy}>
-                <i className="ti ti-ban" aria-hidden /> {anBusy ? "anulando…" : "anular"}
+                <i className="ti ti-ban" aria-hidden /> anular
               </button>
             </div>
           </form>
           <p className="note">la anulación corta el ciclo y queda registrada en el timeline.</p>
           {anErr && <div className="err">{anErr}</div>}
           {anOk && <div className="ok">{anOk}</div>}
+          <ConfirmDialog
+            open={anConfirm}
+            titulo="Anular operación"
+            mensaje={`Vas a anular la operación de ${cont.numero_contenedor}. Corta el ciclo y queda registrada en el timeline.`}
+            detalle={<p className="note" style={{ marginTop: 0 }}>motivo: {motivo.trim() || "—"}</p>}
+            confirmLabel="anular"
+            danger
+            busy={anBusy}
+            onConfirm={() => void ejecutarAnulacion()}
+            onCancel={() => setAnConfirm(false)}
+          />
+        </div>
+      )}
+
+      {/* 6b · reabrir operación cerrada (F-02, supervisor|administrador) */}
+      {puedeReabrir && (
+        <div className="crm-card">
+          <h4>
+            <i className="ti ti-lock-open" aria-hidden /> reabrir operación
+          </h4>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setReErr(null);
+              setReOk(null);
+              if (!reMotivo.trim()) {
+                setReErr("indicá el motivo de la reapertura");
+                return;
+              }
+              setReConfirm(true);
+            }}
+          >
+            <div className="actbar" style={{ marginTop: 0 }}>
+              <div className="f" style={{ flex: "1 1 260px" }}>
+                <label htmlFor="re-motivo">motivo</label>
+                <input
+                  id="re-motivo"
+                  type="text"
+                  value={reMotivo}
+                  onChange={(e) => setReMotivo(e.target.value)}
+                  placeholder="p. ej. fecha de devolución mal cargada…"
+                />
+              </div>
+              <button type="submit" className="btn-primary" disabled={reBusy}>
+                <i className="ti ti-lock-open" aria-hidden /> reabrir
+              </button>
+            </div>
+          </form>
+          <p className="note">
+            revierte el cierre (vuelve a tránsito a terminal), limpia la devolución y deja el hito en el
+            timeline. Corregí los datos y volvé a confirmar la devolución.
+          </p>
+          {reErr && <div className="err">{reErr}</div>}
+          {reOk && <div className="ok">{reOk}</div>}
+          <ConfirmDialog
+            open={reConfirm}
+            titulo="Reabrir operación cerrada"
+            mensaje={`Vas a reabrir la operación de ${cont.numero_contenedor}. Sale del historial de costos hasta que se vuelva a cerrar.`}
+            detalle={<p className="note" style={{ marginTop: 0 }}>motivo: {reMotivo.trim() || "—"}</p>}
+            confirmLabel="reabrir"
+            busy={reBusy}
+            onConfirm={() => void ejecutarReapertura()}
+            onCancel={() => setReConfirm(false)}
+          />
         </div>
       )}
 

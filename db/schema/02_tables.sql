@@ -179,7 +179,8 @@ ALTER TABLE detention.freetime_origin ADD CONSTRAINT freetime_origin_tipo_check 
 ALTER TABLE detention.incidencias ADD CONSTRAINT incidencias_tipo_check CHECK ((tipo = ANY (ARRAY['averia_sufrida'::text, 'averia_recepcionada'::text, 'otro'::text])));
 ALTER TABLE detention.movimientos_planta ADD CONSTRAINT movimientos_planta_estado_check CHECK ((estado = ANY (ARRAY['en_transito'::text, 'confirmado'::text])));
 ALTER TABLE detention.movimientos_planta ADD CONSTRAINT movimientos_planta_medio_check CHECK ((medio = ANY (ARRAY['camion'::text, 'tren'::text])));
-ALTER TABLE detention.operacion_eventos ADD CONSTRAINT operacion_eventos_tipo_evento_check CHECK ((tipo_evento = ANY (ARRAY['retiro'::text, 'ingreso_planta'::text, 'movimiento'::text, 'carga'::text, 'egreso'::text, 'devolucion'::text, 'anulacion'::text, 'incidencia'::text])));
+-- F-02/F-03 (2026-07-05): + 'reapertura' (reversa de cierre) + 'correccion' (edición auditada)
+ALTER TABLE detention.operacion_eventos ADD CONSTRAINT operacion_eventos_tipo_evento_check CHECK ((tipo_evento = ANY (ARRAY['retiro'::text, 'ingreso_planta'::text, 'movimiento'::text, 'carga'::text, 'egreso'::text, 'devolucion'::text, 'anulacion'::text, 'incidencia'::text, 'reapertura'::text, 'correccion'::text])));
 ALTER TABLE detention.operaciones ADD CONSTRAINT operaciones_estado_check CHECK ((estado = ANY (ARRAY['en_transito_a_planta'::text, 'en_planta'::text, 'cargado'::text, 'en_transito_a_terminal'::text, 'cerrado'::text, 'anulada'::text])));
 ALTER TABLE detention.operaciones ADD CONSTRAINT operaciones_tipo_cierre_check CHECK ((tipo_cierre = ANY (ARRAY['embarcado'::text, 'devuelto_vacio'::text, 'pendiente'::text])));
 -- D-05 (2026-07-05): coherencia fecha/estado — evita que una op cerrada sin devolución desaparezca de vista_costos_cerrados

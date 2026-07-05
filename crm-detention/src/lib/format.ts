@@ -68,4 +68,6 @@ export const EVENTO_LABELS: Record<string, string> = {
   devolucion: "Devolución / gate-in terminal",
   anulacion: "Anulación",
   incidencia: "Incidencia",
+  reapertura: "Reapertura (reversa de cierre)",
+  correccion: "Corrección de datos",
 };

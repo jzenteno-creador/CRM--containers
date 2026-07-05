@@ -1,6 +1,86 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 // Piezas compartidas para estados de carga/vacío/error + paginación (spec §11: en TODOS los listados)
+
+/**
+ * Diálogo de confirmación reutilizable (FE-01): acciones de lote irreversibles
+ * (cortar freetime, anular, reabrir) piden confirmación con el impacto a la vista.
+ * Estilos inline sobre las variables del tema (no toca globals.css).
+ */
+export function ConfirmDialog({
+  open,
+  titulo,
+  mensaje,
+  detalle,
+  confirmLabel = "confirmar",
+  danger = false,
+  busy = false,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  titulo: string;
+  mensaje: string;
+  detalle?: ReactNode;
+  confirmLabel?: string;
+  danger?: boolean;
+  busy?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={titulo}
+      onClick={() => !busy && onCancel()}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(2px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--surface-1)",
+          border: "1px solid var(--border-strong)",
+          borderRadius: "var(--radius)",
+          padding: "18px 20px",
+          maxWidth: 460,
+          width: "100%",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+        }}
+      >
+        <h4 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 600 }}>{titulo}</h4>
+        <p style={{ margin: "0 0 10px", fontSize: 13.5, color: "var(--text-primary)" }}>{mensaje}</p>
+        {detalle}
+        <div className="actbar" style={{ justifyContent: "flex-end", marginTop: 14 }}>
+          <button type="button" onClick={onCancel} disabled={busy}>
+            cancelar
+          </button>
+          <button
+            type="button"
+            className={danger ? "btn-danger" : "btn-primary"}
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? "procesando…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Cargando({ msg = "cargando…" }: { msg?: string }) {
   return <p className="empty">{msg}</p>;
