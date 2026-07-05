@@ -48,9 +48,12 @@ begin
           medio = coalesce(p_medio, medio), confirmado_por = p_usuario
       where operacion_id = v_op and estado = 'en_transito';
     update operaciones set estado = 'en_planta' where id = v_op and estado = 'en_transito_a_planta';
-    insert into operacion_eventos (operacion_id, tipo_evento, fecha, usuario_id, detalle)
-    values (v_op, 'ingreso_planta', p_fecha, p_usuario, jsonb_build_object('medio', p_medio));
-    v_n := v_n + 1;
+    -- D-04 (2026-07-05): solo evento+conteo si la operación transicionó (evita duplicados por carrera)
+    if found then
+      insert into operacion_eventos (operacion_id, tipo_evento, fecha, usuario_id, detalle)
+      values (v_op, 'ingreso_planta', p_fecha, p_usuario, jsonb_build_object('medio', p_medio));
+      v_n := v_n + 1;
+    end if;
   end loop;
   return jsonb_build_object('confirmadas', v_n);
 end $function$
