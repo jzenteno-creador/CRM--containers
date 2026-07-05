@@ -391,6 +391,8 @@ function HistoricoAgregado() {
   );
 }
 
+const UMBRAL_DEFAULT = 3; // días — mismo fallback que alertas/page.tsx si falla la lectura de config
+
 export default function InicioPage() {
   const session = useSession();
   const plantaScope = session.rol === "operador" ? session.plantaId : null;
@@ -400,6 +402,7 @@ export default function InicioPage() {
   const [alertas, setAlertas] = useState<VistaAlerta[] | null>(null);
   const [eventos, setEventos] = useState<EventoFeed[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [umbral, setUmbral] = useState<number>(UMBRAL_DEFAULT);
 
   const cargar = useCallback(async () => {
     try {
@@ -437,7 +440,32 @@ export default function InicioPage() {
     void cargar();
   }, [cargar]);
 
-  // Realtime: cualquier cambio en operaciones refresca los KPIs
+  // Umbral configurable (admin, tabla configuracion): default 3 días / 72 h si falla la lectura
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("configuracion")
+          .select("valor")
+          .eq("clave", "umbral_alerta_amarillo")
+          .maybeSingle();
+        if (!vivo) return;
+        const dias = (data?.valor as { dias?: number } | null)?.dias;
+        if (typeof dias === "number") setUmbral(dias);
+      } catch {
+        // fallback silencioso: queda UMBRAL_DEFAULT
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Realtime: cualquier cambio en operaciones refresca los KPIs. Trailing-debounce de 400ms:
+  // varios eventos por fila (ej. un batch de updates) colapsan en un solo refetch — cargar()
+  // incluye el RPC crm_dashboard, que es caro para disparar una vez por fila tocada.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const ch = supabase
       .channel("inicio-dashboard")
@@ -445,11 +473,16 @@ export default function InicioPage() {
         "postgres_changes",
         { event: "*", schema: "detention", table: "operaciones" },
         () => {
-          void cargar();
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => {
+            debounceRef.current = null;
+            void cargar();
+          }, 400);
         }
       )
       .subscribe();
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       void supabase.removeChannel(ch);
     };
   }, [cargar]);
@@ -525,7 +558,12 @@ export default function InicioPage() {
           critical
           prefix="$"
         />
-        <KpiCard label="deadlines <72 h" value={porVencer.length} sub={`umbral configurable · ${datos.por_vencer} por vencer`} amber />
+        <KpiCard
+          label={`deadlines <${umbral * 24} h`}
+          value={porVencer.length}
+          sub={`umbral configurable · ${datos.por_vencer} por vencer`}
+          amber
+        />
       </div>
 
       <div className="fd-cc">
@@ -573,13 +611,13 @@ export default function InicioPage() {
           {/* POR VENCER <72H */}
           <div className="fd-panel">
             <div className="fd-panel-title" style={{ color: "var(--color-status-amber-deep)" }}>
-              <span className="dot dot-amarillo" /> por vencer &lt;72 h
+              <span className="dot dot-amarillo" /> por vencer &lt;{umbral * 24} h
               <span className="fd-count">{porVencer.length}</span>
             </div>
             {alertas == null ? (
               <SkeletonRow cols="190px 1fr 110px" />
             ) : porVencer.length === 0 ? (
-              <p className="empty">nada vence en las próximas 72 h ✓</p>
+              <p className="empty">nada vence en las próximas {umbral * 24} h ✓</p>
             ) : (
               porVencer.slice(0, 6).map((a) => {
                 const consumido =
