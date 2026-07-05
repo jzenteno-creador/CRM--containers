@@ -1,19 +1,21 @@
 "use client";
 
 // Command palette ⌘K (spec artboard 2e): modal 640px top 72px, apertura scale(.98)→1
-// + fade 200ms out-expo. Busca operaciones ABIERTAS en vista_alertas (trae semáforo y
-// metadata en una sola query; las cerradas se consultan en /historial). ↑↓ navega,
-// ↵ abre, ESC cierra. Atajos de acción I/E/A. Se abre con ⌘K/Ctrl+K o evento fd-palette.
+// + fade 200ms out-expo. Busca en paralelo (Promise.all) operaciones ABIERTAS en
+// vista_alertas (trae semáforo y metadata) y CERRADAS en vista_costos_cerrados, ambas
+// por numero_contenedor, en grupos separados. ↑↓ navega, ↵ abre, ESC cierra. Atajos de
+// acción I/E/A. Se abre con ⌘K/Ctrl+K o evento fd-palette.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { ContainerNumber } from "@/components/container-number";
-import { ESTADO_LABELS } from "@/lib/format";
-import type { VistaAlerta } from "@/lib/types";
+import { ESTADO_LABELS, TIPO_CIERRE_LABELS, fmtUSD } from "@/lib/format";
+import type { VistaAlerta, VistaCostoCerrado } from "@/lib/types";
 
 const MAX_RESULTADOS = 8;
+const MAX_RESULTADOS_CERRADAS = 5;
 
 type Accion = { id: string; label: string; icon: string; href: string; kbd: string };
 
@@ -36,6 +38,7 @@ export function CommandPalette() {
   const [abierta, setAbierta] = useState(false);
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<VistaAlerta[]>([]);
+  const [resultadosCerrados, setResultadosCerrados] = useState<VistaCostoCerrado[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [sel, setSel] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +66,7 @@ export function CommandPalette() {
     setAbierta(false);
     setQ("");
     setResultados([]);
+    setResultadosCerrados([]);
     setSel(0);
     setBuscando(false);
   }, []);
@@ -74,47 +78,57 @@ export function CommandPalette() {
     }
   }, [abierta]);
 
-  // búsqueda debounced 250ms sobre vista_alertas (solo operaciones abiertas).
-  // Todos los setState quedan dentro del timeout (regla react-hooks/set-state-in-effect).
+  // búsqueda debounced 250ms en paralelo sobre vista_alertas (abiertas) y
+  // vista_costos_cerrados (cerradas), ambas por numero_contenedor. Todos los setState
+  // quedan dentro del timeout (regla react-hooks/set-state-in-effect).
   useEffect(() => {
     if (!abierta) return;
     const term = q.trim().replace(/[,()]/g, " ").trim();
     const t = setTimeout(async () => {
       if (!term) {
         setResultados([]);
+        setResultadosCerrados([]);
         setBuscando(false);
         return;
       }
       setBuscando(true);
-      let qy = supabase
+      let qyAbiertas = supabase
         .from("vista_alertas")
         .select("*")
         .ilike("numero_contenedor", `%${term}%`)
         .order("dias_restantes", { ascending: true, nullsFirst: false })
         .limit(MAX_RESULTADOS);
       if (session.rol === "operador" && session.plantaNombre) {
-        qy = qy.eq("planta_actual", session.plantaNombre);
+        qyAbiertas = qyAbiertas.eq("planta_actual", session.plantaNombre);
       }
-      const { data, error } = await qy;
-      if (!error) setResultados((data ?? []) as VistaAlerta[]);
+      const qyCerradas = supabase
+        .from("vista_costos_cerrados")
+        .select("*")
+        .ilike("numero_contenedor", `%${term}%`)
+        .limit(MAX_RESULTADOS_CERRADAS);
+      const [abiertasRes, cerradasRes] = await Promise.all([qyAbiertas, qyCerradas]);
+      if (!abiertasRes.error) setResultados((abiertasRes.data ?? []) as VistaAlerta[]);
+      if (!cerradasRes.error) setResultadosCerrados((cerradasRes.data ?? []) as VistaCostoCerrado[]);
       setSel(0);
       setBuscando(false);
     }, 250);
     return () => clearTimeout(t);
   }, [q, abierta, session.rol, session.plantaNombre]);
 
-  const items = resultados.length + ACCIONES.length;
+  const items = resultados.length + resultadosCerrados.length + ACCIONES.length;
 
   const abrir = useCallback(
     (idx: number) => {
       if (idx < resultados.length) {
         router.push(`/contenedores/${resultados[idx].operacion_id}`);
+      } else if (idx < resultados.length + resultadosCerrados.length) {
+        router.push(`/contenedores/${resultadosCerrados[idx - resultados.length].operacion_id}`);
       } else {
-        router.push(ACCIONES[idx - resultados.length].href);
+        router.push(ACCIONES[idx - resultados.length - resultadosCerrados.length].href);
       }
       cerrar();
     },
-    [resultados, router, cerrar],
+    [resultados, resultadosCerrados, router, cerrar],
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -175,7 +189,7 @@ export function CommandPalette() {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="buscar contenedor abierto… (MSKU, TCNU, …)"
+            placeholder="buscar contenedor… abiertas y cerradas (MSKU, TCNU, …)"
             style={{
               flex: 1,
               border: "none",
@@ -199,8 +213,8 @@ export function CommandPalette() {
           </kbd>
         </div>
 
-        {/* grupo contenedores */}
-        {(resultados.length > 0 || buscando || q.trim()) && (
+        {/* grupo contenedores (abiertas) */}
+        {(resultados.length > 0 || buscando || (q.trim() && resultadosCerrados.length === 0)) && (
           <div style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
             <div className="fd-label" style={{ padding: "4px 16px 6px" }}>
               Contenedores
@@ -210,7 +224,7 @@ export function CommandPalette() {
             )}
             {!buscando && q.trim() && resultados.length === 0 && (
               <div style={{ padding: "8px 16px", fontSize: 12.5, color: "var(--text-muted)" }}>
-                sin operaciones abiertas para “{q.trim()}” — las cerradas están en Historial
+                sin resultados (abiertas ni cerradas) para “{q.trim()}”
               </div>
             )}
             {resultados.map((r, i) => (
@@ -259,13 +273,66 @@ export function CommandPalette() {
           </div>
         )}
 
+        {/* grupo cerradas */}
+        {resultadosCerrados.length > 0 && (
+          <div style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+            <div className="fd-label" style={{ padding: "4px 16px 6px" }}>
+              Cerradas
+            </div>
+            {resultadosCerrados.map((r, j) => {
+              const i = resultados.length + j;
+              return (
+                <button
+                  key={r.operacion_id}
+                  type="button"
+                  onClick={() => abrir(i)}
+                  onMouseEnter={() => setSel(i)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "9px 16px",
+                    border: "none",
+                    borderLeft: sel === i ? "2px solid var(--text-accent)" : "2px solid transparent",
+                    borderRadius: 0,
+                    background: sel === i ? "var(--surface-3)" : "transparent",
+                    fontSize: 12.5,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      background: "var(--text-muted)",
+                    }}
+                  />
+                  <ContainerNumber value={r.numero_contenedor} />
+                  <span style={{ color: "var(--text-muted)", flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {r.naviera} · {r.destino ?? "—"} · {TIPO_CIERRE_LABELS[r.tipo_cierre] ?? r.tipo_cierre} · {fmtUSD(r.costo_usd)}
+                  </span>
+                  {sel === i && (
+                    <span className="mono" style={{ fontSize: 10.5, color: "var(--text-muted)", flexShrink: 0 }}>
+                      ↵ abrir
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* grupo acciones */}
         <div style={{ padding: "8px 0" }}>
           <div className="fd-label" style={{ padding: "4px 16px 6px" }}>
             Acciones
           </div>
           {ACCIONES.map((a, j) => {
-            const i = resultados.length + j;
+            const i = resultados.length + resultadosCerrados.length + j;
             return (
               <button
                 key={a.id}
