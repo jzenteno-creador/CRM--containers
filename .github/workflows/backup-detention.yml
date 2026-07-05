@@ -1,0 +1,72 @@
+name: Backup DB detention
+
+# Backup diario del schema `detention` (datos + DDL) — ítem 0.2 / finding D-02.
+# El proyecto Supabase está en plan FREE: sin PITR ni backups descargables, y se
+# pausa tras 7 días de inactividad. Este workflow es la única copia recuperable del
+# historial (2.900+ contenedores, 11.669 eventos, la lógica de plata) y además
+# mantiene el proyecto "activo" evitando el auto-pausado.
+#
+# REQUISITO (lo setea John una vez): secret SUPABASE_DB_URL en el repo
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Valor = connection string del dashboard Supabase → Connect →
+#           "Session pooler" o "Direct connection" (NO "Transaction pooler":
+#           pg_dump necesita sesión, no pooling transaccional).
+#   Formato: postgresql://postgres.<ref>:<db-password>@<host>:5432/postgres
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC = 03:00 America/Argentina/Buenos_Aires
+  workflow_dispatch: {}     # permite dispararlo a mano desde la pestaña Actions
+
+concurrency:
+  group: backup-detention
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Instalar pg_dump 17 (PGDG, matchea Postgres 17 del proyecto)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump del schema detention
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Falta el secret SUPABASE_DB_URL. Ver header de este workflow."
+            exit 1
+          fi
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          # Custom format comprimido (restore selectivo con pg_restore), datos + DDL:
+          pg_dump "$SUPABASE_DB_URL" \
+            --schema=detention \
+            --no-owner --no-privileges \
+            --format=custom \
+            --file="detention-${STAMP}.dump"
+          # Copia plain-SQL legible para diff/inspección rápida:
+          pg_dump "$SUPABASE_DB_URL" \
+            --schema=detention \
+            --no-owner --no-privileges \
+            --format=plain \
+            --file="detention-${STAMP}.sql"
+          ls -lh detention-${STAMP}.*
+          echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
+
+      - name: Subir artifact (retención 90 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: detention-backup-${{ env.STAMP }}
+          path: |
+            detention-*.dump
+            detention-*.sql
+          retention-days: 90
+          if-no-files-found: error
