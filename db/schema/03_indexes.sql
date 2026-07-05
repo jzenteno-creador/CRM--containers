@@ -16,3 +16,5 @@ CREATE INDEX ix_operaciones_estado ON detention.operaciones USING btree (estado)
 CREATE INDEX ix_operaciones_fecha_retiro ON detention.operaciones USING btree (fecha_retiro);
 CREATE INDEX ix_operaciones_planta ON detention.operaciones USING btree (planta_actual_id);
 CREATE UNIQUE INDEX ux_operacion_abierta ON detention.operaciones USING btree (contenedor_id) WHERE (estado <> ALL (ARRAY['cerrado'::text, 'anulada'::text]));
+-- D-10 (2026-07-05): una sola versión de tarifa vigente por (naviera, régimen) — cierra la carrera concurrente de crm_nueva_version_freetime
+CREATE UNIQUE INDEX ux_freetime_vigente ON detention.freetime_origin (naviera_id, regimen) WHERE (vigente_hasta IS NULL);

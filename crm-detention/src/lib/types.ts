@@ -22,6 +22,8 @@ export interface Naviera {
   nombre: string;
 }
 
+export type RegimenFreetime = "vacios" | "cargados" | "sin_uso";
+
 export interface FreetimeOrigin {
   id: string;
   naviera_id: string;
@@ -32,6 +34,7 @@ export interface FreetimeOrigin {
   tarifa_usd_dia: number;
   vigente_desde: string;
   vigente_hasta: string | null;
+  regimen: RegimenFreetime;
   navieras?: Naviera;
 }
 

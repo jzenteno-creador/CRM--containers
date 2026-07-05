@@ -227,17 +227,26 @@ begin
           jsonb_build_object('destino_id', p_destino, 'medio', p_medio, 'confirmado', p_confirmar));
 end $function$
 
-CREATE OR REPLACE FUNCTION detention.crm_nueva_version_freetime(p_naviera uuid, p_dias integer, p_peligrosa boolean, p_tipo text, p_tarifa numeric, p_desde date)
+-- D-01 (2026-07-05): scopea el cierre por naviera+régimen, parametriza p_regimen,
+-- valida entradas + coherencia de fecha (insert-only, sin ventana 0-día), idempotente.
+CREATE OR REPLACE FUNCTION detention.crm_nueva_version_freetime(p_naviera uuid, p_dias integer, p_peligrosa boolean, p_tipo text, p_tarifa numeric, p_desde date, p_regimen text DEFAULT 'vacios')
  RETURNS uuid
  LANGUAGE plpgsql
  SET search_path TO 'detention', 'public'
 AS $function$
-declare v_id uuid;
+declare v_id uuid; v_prev record;
 begin
-  update freetime_origin set vigente_hasta = p_desde - 1
-    where naviera_id = p_naviera and vigente_hasta is null;
-  insert into freetime_origin (naviera_id, dias_libres, aplica_carga_peligrosa, tipo, tarifa_usd_dia, vigente_desde, vigente_hasta)
-  values (p_naviera, p_dias, p_peligrosa, p_tipo, p_tarifa, p_desde, null)
+  if p_regimen is null or p_regimen not in ('vacios','cargados','sin_uso') then raise exception 'régimen inválido: %', p_regimen; end if;
+  if p_tipo   is null or p_tipo   not in ('Detention','Demurrage','Combined') then raise exception 'tipo inválido: %', p_tipo; end if;
+  if p_dias   is null or p_dias < 0 then raise exception 'días libres inválidos: %', p_dias; end if;
+  if p_tarifa is null or p_tarifa < 0 then raise exception 'tarifa inválida: %', p_tarifa; end if;
+  if p_desde  is null then raise exception 'fecha de vigencia obligatoria'; end if;
+  select * into v_prev from freetime_origin where naviera_id = p_naviera and regimen = p_regimen and vigente_hasta is null limit 1;
+  if v_prev.id is not null and v_prev.vigente_desde = p_desde and v_prev.dias_libres = p_dias and v_prev.tarifa_usd_dia = p_tarifa and v_prev.tipo = p_tipo and v_prev.aplica_carga_peligrosa = p_peligrosa then return v_prev.id; end if;
+  if v_prev.id is not null and p_desde <= v_prev.vigente_desde then raise exception 'la vigencia nueva (%) debe ser posterior al inicio de la versión vigente (%)', p_desde, v_prev.vigente_desde; end if;
+  if v_prev.id is not null then update freetime_origin set vigente_hasta = p_desde - 1 where id = v_prev.id; end if;
+  insert into freetime_origin (naviera_id, regimen, dias_libres, aplica_carga_peligrosa, tipo, tarifa_usd_dia, vigente_desde, vigente_hasta)
+  values (p_naviera, p_regimen, p_dias, p_peligrosa, p_tipo, p_tarifa, p_desde, null)
   returning id into v_id;
   return v_id;
 end $function$

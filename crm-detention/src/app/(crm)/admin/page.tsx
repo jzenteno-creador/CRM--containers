@@ -7,7 +7,13 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Cargando, Vacio, ErrorMsg } from "@/components/ui";
 import { hoyAR } from "@/lib/format";
-import type { FreetimeOrigin, Naviera, Planta, Rol, Usuario } from "@/lib/types";
+import type { FreetimeOrigin, Naviera, Planta, RegimenFreetime, Rol, Usuario } from "@/lib/types";
+
+const REGIMEN_LABELS: Record<RegimenFreetime, string> = {
+  vacios: "vacíos",
+  cargados: "cargados",
+  sin_uso: "sin uso (devolución de vacío)",
+};
 
 // fmtFecha parsea ISO con Date(); para columnas date 'YYYY-MM-DD' eso corre un día en AR (UTC-3).
 // Formateo manual sin Date para evitar el off-by-one.
@@ -27,6 +33,7 @@ type TipoFreetime = "Detention" | "Demurrage" | "Combined";
 interface FormVersion {
   naviera_id: string;
   navieraNombre: string;
+  regimen: RegimenFreetime;
   dias: string;
   tarifa: string;
   tipo: TipoFreetime;
@@ -192,6 +199,7 @@ export default function AdminPage() {
     setFormVersion({
       naviera_id: t.naviera_id,
       navieraNombre: t.navieras?.nombre ?? "—",
+      regimen: t.regimen,
       dias: String(t.dias_libres),
       tarifa: String(t.tarifa_usd_dia),
       tipo: t.tipo,
@@ -227,6 +235,7 @@ export default function AdminPage() {
         p_tipo: formVersion.tipo,
         p_tarifa: tarifa,
         p_desde: formVersion.desde,
+        p_regimen: formVersion.regimen,
       });
       if (error) throw error;
       setVersionMsg({ tipo: "ok", texto: "versión nueva insertada; la anterior quedó cerrada" });
@@ -454,7 +463,11 @@ export default function AdminPage() {
           <form onSubmit={guardarNuevaVersion} className="crm-card" style={{ marginTop: 10 }}>
             <h4>
               <i className="ti ti-versions" aria-hidden /> nueva versión — {formVersion.navieraNombre}
+              <span className="pill" style={{ marginLeft: 8 }}>régimen: {REGIMEN_LABELS[formVersion.regimen]}</span>
             </h4>
+            <p className="note" style={{ marginTop: 0 }}>
+              solo cierra y reemplaza la versión vigente de este régimen; los demás quedan intactos.
+            </p>
             <div className="grid">
               <div className="f">
                 <label>días libres</label>
