@@ -182,6 +182,10 @@ ALTER TABLE detention.movimientos_planta ADD CONSTRAINT movimientos_planta_medio
 ALTER TABLE detention.operacion_eventos ADD CONSTRAINT operacion_eventos_tipo_evento_check CHECK ((tipo_evento = ANY (ARRAY['retiro'::text, 'ingreso_planta'::text, 'movimiento'::text, 'carga'::text, 'egreso'::text, 'devolucion'::text, 'anulacion'::text, 'incidencia'::text])));
 ALTER TABLE detention.operaciones ADD CONSTRAINT operaciones_estado_check CHECK ((estado = ANY (ARRAY['en_transito_a_planta'::text, 'en_planta'::text, 'cargado'::text, 'en_transito_a_terminal'::text, 'cerrado'::text, 'anulada'::text])));
 ALTER TABLE detention.operaciones ADD CONSTRAINT operaciones_tipo_cierre_check CHECK ((tipo_cierre = ANY (ARRAY['embarcado'::text, 'devuelto_vacio'::text, 'pendiente'::text])));
+-- D-05 (2026-07-05): coherencia fecha/estado — evita que una op cerrada sin devolución desaparezca de vista_costos_cerrados
+ALTER TABLE detention.operaciones ADD CONSTRAINT ck_devolucion_post_retiro CHECK ((fecha_devolucion IS NULL OR fecha_devolucion >= fecha_retiro));
+ALTER TABLE detention.operaciones ADD CONSTRAINT ck_cerrado_tiene_devolucion CHECK ((estado <> 'cerrado'::text OR fecha_devolucion IS NOT NULL));
+ALTER TABLE detention.operaciones ADD CONSTRAINT ck_egreso_post_retiro CHECK ((fecha_egreso_planta IS NULL OR fecha_egreso_planta >= fecha_retiro));
 ALTER TABLE detention.plantas ADD CONSTRAINT plantas_nombre_check CHECK ((nombre = ANY (ARRAY['BAHIA'::text, 'ABBOTT'::text])));
 ALTER TABLE detention.prefijos_restringidos ADD CONSTRAINT prefijos_restringidos_estado_check CHECK ((estado = ANY (ARRAY['vigente'::text, 'retirado_de_lista'::text])));
 ALTER TABLE detention.prefijos_restringidos ADD CONSTRAINT prefijos_restringidos_prefijo_check CHECK ((prefijo ~ '^[A-Z]{4}$'::text));
