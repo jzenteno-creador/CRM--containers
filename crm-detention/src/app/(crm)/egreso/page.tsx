@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
-import { Vacio, ErrorMsg, Semaforo, Paginacion } from "@/components/ui";
+import { Vacio, ErrorMsg, Semaforo, Paginacion, ConfirmDialog } from "@/components/ui";
 import { SkeletonRowsTable } from "@/components/fd/skeleton-row";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { ContainerNumber } from "@/components/container-number";
@@ -59,6 +59,8 @@ export default function EgresoPage() {
   const [busy1, setBusy1] = useState(false);
   const [okMut1, setOkMut1] = useState<string | null>(null);
   const [errMut1, setErrMut1] = useState<string | null>(null);
+  // FE-01: el botón de lote abre este diálogo; la mutación corre en onConfirm
+  const [confirmSalida, setConfirmSalida] = useState(false);
   // números pegados pendientes de auto-selección tras el próximo fetch
   const autoSelectRef = useRef<string[] | null>(null);
 
@@ -73,6 +75,15 @@ export default function EgresoPage() {
   const [busy2, setBusy2] = useState(false);
   const [okMut2, setOkMut2] = useState<string | null>(null);
   const [errMut2, setErrMut2] = useState<string | null>(null);
+  // FE-01: confirmación explícita porque esta acción corta freetime (irreversible)
+  const [confirmDevolucion, setConfirmDevolucion] = useState(false);
+
+  // FE-02: refs para leer la selección vigente dentro de los fetch sin
+  // agregarla a las deps (evita refetch en cada toggle de checkbox)
+  const sel1Ref = useRef(sel1);
+  sel1Ref.current = sel1;
+  const sel2Ref = useRef(sel2);
+  sel2Ref.current = sel2;
 
   // ── Data fetching ─────────────────────────────────────────────────────
 
@@ -107,10 +118,28 @@ export default function EgresoPage() {
       const filas = (data ?? []) as VistaAlerta[];
       setRows1(filas);
       setTotal1(count ?? 0);
-      // podar selección a filas visibles + auto-seleccionar los pegados que matchean
+
+      // FE-02: la selección sobrevive el paginado/filtrado — solo se remueven
+      // ids que dejaron de existir en el total real (ya no están en_planta/
+      // cargado). Si la validación falla se conservan: los RPCs saltean ids
+      // stale sin error, así que mantenerlos es seguro.
+      const visibles = new Set(filas.map((f) => f.operacion_id));
+      const fueraDePagina = [...sel1Ref.current].filter((id) => !visibles.has(id));
+      const muertos = new Set<string>();
+      if (fueraDePagina.length > 0) {
+        const { data: vivosData, error: vivosError } = await supabase
+          .from("vista_alertas")
+          .select("operacion_id")
+          .in("estado", ["en_planta", "cargado"])
+          .in("operacion_id", fueraDePagina);
+        if (!vivosError && vivosData) {
+          const vivos = new Set(vivosData.map((v) => v.operacion_id as string));
+          for (const id of fueraDePagina) if (!vivos.has(id)) muertos.add(id);
+        }
+      }
+      // auto-seleccionar los pegados que matchean en esta página
       setSel1((prev) => {
-        const visibles = new Set(filas.map((f) => f.operacion_id));
-        const next = new Set([...prev].filter((id) => visibles.has(id)));
+        const next = new Set([...prev].filter((id) => !muertos.has(id)));
         const pegados = autoSelectRef.current;
         if (pegados && pegados.length > 0) {
           const nums = new Set(pegados);
@@ -132,13 +161,20 @@ export default function EgresoPage() {
     setLoading2(true);
     setErr2(null);
     try {
-      const { data, error, count } = await supabase
+      let q = supabase
         .from("operaciones")
         .select(
           "id, tipo_cierre, destino, fecha_egreso_planta, contenedores(numero_contenedor, navieras(nombre))",
           { count: "exact" }
         )
-        .eq("estado", "en_transito_a_terminal")
+        .eq("estado", "en_transito_a_terminal");
+
+      // FE-03: scope de planta para operador (mismo criterio que fase 1) —
+      // operaciones tiene planta_actual_id, así que el filtro va server-side
+      // por session.plantaId; supervisor/admin siguen viendo todas.
+      if (esOperador && session.plantaId) q = q.eq("planta_actual_id", session.plantaId);
+
+      const { data, error, count } = await q
         .order("fecha_egreso_planta", { ascending: false })
         .range(page2 * PAGE_SIZE, page2 * PAGE_SIZE + PAGE_SIZE - 1);
       if (error) throw error;
@@ -146,16 +182,31 @@ export default function EgresoPage() {
       const filas = (data ?? []) as unknown as OpTransito[];
       setRows2(filas);
       setTotal2(count ?? 0);
-      setSel2((prev) => {
-        const visibles = new Set(filas.map((f) => f.id));
-        return new Set([...prev].filter((id) => visibles.has(id)));
-      });
+
+      // FE-02: misma política que fase 1 — la selección cruza páginas y solo
+      // se poda lo que ya no está en_transito_a_terminal en el total real.
+      const visibles = new Set(filas.map((f) => f.id));
+      const fueraDePagina = [...sel2Ref.current].filter((id) => !visibles.has(id));
+      if (fueraDePagina.length > 0) {
+        const { data: vivosData, error: vivosError } = await supabase
+          .from("operaciones")
+          .select("id")
+          .eq("estado", "en_transito_a_terminal")
+          .in("id", fueraDePagina);
+        if (!vivosError && vivosData) {
+          const vivos = new Set(vivosData.map((v) => v.id as string));
+          const muertos = new Set(fueraDePagina.filter((id) => !vivos.has(id)));
+          if (muertos.size > 0) {
+            setSel2((prev) => new Set([...prev].filter((id) => !muertos.has(id))));
+          }
+        }
+      }
     } catch (e) {
       setErr2(e instanceof Error ? e.message : "error al cargar operaciones en tránsito");
     } finally {
       setLoading2(false);
     }
-  }, [page2]);
+  }, [page2, esOperador, session.plantaId]);
 
   // fase 1: debounce cuando hay búsqueda tipeada
   useEffect(() => {
@@ -187,13 +238,21 @@ export default function EgresoPage() {
     void fetchFase2();
   };
   useEffect(() => {
+    // FE-06: trailing-debounce de 350ms — una tanda de N eventos por fila
+    // dispara un único refetch en vez de N (cada evento limpia y re-arma el timer)
+    let t: ReturnType<typeof setTimeout> | null = null;
     const ch = supabase
       .channel("egreso-operaciones")
       .on("postgres_changes", { event: "*", schema: "detention", table: "operaciones" }, () => {
-        refetchRef.current();
+        if (t) clearTimeout(t);
+        t = setTimeout(() => {
+          t = null;
+          refetchRef.current();
+        }, 350);
       })
       .subscribe();
     return () => {
+      if (t) clearTimeout(t);
       void supabase.removeChannel(ch);
     };
   }, []);
@@ -231,7 +290,8 @@ export default function EgresoPage() {
     });
   }
 
-  async function confirmarSalida() {
+  // FE-01: el botón valida y abre el diálogo; la mutación real corre en onConfirm
+  function pedirConfirmarSalida() {
     setOkMut1(null);
     setErrMut1(null);
     if (sel1.size === 0) {
@@ -239,6 +299,22 @@ export default function EgresoPage() {
       return;
     }
     if (!fechaSalida) {
+      setErrMut1("indicá la fecha de salida");
+      return;
+    }
+    setConfirmSalida(true);
+  }
+
+  async function confirmarSalida() {
+    setOkMut1(null);
+    setErrMut1(null);
+    if (sel1.size === 0) {
+      setConfirmSalida(false);
+      setErrMut1("seleccioná al menos un contenedor en planta");
+      return;
+    }
+    if (!fechaSalida) {
+      setConfirmSalida(false);
       setErrMut1("indicá la fecha de salida");
       return;
     }
@@ -273,6 +349,7 @@ export default function EgresoPage() {
       setErrMut1(e instanceof Error ? e.message : "error al registrar la salida de planta");
     } finally {
       setBusy1(false);
+      setConfirmSalida(false);
     }
   }
 
@@ -297,7 +374,8 @@ export default function EgresoPage() {
     });
   }
 
-  async function confirmarDevolucion() {
+  // FE-01: corta freetime (irreversible) → siempre pide confirmación con el impacto
+  function pedirConfirmarDevolucion() {
     setOkMut2(null);
     setErrMut2(null);
     if (sel2.size === 0) {
@@ -305,6 +383,22 @@ export default function EgresoPage() {
       return;
     }
     if (!fechaDevolucion) {
+      setErrMut2("indicá la fecha de devolución / gate-in");
+      return;
+    }
+    setConfirmDevolucion(true);
+  }
+
+  async function confirmarDevolucion() {
+    setOkMut2(null);
+    setErrMut2(null);
+    if (sel2.size === 0) {
+      setConfirmDevolucion(false);
+      setErrMut2("seleccioná al menos una operación en tránsito");
+      return;
+    }
+    if (!fechaDevolucion) {
+      setConfirmDevolucion(false);
       setErrMut2("indicá la fecha de devolución / gate-in");
       return;
     }
@@ -324,8 +418,15 @@ export default function EgresoPage() {
       setErrMut2(e instanceof Error ? e.message : "error al confirmar la devolución");
     } finally {
       setBusy2(false);
+      setConfirmDevolucion(false);
     }
   }
+
+  // FE-02: cuántos seleccionados quedan fuera de la página visible (para el contador)
+  const visiblesPag1 = new Set(rows1.map((r) => r.operacion_id));
+  const sel1FueraDePagina = [...sel1].filter((id) => !visiblesPag1.has(id)).length;
+  const visiblesPag2 = new Set(rows2.map((r) => r.id));
+  const sel2FueraDePagina = [...sel2].filter((id) => !visiblesPag2.has(id)).length;
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -533,11 +634,17 @@ export default function EgresoPage() {
               onChange={(e) => setFechaSalida(e.target.value)}
             />
           </div>
+          {sel1.size > 0 && (
+            <span className="pill">
+              {sel1.size} seleccionado{sel1.size === 1 ? "" : "s"}
+              {sel1FueraDePagina > 0 && ` (${sel1FueraDePagina} en otras páginas)`}
+            </span>
+          )}
           <button
             type="button"
             className="btn-primary"
             disabled={busy1 || sel1.size === 0}
-            onClick={() => void confirmarSalida()}
+            onClick={pedirConfirmarSalida}
           >
             <i className="ti ti-truck" aria-hidden />{" "}
             {busy1 ? "registrando…" : `confirmar salida (${sel1.size})`}
@@ -547,6 +654,21 @@ export default function EgresoPage() {
         {errMut1 && <div className="err">{errMut1}</div>}
         {okMut1 && <div className="ok">{okMut1}</div>}
         </div>
+
+        <ConfirmDialog
+          open={confirmSalida}
+          titulo="confirmar salida de planta"
+          mensaje={`vas a registrar la salida de ${sel1.size} contenedor${sel1.size === 1 ? "" : "es"} con cierre "${TIPO_CIERRE_LABELS[tipoCierre] ?? tipoCierre}" y fecha ${fmtFecha(`${fechaSalida}T00:00:00-03:00`)}.`}
+          detalle={
+            <p className="note">
+              no corta freetime — el corte ocurre al confirmar el ingreso a terminal en la fase 2.
+            </p>
+          }
+          confirmLabel={`registrar salida (${sel1.size})`}
+          busy={busy1}
+          onConfirm={() => void confirmarSalida()}
+          onCancel={() => setConfirmSalida(false)}
+        />
       </section>
 
       {/* Fase 2 · confirmación en terminal */}
@@ -631,11 +753,17 @@ export default function EgresoPage() {
               onChange={(e) => setFechaDevolucion(e.target.value)}
             />
           </div>
+          {sel2.size > 0 && (
+            <span className="pill">
+              {sel2.size} seleccionada{sel2.size === 1 ? "" : "s"}
+              {sel2FueraDePagina > 0 && ` (${sel2FueraDePagina} en otras páginas)`}
+            </span>
+          )}
           <button
             type="button"
             className="btn-primary"
             disabled={busy2 || sel2.size === 0}
-            onClick={() => void confirmarDevolucion()}
+            onClick={pedirConfirmarDevolucion}
           >
             <i className="ti ti-anchor" aria-hidden />{" "}
             {busy2 ? "confirmando…" : "confirmar ingreso a terminal (corta freetime)"}
@@ -645,6 +773,22 @@ export default function EgresoPage() {
         {errMut2 && <div className="err">{errMut2}</div>}
         {okMut2 && <div className="ok">{okMut2}</div>}
         </div>
+
+        <ConfirmDialog
+          open={confirmDevolucion}
+          titulo="cortar freetime"
+          mensaje={`vas a confirmar el ingreso a terminal / devolución de ${sel2.size} operacion${sel2.size === 1 ? "" : "es"} con fecha ${fmtFecha(`${fechaDevolucion}T00:00:00-03:00`)}.`}
+          detalle={
+            <p className="note">
+              esta acción corta el freetime de las seleccionadas y no se puede deshacer desde esta pantalla.
+            </p>
+          }
+          confirmLabel={`cortar freetime (${sel2.size})`}
+          danger
+          busy={busy2}
+          onConfirm={() => void confirmarDevolucion()}
+          onCancel={() => setConfirmDevolucion(false)}
+        />
       </section>
     </>
   );
