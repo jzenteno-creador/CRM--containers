@@ -5,12 +5,13 @@
 // semáforo en America/Argentina/Buenos_Aires). Acá SOLO se agrupa y se deriva presentación
 // (pct de timers, horas = días × 24). Cero matemática de fechas nueva en el front.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/components/session-context";
 import { Vacio, ErrorMsg, Semaforo, Paginacion, FreetimeMeter } from "@/components/ui";
-import { fmtUSD, ESTADO_LABELS } from "@/lib/format";
+import { fmtUSD, fmtFecha, hoyAR, ESTADO_LABELS } from "@/lib/format";
+import { descargarCSV, type ColumnaCSV } from "@/lib/export-csv";
 import { ContainerNumber } from "@/components/container-number";
 import { RadialTimer } from "@/components/fd/radial-timer";
 import { KpiCard } from "@/components/fd/kpi-card";
@@ -23,6 +24,52 @@ const UMBRAL_DEFAULT = 3;
 const MAX_FILAS = 500;
 
 type FiltroSemaforo = "todos" | "verde" | "amarillo" | "rojo" | "neutro";
+
+// FE-04: columnas ordenables de la tabla "listado completo" (headers clickeables)
+type ColumnaOrdenable =
+  | "numero_contenedor"
+  | "naviera"
+  | "planta_actual"
+  | "dias_estadia"
+  | "dias_restantes"
+  | "costo_proyectado"
+  | "estado_semaforo";
+
+// severidad operativa: rojo primero cuando el orden es ascendente
+const SEMAFORO_RANK: Record<VistaAlerta["estado_semaforo"], number> = {
+  rojo: 0,
+  amarillo: 1,
+  verde: 2,
+  neutro: 3,
+};
+
+function valorOrdenable(fila: VistaAlerta, col: ColumnaOrdenable): string | number | null {
+  if (col === "estado_semaforo") return SEMAFORO_RANK[fila.estado_semaforo];
+  return fila[col];
+}
+
+function compararOrdenable(a: string | number | null, b: string | number | null): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1; // nulls siempre al final, sin importar la dirección
+  if (b == null) return -1;
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b), "es", { sensitivity: "base" });
+}
+
+// F-01: columnas del export CSV (mismos campos reales de VistaAlerta)
+const COLUMNAS_CSV: ColumnaCSV[] = [
+  { key: "numero_contenedor", label: "N° Contenedor" },
+  { key: "naviera", label: "Naviera" },
+  { key: "planta_actual", label: "Planta" },
+  { key: "estado", label: "Estado" },
+  { key: "fecha_retiro", label: "Fecha Retiro" },
+  { key: "dias_estadia", label: "Días Estadía" },
+  { key: "dias_libres", label: "Días Libres" },
+  { key: "dias_restantes", label: "Días Restantes" },
+  { key: "tarifa_usd_dia", label: "Tarifa USD/Día" },
+  { key: "costo_proyectado", label: "Costo Proyectado USD" },
+  { key: "estado_semaforo", label: "Semáforo" },
+];
 
 export default function AlertasPage() {
   const session = useSession();
@@ -38,6 +85,12 @@ export default function AlertasPage() {
   const [fNaviera, setFNaviera] = useState<string>("");
   // Contador de refetch: lo incrementan realtime y el botón reintentar
   const [tick, setTick] = useState(0);
+  // FE-06: timer del trailing-debounce del realtime (ver efecto de suscripción más abajo)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // FE-04: orden client-side de la tabla "listado completo"
+  const [sortCol, setSortCol] = useState<ColumnaOrdenable | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   // Umbral configurable + catálogo de navieras (una sola vez)
   useEffect(() => {
@@ -92,7 +145,8 @@ export default function AlertasPage() {
     };
   }, [fNaviera, session.rol, session.plantaNombre, tick]);
 
-  // Realtime: cambios en operaciones → refetch (incrementa tick)
+  // Realtime: cambios en operaciones → refetch (incrementa tick).
+  // FE-06: trailing-debounce 350ms — varios eventos por fila se acumulan en un solo refetch.
   useEffect(() => {
     const ch = supabase
       .channel("alertas-operaciones")
@@ -100,11 +154,19 @@ export default function AlertasPage() {
         "postgres_changes",
         { event: "*", schema: "detention", table: "operaciones" },
         () => {
-          setTick((t) => t + 1);
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => {
+            debounceRef.current = null;
+            setTick((t) => t + 1);
+          }, 350);
         },
       )
       .subscribe();
     return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
       void supabase.removeChannel(ch);
     };
   }, []);
@@ -129,7 +191,65 @@ export default function AlertasPage() {
     () => (fSemaforo === "todos" ? filas : filas.filter((f) => f.estado_semaforo === fSemaforo)),
     [filas, fSemaforo],
   );
-  const pageRows = filasTabla.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // FE-04: orden client-side por columna sobre la tabla ya filtrada (dataset completo en memoria)
+  const filasOrdenadas = useMemo(() => {
+    if (!sortCol) return filasTabla;
+    const signo = sortDir === "asc" ? 1 : -1;
+    return [...filasTabla].sort(
+      (a, b) => signo * compararOrdenable(valorOrdenable(a, sortCol), valorOrdenable(b, sortCol)),
+    );
+  }, [filasTabla, sortCol, sortDir]);
+
+  const pageRows = filasOrdenadas.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  function alternarOrden(col: ColumnaOrdenable) {
+    setPage(0);
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  }
+
+  // Header clickeable con indicador ▲/▼ de la columna activa
+  function renderThOrdenable(label: string, col: ColumnaOrdenable, className?: string) {
+    const activa = sortCol === col;
+    return (
+      <th
+        className={className}
+        onClick={() => alternarOrden(col)}
+        style={{ cursor: "pointer", userSelect: "none" }}
+        aria-sort={activa ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+      >
+        {label}
+        {activa && (
+          <span aria-hidden style={{ marginLeft: 3, color: "var(--text-accent)" }}>
+            {sortDir === "asc" ? "▲" : "▼"}
+          </span>
+        )}
+      </th>
+    );
+  }
+
+  // F-01: exporta las filas actuales (filtro + orden activo) de vista_alertas
+  function handleExportarCSV() {
+    const filasCSV = filasOrdenadas.map((a) => ({
+      numero_contenedor: a.numero_contenedor,
+      naviera: a.naviera,
+      planta_actual: a.planta_actual ?? "",
+      estado: ESTADO_LABELS[a.estado] ?? a.estado,
+      fecha_retiro: fmtFecha(a.fecha_retiro),
+      dias_estadia: a.dias_estadia,
+      dias_libres: a.dias_libres ?? "",
+      dias_restantes: a.dias_restantes ?? "",
+      tarifa_usd_dia: a.tarifa_usd_dia ?? "",
+      costo_proyectado: a.costo_proyectado ?? "",
+      estado_semaforo: a.estado_semaforo,
+    }));
+    descargarCSV(`alertas_${hoyAR()}`, COLUMNAS_CSV, filasCSV);
+  }
 
   if (error && filas.length === 0 && !cargando) {
     return (
@@ -330,6 +450,18 @@ export default function AlertasPage() {
         <div className="fd-panel-title">
           <i className="ti ti-list" aria-hidden /> listado completo
           <span className="fd-count">{filasTabla.length}</span>
+          {(session.rol === "supervisor" || session.rol === "administrador") && (
+            <button
+              type="button"
+              className="chip"
+              style={{ cursor: "pointer", marginLeft: 8 }}
+              disabled={cargando || filasOrdenadas.length === 0}
+              onClick={handleExportarCSV}
+              title="exporta las filas visibles con el filtro y orden activos"
+            >
+              <i className="ti ti-download" aria-hidden style={{ fontSize: 11 }} /> exportar CSV
+            </button>
+          )}
         </div>
         <div className="fd-panel-body" style={{ paddingBottom: 8 }}>
           <div className="filters" style={{ marginBottom: 0 }}>
@@ -395,16 +527,16 @@ export default function AlertasPage() {
               <table className="t">
                 <thead>
                   <tr>
-                    <th>n° contenedor</th>
-                    <th className="hide-sm">naviera</th>
-                    <th className="hide-sm">planta</th>
+                    {renderThOrdenable("n° contenedor", "numero_contenedor")}
+                    {renderThOrdenable("naviera", "naviera", "hide-sm")}
+                    {renderThOrdenable("planta", "planta_actual", "hide-sm")}
                     <th className="hide-sm">estado</th>
-                    <th>estadía</th>
+                    {renderThOrdenable("estadía", "dias_estadia")}
                     <th>freetime</th>
                     <th className="hide-sm">libres</th>
-                    <th className="hide-sm">rest.</th>
-                    <th>costo proy.</th>
-                    <th className="hide-sm">semáforo</th>
+                    {renderThOrdenable("rest.", "dias_restantes", "hide-sm")}
+                    {renderThOrdenable("costo proy.", "costo_proyectado")}
+                    {renderThOrdenable("semáforo", "estado_semaforo", "hide-sm")}
                   </tr>
                 </thead>
                 <tbody>
