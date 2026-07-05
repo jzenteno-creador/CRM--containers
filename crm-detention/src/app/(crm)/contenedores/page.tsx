@@ -26,6 +26,13 @@ import type { Naviera, OperacionEstado, Planta, ReforzadoEstado, VistaAlerta } f
 const PAGE_SIZE = 50;
 const SEARCH_CAP = 200; // tope por query en modo búsqueda (merge client-side)
 
+// FE-04: columnas ordenables de la tabla (headers clickeables → orden server-side).
+// No incluye estadía/libres/restantes/costo: esos vienen de `vista_alertas` vía
+// cargarFreetime, una query aparte que solo trae los ids de la página ya paginada —
+// no hay forma de ordenar el listado completo por esas columnas sin re-arquitecturar
+// el fetch (ver reporte final).
+type SortColumn = "numero_contenedor" | "naviera" | "planta" | "estado" | "fecha_retiro";
+
 const SELECT =
   "id, estado, fecha_retiro, retiro_de, booking_retiro, booking_asignado, orden, " +
   "contenedores!inner(id, numero_contenedor, tipo, reforzado_estado, naviera_id, navieras(nombre)), " +
@@ -48,6 +55,31 @@ interface FilaOperacion {
     navieras: { nombre: string } | null;
   };
   plantas: { nombre: string } | null;
+}
+
+// FE-04: valor comparable de una fila para el orden client-side (modo búsqueda, sobre el merge)
+function valorOrdenable(f: FilaOperacion, col: SortColumn): string {
+  switch (col) {
+    case "numero_contenedor":
+      return f.contenedores.numero_contenedor ?? "";
+    case "naviera":
+      return f.contenedores.navieras?.nombre ?? "";
+    case "planta":
+      return f.plantas?.nombre ?? "";
+    case "estado":
+      return f.estado ?? "";
+    case "fecha_retiro":
+    default:
+      return f.fecha_retiro ?? "";
+  }
+}
+
+function compararFilas(a: FilaOperacion, b: FilaOperacion, col: SortColumn, dir: "asc" | "desc"): number {
+  const av = valorOrdenable(a, col);
+  const bv = valorOrdenable(b, col);
+  if (av === bv) return 0;
+  const signo = dir === "asc" ? 1 : -1;
+  return av < bv ? -signo : signo;
 }
 
 function BadgeEstado({ estado }: { estado: OperacionEstado }) {
@@ -74,6 +106,10 @@ export default function ContenedoresPage() {
   const [fEstado, setFEstado] = useState("");
   const [soloVacios, setSoloVacios] = useState(false);
 
+  // FE-04: orden de la tabla — headers clickeables, mapea a .order() server-side
+  const [sortBy, setSortBy] = useState<SortColumn>("fecha_retiro");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
   // catálogos para selects
   const [plantas, setPlantas] = useState<Planta[]>([]);
   const [navieras, setNavieras] = useState<Naviera[]>([]);
@@ -95,17 +131,27 @@ export default function ContenedoresPage() {
     "operacion_id" | "dias_estadia" | "dias_libres" | "dias_restantes" | "tarifa_usd_dia" | "costo_proyectado" | "estado_semaforo" | "sin_cargo"
   >;
   const [freetime, setFreetime] = useState<Map<string, FreetimeFila>>(new Map());
+  // FE-09: fail-visible — si `vista_alertas` no responde, semáforos/costos muestran "—"
+  // indistinguible de "operación cerrada" salvo por este flag (ver aviso junto a la tabla)
+  const [freetimeError, setFreetimeError] = useState(false);
 
   const cargarFreetime = useCallback(async (rows: FilaOperacion[]) => {
     const ids = rows.map((r) => r.id);
     if (ids.length === 0) {
       setFreetime(new Map());
+      setFreetimeError(false);
       return;
     }
-    const { data } = await supabase
+    const { data, error: err } = await supabase
       .from("vista_alertas")
       .select("operacion_id, dias_estadia, dias_libres, dias_restantes, tarifa_usd_dia, costo_proyectado, estado_semaforo, sin_cargo")
       .in("operacion_id", ids);
+    if (err) {
+      setFreetimeError(true);
+      setFreetime(new Map());
+      return;
+    }
+    setFreetimeError(false);
     setFreetime(new Map(((data ?? []) as FreetimeFila[]).map((a) => [a.operacion_id, a])));
   }, []);
 
@@ -156,9 +202,35 @@ export default function ContenedoresPage() {
       if (!q) {
         // sin búsqueda → paginación server-side
         const desde = page * PAGE_SIZE;
-        const { data, error: err, count } = await buildBase()
-          .order("fecha_retiro", { ascending: false })
-          .range(desde, desde + PAGE_SIZE - 1);
+        let ordenada = buildBase();
+        // FE-04: orden dinámico server-side. numero_contenedor usa referencedTable sobre
+        // "contenedores" — funciona porque ese embed está marcado !inner (ver SELECT),
+        // que es lo que hace que el orden del embed reordene las filas de `operaciones`
+        // (doc de postgrest-js: "it only affects the ordering of the parent table if you
+        // use `!inner`"). naviera/planta van vía referencedTable sobre navieras/plantas,
+        // que NO están marcados !inner — es mejor esfuerzo, no verificado contra el
+        // schema real (ver reporte final: puede no reordenar el padre).
+        switch (sortBy) {
+          case "estado":
+            ordenada = ordenada.order("estado", { ascending: sortDir === "asc" });
+            break;
+          case "numero_contenedor":
+            ordenada = ordenada.order("numero_contenedor", {
+              ascending: sortDir === "asc",
+              referencedTable: "contenedores",
+            });
+            break;
+          case "naviera":
+            ordenada = ordenada.order("nombre", { ascending: sortDir === "asc", referencedTable: "navieras" });
+            break;
+          case "planta":
+            ordenada = ordenada.order("nombre", { ascending: sortDir === "asc", referencedTable: "plantas" });
+            break;
+          case "fecha_retiro":
+          default:
+            ordenada = ordenada.order("fecha_retiro", { ascending: sortDir === "asc" });
+        }
+        const { data, error: err, count } = await ordenada.range(desde, desde + PAGE_SIZE - 1);
         if (err) throw err;
         const rows = (data ?? []) as unknown as FilaOperacion[];
         setFilas(rows);
@@ -188,9 +260,10 @@ export default function ContenedoresPage() {
         ]) {
           mapa.set(fila.id, fila);
         }
-        const merged = Array.from(mapa.values()).sort((a, b) =>
-          a.fecha_retiro < b.fecha_retiro ? 1 : a.fecha_retiro > b.fecha_retiro ? -1 : 0,
-        );
+        // FE-04: mismo orden activo aplicado client-side sobre el merge (ver nota al inicio
+        // del archivo — en modo búsqueda no hay forma de ordenar server-side sobre las dos
+        // queries y mergear después, así que el orden final se resuelve acá)
+        const merged = Array.from(mapa.values()).sort((a, b) => compararFilas(a, b, sortBy, sortDir));
         setTotal(merged.length);
         const pageRows = merged.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
         setFilas(pageRows);
@@ -201,7 +274,7 @@ export default function ContenedoresPage() {
     } finally {
       setCargando(false);
     }
-  }, [q, page, buildBase, cargarFreetime]);
+  }, [q, page, buildBase, cargarFreetime, sortBy, sortDir]);
 
   useEffect(() => {
     void fetchFilas();
@@ -212,6 +285,9 @@ export default function ContenedoresPage() {
   useEffect(() => {
     refetchRef.current = fetchFilas;
   }, [fetchFilas]);
+  // FE-06: trailing-debounce 350ms — varios eventos por fila (ej. UPDATE en cascada sobre
+  // varias columnas) se acumulan en un solo refetch en vez de uno por evento
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const ch = supabase
       .channel("contenedores-planilla")
@@ -219,16 +295,57 @@ export default function ContenedoresPage() {
         "postgres_changes",
         { event: "*", schema: "detention", table: "operaciones" },
         () => {
-          void refetchRef.current();
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => {
+            debounceRef.current = null;
+            void refetchRef.current();
+          }, 350);
         },
       )
       .subscribe();
     return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
       void supabase.removeChannel(ch);
     };
   }, []);
 
   const resetPagina = () => setPage(0);
+
+  // FE-04: alterna asc/desc si es la misma columna; si cambia de columna, arranca en un
+  // sentido por defecto sensato (fecha_retiro: desc = más reciente primero, resto: asc)
+  function alternarOrden(col: SortColumn) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir(col === "fecha_retiro" ? "desc" : "asc");
+    }
+    setPage(0);
+  }
+
+  // FE-04: header clickeable con indicador ▲/▼ de la columna activa (mismo patrón visual
+  // que /alertas)
+  function renderThOrdenable(label: string, col: SortColumn, className?: string) {
+    const activa = sortBy === col;
+    return (
+      <th
+        className={className}
+        onClick={() => alternarOrden(col)}
+        style={{ cursor: "pointer", userSelect: "none" }}
+        aria-sort={activa ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+      >
+        {label}
+        {activa && (
+          <span aria-hidden style={{ marginLeft: 3, color: "var(--text-accent)" }}>
+            {sortDir === "asc" ? "▲" : "▼"}
+          </span>
+        )}
+      </th>
+    );
+  }
 
   // chips de filtros activos — representación removible de los estados existentes (cero lógica nueva)
   const chips: { key: string; label: string; clear: () => void }[] = [];
@@ -409,6 +526,13 @@ export default function ContenedoresPage() {
             <ErrorMsg msg={error} onRetry={() => void fetchFilas()} />
           </div>
         )}
+        {!cargando && !error && freetimeError && filas.length > 0 && (
+          <p className="note" style={{ padding: "0 16px 8px", color: "var(--text-warning)" }}>
+            <i className="ti ti-alert-triangle" aria-hidden /> no se pudo cargar el freetime de esta
+            página — los semáforos y costos muestran &quot;—&quot; por un error de carga, no porque la
+            operación esté cerrada
+          </p>
+        )}
         {!cargando && !error && filas.length === 0 && (
           <Vacio msg="sin operaciones para los filtros elegidos" />
         )}
@@ -420,12 +544,12 @@ export default function ContenedoresPage() {
                 <thead>
                   <tr>
                     <th aria-label="semáforo" style={{ width: 30 }} />
-                    <th>n° contenedor</th>
-                    <th className="hide-sm">naviera</th>
+                    {renderThOrdenable("n° contenedor", "numero_contenedor")}
+                    {renderThOrdenable("naviera", "naviera", "hide-sm")}
                     <th className="hide-sm">tipo</th>
-                    <th className="hide-sm">posición</th>
-                    <th className="hide-sm">estado ciclo</th>
-                    <th className="hide-sm">retiro</th>
+                    {renderThOrdenable("posición", "planta", "hide-sm")}
+                    {renderThOrdenable("estado ciclo", "estado", "hide-sm")}
+                    {renderThOrdenable("retiro", "fecha_retiro", "hide-sm")}
                     <th>estadía</th>
                     <th className="hide-sm">libres</th>
                     <th>restantes</th>
