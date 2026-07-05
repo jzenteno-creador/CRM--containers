@@ -74,6 +74,24 @@ function chipReforzado(estado: ReforzadoEstado): string {
   return "chip";
 }
 
+/** timestamptz ISO → 'YYYY-MM-DD' en zona AR (para inputs date de corrección). */
+function isoAFechaAR(iso: string | null): string {
+  if (!iso) return "";
+  const ar = new Date(new Date(iso).getTime() - 3 * 3600 * 1000);
+  return ar.toISOString().slice(0, 10);
+}
+
+const CAMPOS_CORR = [
+  { k: "booking_asignado", label: "booking asignado", tipo: "text" },
+  { k: "buque", label: "buque", tipo: "text" },
+  { k: "destino", label: "destino", tipo: "text" },
+  { k: "orden", label: "orden", tipo: "text" },
+  { k: "shp", label: "SHP", tipo: "text" },
+  { k: "fecha_retiro", label: "fecha retiro", tipo: "date" },
+  { k: "fecha_egreso_planta", label: "egreso planta", tipo: "date" },
+  { k: "fecha_devolucion", label: "devolución", tipo: "date" },
+] as const;
+
 /** detalle jsonb → "clave: valor · clave: valor" (solo valores simples). */
 function detalleLegible(detalle: Record<string, unknown> | null): string {
   if (!detalle) return "";
@@ -127,6 +145,13 @@ export default function FichaOperacionPage() {
   const [reErr, setReErr] = useState<string | null>(null);
   const [reOk, setReOk] = useState<string | null>(null);
   const [reConfirm, setReConfirm] = useState(false);
+
+  // corregir datos (F-03, edición auditada)
+  const [corrOpen, setCorrOpen] = useState(false);
+  const [corrForm, setCorrForm] = useState<Record<string, string>>({});
+  const [corrBusy, setCorrBusy] = useState(false);
+  const [corrErr, setCorrErr] = useState<string | null>(null);
+  const [corrOk, setCorrOk] = useState<string | null>(null);
 
   // validar reforzado
   const [refEstado, setRefEstado] = useState<ReforzadoEstado>("pendiente_validacion");
@@ -327,6 +352,69 @@ export default function FichaOperacionPage() {
     }
   }
 
+  function valoresOriginales(o: OpFicha): Record<string, string> {
+    return {
+      booking_asignado: o.booking_asignado ?? "",
+      buque: o.buque ?? "",
+      destino: o.destino ?? "",
+      orden: o.orden ?? "",
+      shp: o.shp ?? "",
+      fecha_retiro: isoAFechaAR(o.fecha_retiro),
+      fecha_egreso_planta: isoAFechaAR(o.fecha_egreso_planta),
+      fecha_devolucion: isoAFechaAR(o.fecha_devolucion),
+    };
+  }
+
+  function abrirCorreccion() {
+    if (!op) return;
+    setCorrErr(null);
+    setCorrOk(null);
+    setCorrForm(valoresOriginales(op));
+    setCorrOpen(true);
+  }
+
+  async function guardarCorreccion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!op) return;
+    setCorrErr(null);
+    setCorrOk(null);
+    const orig = valoresOriginales(op);
+    const campos: Record<string, string | null> = {};
+    for (const { k, tipo } of CAMPOS_CORR) {
+      const val = (corrForm[k] ?? "").trim();
+      if (val === (orig[k] ?? "")) continue; // sin cambio
+      if (tipo === "date") {
+        if (k === "fecha_retiro" && !val) {
+          setCorrErr("la fecha de retiro no puede quedar vacía");
+          return;
+        }
+        campos[k] = val ? `${val}T12:00:00-03:00` : null;
+      } else {
+        campos[k] = val || null;
+      }
+    }
+    if (Object.keys(campos).length === 0) {
+      setCorrErr("no cambiaste ningún campo");
+      return;
+    }
+    setCorrBusy(true);
+    try {
+      const { error: err } = await supabase.rpc("crm_corregir_operacion", {
+        p_operacion: op.id,
+        p_usuario: session.id,
+        p_campos: campos,
+      });
+      if (err) throw err;
+      setCorrOk("datos corregidos — queda registrado en el timeline");
+      setCorrOpen(false);
+      await fetchTodo();
+    } catch (e2) {
+      setCorrErr(e2 instanceof Error ? e2.message : "error al corregir los datos");
+    } finally {
+      setCorrBusy(false);
+    }
+  }
+
   async function validarReforzado() {
     if (!op) return;
     setRefErr(null);
@@ -357,6 +445,7 @@ export default function FichaOperacionPage() {
   const puedeMover = op.estado === "en_planta" || op.estado === "cargado";
   const puedeAnular = puedeGestionar && op.estado !== "cerrado" && op.estado !== "anulada";
   const puedeReabrir = puedeGestionar && op.estado === "cerrado";
+  const puedeCorregir = puedeGestionar && op.estado !== "anulada";
 
   // ---- derivaciones de PRESENTACIÓN (días/costos ya calculados por las vistas de la DB) ----
   const abiertaOp = op.estado !== "cerrado" && op.estado !== "anulada";
@@ -888,6 +977,52 @@ export default function FichaOperacionPage() {
             onConfirm={() => void ejecutarReapertura()}
             onCancel={() => setReConfirm(false)}
           />
+        </div>
+      )}
+
+      {/* 6c · corregir datos (F-03, supervisor|administrador) */}
+      {puedeCorregir && (
+        <div className="crm-card">
+          <h4>
+            <i className="ti ti-edit" aria-hidden /> corregir datos
+          </h4>
+          {!corrOpen ? (
+            <>
+              <p className="note" style={{ marginTop: 0 }}>
+                editá booking, buque, destino, orden, SHP o fechas cargados con error. Queda auditado en
+                el timeline (valor anterior → nuevo). Las fechas recalculan el costo.
+              </p>
+              <button type="button" onClick={abrirCorreccion}>
+                <i className="ti ti-edit" aria-hidden /> corregir datos
+              </button>
+              {corrOk && <div className="ok">{corrOk}</div>}
+            </>
+          ) : (
+            <form onSubmit={guardarCorreccion}>
+              <div className="grid">
+                {CAMPOS_CORR.map(({ k, label, tipo }) => (
+                  <div className="f" key={k}>
+                    <label htmlFor={`corr-${k}`}>{label}</label>
+                    <input
+                      id={`corr-${k}`}
+                      type={tipo}
+                      value={corrForm[k] ?? ""}
+                      onChange={(e) => setCorrForm((f) => ({ ...f, [k]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="actbar">
+                <button type="button" onClick={() => setCorrOpen(false)} disabled={corrBusy}>
+                  cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={corrBusy}>
+                  {corrBusy ? "guardando…" : "guardar corrección"}
+                </button>
+              </div>
+              {corrErr && <div className="err">{corrErr}</div>}
+            </form>
+          )}
         </div>
       )}
 

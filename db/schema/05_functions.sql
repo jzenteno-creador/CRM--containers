@@ -325,3 +325,34 @@ begin
   insert into operacion_eventos(operacion_id, tipo_evento, fecha, usuario_id, detalle)
    values (p_operacion, 'reapertura', now(), p_usuario, jsonb_build_object('motivo', p_motivo));
 end $function$
+
+-- F-03 (2026-07-05): edición auditada de datos de asignación/fechas. Whitelist de campos, deja
+-- evento 'correccion' con snapshot anterior→nuevo. Los CHECKs de D-05 validan las fechas.
+CREATE OR REPLACE FUNCTION detention.crm_corregir_operacion(p_operacion uuid, p_usuario uuid, p_campos jsonb)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO 'detention', 'public'
+AS $function$
+declare v_op operaciones; v_anterior jsonb;
+  v_allowed text[] := ARRAY['booking_asignado','buque','destino','orden','shp','fecha_retiro','fecha_egreso_planta','fecha_devolucion'];
+begin
+  select * into v_op from operaciones where id = p_operacion;
+  if not found then raise exception 'operación no encontrada'; end if;
+  if p_campos is null or p_campos = '{}'::jsonb then raise exception 'no hay campos para corregir'; end if;
+  if exists (select 1 from jsonb_object_keys(p_campos) k where k <> all(v_allowed)) then
+    raise exception 'campo no editable en la corrección'; end if;
+  select jsonb_object_agg(k, to_jsonb(v_op)->k) into v_anterior from jsonb_object_keys(p_campos) k;
+  update operaciones set
+    booking_asignado = case when p_campos ? 'booking_asignado' then nullif(p_campos->>'booking_asignado','') else booking_asignado end,
+    buque = case when p_campos ? 'buque' then nullif(p_campos->>'buque','') else buque end,
+    destino = case when p_campos ? 'destino' then nullif(p_campos->>'destino','') else destino end,
+    orden = case when p_campos ? 'orden' then nullif(p_campos->>'orden','') else orden end,
+    shp = case when p_campos ? 'shp' then nullif(p_campos->>'shp','') else shp end,
+    fecha_retiro = case when p_campos ? 'fecha_retiro' then (p_campos->>'fecha_retiro')::timestamptz else fecha_retiro end,
+    fecha_egreso_planta = case when p_campos ? 'fecha_egreso_planta' then nullif(p_campos->>'fecha_egreso_planta','')::timestamptz else fecha_egreso_planta end,
+    fecha_devolucion = case when p_campos ? 'fecha_devolucion' then nullif(p_campos->>'fecha_devolucion','')::timestamptz else fecha_devolucion end,
+    updated_at = now()
+  where id = p_operacion;
+  insert into operacion_eventos(operacion_id, tipo_evento, fecha, usuario_id, detalle)
+  values (p_operacion, 'correccion', now(), p_usuario, jsonb_build_object('cambios', p_campos, 'anterior', v_anterior));
+end $function$
