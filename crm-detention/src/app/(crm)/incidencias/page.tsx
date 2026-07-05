@@ -262,7 +262,7 @@ export default function IncidenciasPage() {
     };
   }, []);
 
-  // ---- submit: insert incidencia → fotos (storage + tabla) → evento de operación ----
+  // ---- submit: RPC atómica (incidencia + evento) → fotos best-effort (storage + tabla) ----
   async function registrar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormErr(null);
@@ -280,20 +280,16 @@ export default function IncidenciasPage() {
       const fechaTs = `${fecha}T12:00:00-03:00`;
       const desc = descripcion.trim() || null;
 
-      // 1) incidencia (si falla, no se guarda nada)
-      const { data: inc, error: eInc } = await supabase
-        .from("incidencias")
-        .insert({
-          operacion_id: opSel.id,
-          tipo,
-          descripcion: desc,
-          fecha: fechaTs,
-          usuario_id: session.id,
-        })
-        .select("id")
-        .single();
+      // 1) incidencia + evento del timeline en una sola transacción (BE-03)
+      const { data: incId, error: eInc } = await supabase.rpc("crm_registrar_incidencia", {
+        p_operacion: opSel.id,
+        p_tipo: tipo,
+        p_descripcion: desc,
+        p_fecha: fechaTs,
+        p_usuario: session.id,
+      });
       if (eInc) throw new Error(`no se pudo registrar la incidencia: ${eInc.message}`);
-      const incidenciaId = (inc as { id: string }).id;
+      const incidenciaId = incId as string;
 
       // 2) fotos: cada una por separado; si una falla se informa pero la incidencia no se pierde
       const avisos: string[] = [];
@@ -316,15 +312,7 @@ export default function IncidenciasPage() {
         subidas++;
       }
 
-      // 3) evento en el timeline de la operación
-      const { error: eEv } = await supabase.from("operacion_eventos").insert({
-        operacion_id: opSel.id,
-        tipo_evento: "incidencia",
-        fecha: fechaTs,
-        usuario_id: session.id,
-        detalle: { tipo, descripcion: desc },
-      });
-      if (eEv) avisos.push(`evento de operación: ${eEv.message}`);
+      // (el evento del timeline ya lo insertó la RPC atómicamente en el paso 1)
 
       let msg = `incidencia registrada sobre ${opSel.numero}`;
       if (fotos.length > 0) msg += ` · ${subidas}/${fotos.length} fotos subidas`;

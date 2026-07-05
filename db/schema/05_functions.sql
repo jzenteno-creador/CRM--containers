@@ -356,3 +356,22 @@ begin
   insert into operacion_eventos(operacion_id, tipo_evento, fecha, usuario_id, detalle)
   values (p_operacion, 'correccion', now(), p_usuario, jsonb_build_object('cambios', p_campos, 'anterior', v_anterior));
 end $function$
+
+-- BE-03 (2026-07-05): alta de incidencia atómica (incidencia + evento del timeline en una transacción).
+-- Valida operación abierta. Las fotos se suben aparte (best-effort) usando el id devuelto.
+CREATE OR REPLACE FUNCTION detention.crm_registrar_incidencia(p_operacion uuid, p_tipo text, p_descripcion text, p_fecha timestamp with time zone, p_usuario uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SET search_path TO 'detention', 'public'
+AS $function$
+declare v_id uuid; v_estado text;
+begin
+  select estado into v_estado from operaciones where id = p_operacion;
+  if not found then raise exception 'operación no encontrada'; end if;
+  if v_estado in ('cerrado','anulada') then raise exception 'no se puede cargar una incidencia sobre una operación %', v_estado; end if;
+  insert into incidencias(operacion_id, tipo, descripcion, fecha, usuario_id)
+   values (p_operacion, p_tipo, p_descripcion, p_fecha, p_usuario) returning id into v_id;
+  insert into operacion_eventos(operacion_id, tipo_evento, fecha, usuario_id, detalle)
+   values (p_operacion, 'incidencia', p_fecha, p_usuario, jsonb_build_object('tipo', p_tipo, 'descripcion', p_descripcion));
+  return v_id;
+end $function$
