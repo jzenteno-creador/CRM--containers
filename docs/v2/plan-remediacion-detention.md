@@ -27,6 +27,39 @@ El schema `detention` (v1) está **expuesto en la Data API** con **RLS OFF en la
 
 Ambas son reversibles: la exposición se puede volver a activar. La 1 es un toggle tuyo; la 2 es una migración sobre `detention` que requiere tu OK explícito (§21).
 
+## Evidencia (a) — v1 es client-side con anon key (verificado directo 2026-07-08)
+
+- `crm-detention/src/lib/supabase.ts:1,13` — único `createClient`, con `SUPABASE_ANON_KEY`, `db.schema="detention"`.
+- Grep `src/`: **0** `service_role`/`serviceRole`, **0** route handlers/middleware, **0** `createServerClient`/`@supabase/ssr`.
+- El cliente `supabase` lo importan 13 archivos: **12 `"use client"`** + `login/actions.ts` (`"use server"`, pero también anon key vía REST). Por semántica Next, la anon key `NEXT_PUBLIC_*` se inlinea en el bundle → queries desde el browser.
+- **Conclusión: 100% anon-key, dominado por el browser. Des-exponer detention rompe v1.**
+
+## Config viva de PostgREST (fuente de verdad)
+
+`pg_db_role_setting` de `authenticator`: `pgrst.db_schemas = public, graphql_public, detention` (crm NO figura — el Save del dashboard no persistió). La exposición la manda ESTE setting + `NOTIFY pgrst,'reload config'`, no el dashboard.
+
+## Por qué "RLS con el patrón de crm" NO aplica a detention
+
+El patrón crm depende de `auth.uid()`/`perfil()`. v1 no usa Supabase Auth (login propio, cookie base64, todo como rol `anon`). Sin `auth.uid()`, la única RLS escribible es `USING(true)` (no protege) o `USING(false)` (rompe v1). A nivel DB, `anon`-app y `anon`-atacante son el mismo principal con la misma key pública: **ninguna RLS/grant los distingue.** Asegurar detention funcional ⇒ darle identidad real (reescribir auth) o proxy server-side con service role.
+
+## Statements candidatos para (c) — exposición de crm por SQL (NO aplicar sin OK de John)
+
+crm debe exponerse igual (lo necesita v2). La lista final depende de la decisión de detention:
+
+- **Opción A (detention dormida → des-exponer):**
+  ```sql
+  ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, crm';
+  NOTIFY pgrst, 'reload config';
+  ```
+- **Opción B/C (detention se sigue usando → queda expuesta):**
+  ```sql
+  ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, detention, crm';
+  NOTIFY pgrst, 'reload config';
+  ```
+  En B además va una migración sobre detention (REVOKE INSERT/UPDATE de anon/authenticated) — corta escritura anónima, deja lectura; requiere OK aparte (§21).
+
+Los grants de las tablas crm ya existen (auto-expose previo) → exponer el schema alcanza; la RLS protege. El hardening 015 (revocar excedentes) va DESPUÉS del test §14.10.
+
 ## Follow-up separado (no bloqueante de esta decisión)
 
 - Bucket de storage `incidencias` (v1) es **público** (advisor `public_bucket_allows_listing`): las fotos de incidencias son listables sin auth. Se cierra junto con la Opción elegida o en el cutover.
