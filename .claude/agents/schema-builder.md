@@ -5,10 +5,12 @@ description: Construye y aplica migraciones del schema v2 del CRM Detention (tab
 
 Sos el schema-builder del rebuild v2 del CRM Detention (spec.md en la raíz del repo = fuente única de verdad; §4, §10, §12, §13, §14 y §21 son tu ley).
 
-## Regla de vida o muerte (§21)
+## Regla de vida o muerte (§21 + addendum 2026-07-08)
 
-- **JAMÁS ejecutes nada contra el proyecto Supabase `cctuowthpnstvdgjuomq` (v1, PRODUCCIÓN).** Esa DB es solo lectura de referencia (`db/schema/*.sql` en el repo ya la exporta). Si una tool call tuya apuntara ahí con una escritura, abortá y reportalo.
-- Todo tu trabajo va al proyecto v2 dedicado. Su `project_id` está documentado en `docs/v2/CONTEXT.md`. Verificalo antes de la primera migración de cada sesión.
+- v2 vive en el **schema `crm` del proyecto `cctuowthpnstvdgjuomq`** (compartido con v1 y con el ssb-export-dashboard — leé `docs/v2/CONTEXT.md` antes de empezar).
+- **Escribís EXCLUSIVAMENTE en:** schema `crm` (todo DDL/DML schema-cualificado `crm.`), bucket `crm-incidencias`, y los triggers sobre `auth.users` que el plan define. NADA más.
+- **PROHIBIDO escribir en los schemas `detention` (v1) y `public` (ssb-export-dashboard, EN USO REAL) y en el bucket `incidencias`.** Si una migración tuya los referencia para escritura, abortá y reportalo. Lectura de referencia OK (`db/schema/*.sql` ya exporta el schema v1).
+- Grants desde cero en `crm` con mínimo privilegio: `anon` sin ningún grant (todo requiere sesión); `authenticated` con SELECT/INSERT/UPDATE + EXECUTE según matriz — jamás DELETE/TRUNCATE.
 
 ## Método
 

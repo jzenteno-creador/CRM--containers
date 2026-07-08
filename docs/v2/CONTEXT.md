@@ -2,12 +2,19 @@
 
 > Leído por los subagentes (.claude/agents/) al inicio de cada tarea. Fuente de verdad funcional: `spec.md` (raíz).
 
-## Proyectos Supabase
+## Supabase (addendum §21 del spec, 2026-07-08)
 
-| Ambiente | project_id | Regla |
-|---|---|---|
-| **v1 PRODUCCIÓN** | `cctuowthpnstvdgjuomq` | ⛔ INTOCABLE (§21.1). Solo lectura de referencia. Ninguna migración/seed/escritura de v2 apunta acá. |
-| **v2 (rebuild)** | _pendiente de creación — se completa al crear el proyecto vía MCP con costo confirmado por John_ | Único destino de migraciones y seeds de v2. |
+**Un solo proyecto: `cctuowthpnstvdgjuomq`.** v2 vive en el **schema `crm`** de ese proyecto.
+
+| Superficie | Regla |
+|---|---|
+| schema `crm` + bucket `crm-incidencias` + triggers sobre `auth.users` | ✅ Único destino de escritura de v2. Todo DDL/DML schema-cualificado `crm.` |
+| schema `detention` (v1 CRM, demo viva) | ⛔ Intocable para escritura. Lectura de referencia OK. |
+| schema `public` (ssb-export-dashboard, EN USO) | ⛔ Intocable para escritura. |
+| bucket `incidencias` | ⛔ Es de v1 — no tocar. |
+| dominio crm-detention.vercel.app | ⛔ Es de v1 — no deployar ahí. |
+
+Cliente v2: `db: { schema: 'crm' }` (patrón v1). `auth.users` verificada con 0 filas (2026-07-08): v2 se apropia de Auth sin conflicto. Paso manual de John pendiente: exponer `crm` en Data API (precondición del front M2+, no de las migraciones).
 
 ## Git
 

@@ -21,11 +21,11 @@ Fuente de verdad: `spec.md` (raíz del repo). Leé la sección del módulo bajo 
 9. Bucket de storage público o sin policies de activos.
 10. Credenciales hardcodeadas (URL/key de v2 van por env; la excepción documentada de v1 no aplica al rebuild).
 
-## Criterios de rechazo automático — Convivencia v1 (§21)
+## Criterios de rechazo automático — Convivencia (§21 + addendum 2026-07-08)
 
-11. **Cualquier referencia de escritura al proyecto `cctuowthpnstvdgjuomq` (v1 PROD)** en código, migración, script o config de v2. Lectura de referencia está OK solo en docs/análisis.
-12. Código v2 fuera de `crm-v2/` (+ `.claude/`, `docs/`), o cambios sobre `crm-detention/` (v1).
-13. Deploy automático o referencia al dominio de producción v1.
+11. **Cualquier escritura fuera del schema `crm`** del proyecto compartido `cctuowthpnstvdgjuomq`: statements que escriban en los schemas `detention` (v1) o `public` (ssb-export-dashboard), objetos sin cualificar con `crm.`, o uso del bucket `incidencias` (v1) en lugar de `crm-incidencias`. Triggers sobre `auth.users`: solo los del plan aprobado. Lectura de referencia OK.
+12. Código v2 fuera de `crm-v2/` (+ `.claude/`, `docs/`), o cambios sobre `crm-detention/` (v1). Cliente Supabase v2 sin `db: { schema: 'crm' }`.
+13. Deploy automático o referencia al dominio de producción v1. Grant de DELETE/TRUNCATE, o cualquier grant a `anon`, en el schema `crm`.
 
 ## Criterios de rechazo automático — Interfaz (estándar del build)
 
