@@ -4,18 +4,20 @@
 // Tabler + tooltip + ítem activo cyan; bottom-nav en móvil. Header 58px: título
 // contextual, búsqueda global (placeholder — wiring M5), campana con badge
 // (placeholder — wiring M6), "?" contextual (contenido M10), reloj mono y menú de
-// usuario con el Dropdown del sistema (sesión real en M2).
+// usuario con sesión real (M2): nombre/correo/rol + logout. La solapa Admin solo
+// aparece para rol administrador (§8) — RLS sigue siendo la compuerta real.
 // En móvil el header colapsa a título + campana + menú (búsqueda y "?" van al menú).
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ROL_LABELS, useSession } from "@/lib/session";
 import { CommandPalette } from "./command-palette";
 import { Dropdown, Popover } from "./dropdown";
 import { HelpPanel } from "./help-panel";
 import { Markdown } from "./markdown";
 
-// Solapas §8 — Admin se gatea por rol en M2 (en M0 no hay sesión: se muestran todas)
+// Solapas §8 — Admin se filtra por rol (abajo, en FdShell)
 const TABS = [
   { href: "/inicio", label: "Inicio", icon: "ti-layout-dashboard" },
   { href: "/ingreso", label: "Ingreso", icon: "ti-login-2" },
@@ -83,14 +85,35 @@ function NotificationBell() {
   );
 }
 
+/** Iniciales para el avatar (display): 2 letras del nombre, fallback correo. */
+function initialsOf(name: string | null, email: string | null): string {
+  const source = (name ?? "").trim() || email || "";
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return source.slice(0, 2).toUpperCase() || "—";
+}
+
 export function FdShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { displayName, email, perfil, signOut } = useSession();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
-  const activeTab = TABS.find((t) => pathname.startsWith(t.href));
+  // §8: Admin solo para administradores (el rol viene de perfil(), no de metadata)
+  const tabs = TABS.filter((t) => t.href !== "/admin" || perfil?.rol === "administrador");
+
+  const activeTab = tabs.find((t) => pathname.startsWith(t.href));
   const title = activeTab?.label ?? "SSB·DETENTION";
 
   const openSearch = () => window.dispatchEvent(new CustomEvent("fd-palette"));
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut();
+    router.replace("/login");
+  };
 
   return (
     <div className="fd-shell">
@@ -113,7 +136,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
         <span className="dot-logo fd-rail-logo" title="SSB · DETENTION">
           S
         </span>
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""} aria-label={t.label}>
             <i className={`ti ${t.icon}`} aria-hidden />
             <span className="fd-tip">{t.label}</span>
@@ -164,22 +187,39 @@ export function FdShell({ children }: { children: React.ReactNode }) {
 
           <ClockAR />
 
-          {/* menú de usuario (Dropdown del sistema) — sesión real en M2 */}
+          {/* menú de usuario — sesión real (M2): identidad de perfil() + logout */}
           <Dropdown
             align="right"
-            width={220}
+            width={230}
             header={
               <div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--color-text-primary)" }}>Sin sesión</div>
-                <div style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 2 }}>
-                  el login se conecta en M2
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--color-text-primary)" }}>
+                  {displayName ?? "—"}
                 </div>
+                {email && (
+                  <div className="mono" style={{ fontSize: 10.5, color: "var(--color-text-faint)", marginTop: 2 }}>
+                    {email}
+                  </div>
+                )}
+                {perfil?.rol && (
+                  <div style={{ fontSize: 11, color: "var(--color-accent-500)", marginTop: 4 }}>
+                    {ROL_LABELS[perfil.rol]}
+                  </div>
+                )}
               </div>
             }
             items={[
               { id: "buscar", label: "Buscar (⌘K)", icon: "ti-search", onSelect: openSearch },
               { id: "ayuda", label: "Ayuda de esta solapa", icon: "ti-help-circle", onSelect: () => setHelpOpen(true) },
-              { id: "logout", label: "Cerrar sesión", icon: "ti-logout", disabled: true, divider: true },
+              {
+                id: "logout",
+                label: signingOut ? "Cerrando sesión…" : "Cerrar sesión",
+                icon: "ti-logout",
+                danger: true,
+                disabled: signingOut,
+                divider: true,
+                onSelect: () => void handleSignOut(),
+              },
             ]}
             trigger={(p) => (
               <button
@@ -191,7 +231,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
                 aria-controls={p["aria-controls"]}
                 style={{ border: "none", background: "transparent", padding: 0, minHeight: 0, display: "inline-flex" }}
               >
-                <span className="fd-avatar">—</span>
+                <span className="fd-avatar">{initialsOf(displayName, email)}</span>
               </button>
             )}
           />
@@ -205,7 +245,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
 
       {/* bottom-nav móvil: una línea con scroll horizontal, touch ≥44px */}
       <nav className="fd-bottombar">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""}>
             <i className={`ti ${t.icon}`} aria-hidden />
             {t.label}
