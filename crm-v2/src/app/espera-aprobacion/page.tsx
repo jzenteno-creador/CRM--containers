@@ -1,20 +1,36 @@
 "use client";
 
-// Compuerta de aprobación (§12.2/§12.5, wireada en M2): autenticado pero no activo.
-// Muestra el ESTADO REAL desde la RPC perfil() (pendiente / rechazado / suspendido)
-// + logout. El acceso cero a datos lo garantiza RLS (§14.3), no esta pantalla.
-// Nota: el motivo del rechazo vive en crm.usuarios.rechazo_motivo, que un usuario
-// no-activo NO puede leer (§14.3) y perfil() no expone — se muestra un mensaje
-// genérico hasta que el schema-builder lo agregue a la superficie, si se decide.
+// Compuerta de aprobación (§12.2/§12.3/§12.5): autenticado pero no activo.
+// El estado de ESTA pantalla se resuelve vía la RPC crm.mi_estado_cuenta()
+// (migración 012): devuelve UNA fila { estado_cuenta, rechazo_motivo } de la
+// fila PROPIA del caller — única superficie que un no-activo puede leer
+// (§14.3) y la que trae el motivo de rechazo que exige §12.3.
+// Si la RPC falla (ej: schema `crm` aún sin exponer en la Data API) se
+// degrada al comportamiento previo: estado desde el contexto de sesión
+// (perfil()) con texto genérico, o ErrorState + retry si perfil() también
+// falló. El acceso cero a datos lo garantiza RLS (§14.3), no esta pantalla.
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/fd/button";
 import { ErrorState } from "@/components/fd/error-state";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useSession, type EstadoCuenta } from "@/lib/session";
+import { getSupabase } from "@/lib/supabase";
 
 type EstadoGate = Exclude<EstadoCuenta, "activo">;
+
+/** Espejo de la RPC crm.mi_estado_cuenta() (migración 012). */
+type EstadoCuentaRow = {
+  estado_cuenta: EstadoCuenta | null;
+  rechazo_motivo: string | null;
+};
+
+type GateState =
+  | { kind: "loading" }
+  | { kind: "resolved"; estado: EstadoCuenta; motivo: string | null }
+  /** La RPC falló — se degrada al estado del contexto de sesión (perfil()). */
+  | { kind: "fallback" };
 
 const ESTADO_UI: Record<
   EstadoGate,
@@ -70,14 +86,42 @@ export default function EsperaAprobacionPage() {
   const router = useRouter();
   const { status, email, perfil, perfilError, refreshPerfil, signOut } = useSession();
   const [signingOut, setSigningOut] = useState(false);
+  const [gate, setGate] = useState<GateState>({ kind: "loading" });
+
+  // Sin setState previo al await: el estado inicial ya es "loading" y el reset
+  // de los retries vive en su event handler (react-hooks/set-state-in-effect).
+  const loadEstadoCuenta = useCallback(async () => {
+    const { data, error } = await getSupabase().rpc("mi_estado_cuenta");
+    if (error) {
+      setGate({ kind: "fallback" });
+      return;
+    }
+    const row = data as EstadoCuentaRow | null;
+    const motivo =
+      typeof row?.rechazo_motivo === "string" && row.rechazo_motivo.trim() !== ""
+        ? row.rechazo_motivo.trim()
+        : null;
+    // Ambos campos null (sin fila en crm.usuarios) ⇒ pendiente genérico.
+    setGate({ kind: "resolved", estado: row?.estado_cuenta ?? "pendiente_aprobacion", motivo });
+  }, []);
+
+  useEffect(() => {
+    if (status !== "signedIn") return;
+    // IIFE async: los setState de loadEstadoCuenta() quedan detrás del await (set-state-in-effect)
+    void (async () => {
+      await loadEstadoCuenta();
+    })();
+  }, [status, loadEstadoCuenta]);
 
   useEffect(() => {
     if (status === "signedOut") router.replace("/login");
   }, [status, router]);
 
   useEffect(() => {
-    if (perfil?.estado === "activo") router.replace("/inicio");
-  }, [perfil, router]);
+    const activo =
+      (gate.kind === "resolved" && gate.estado === "activo") || perfil?.estado === "activo";
+    if (activo) router.replace("/inicio");
+  }, [gate, perfil, router]);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -85,14 +129,28 @@ export default function EsperaAprobacionPage() {
     router.replace("/login");
   };
 
-  if (status === "signedIn" && perfilError) {
+  // Estado efectivo de la card: mi_estado_cuenta() manda; si falló, perfil().
+  let estadoGate: EstadoGate | null = null;
+  let motivo: string | null = null;
+  if (gate.kind === "resolved" && gate.estado !== "activo") {
+    estadoGate = gate.estado;
+    motivo = gate.estado === "rechazado" ? gate.motivo : null;
+  } else if (gate.kind === "fallback" && perfil && perfil.estado !== "activo") {
+    estadoGate = perfil.estado;
+  }
+
+  if (status === "signedIn" && gate.kind === "fallback" && perfilError) {
     return (
       <GateFrame>
         <div className="gate-card">
           <ErrorState
             title="No pudimos resolver el estado de tu cuenta"
             detail={perfilError}
-            onRetry={() => void refreshPerfil()}
+            onRetry={() => {
+              setGate({ kind: "loading" });
+              void refreshPerfil();
+              void loadEstadoCuenta();
+            }}
           />
           <Button
             variant="ghost"
@@ -108,7 +166,7 @@ export default function EsperaAprobacionPage() {
     );
   }
 
-  if (status !== "signedIn" || !perfil || perfil.estado === "activo") {
+  if (status !== "signedIn" || !estadoGate) {
     return (
       <GateFrame>
         <div className="gate-card" aria-busy="true" aria-label="cargando estado de la cuenta">
@@ -121,7 +179,11 @@ export default function EsperaAprobacionPage() {
     );
   }
 
-  const ui = ESTADO_UI[perfil.estado];
+  const ui = ESTADO_UI[estadoGate];
+  const body =
+    estadoGate === "rechazado" && motivo
+      ? "Un administrador rechazó tu solicitud de acceso. Este es el motivo que indicó:"
+      : ui.body;
 
   return (
     <GateFrame>
@@ -169,8 +231,48 @@ export default function EsperaAprobacionPage() {
           </span>
         )}
         <p style={{ fontSize: 12.5, color: "var(--color-text-muted)", lineHeight: 1.6, margin: 0, maxWidth: 340 }}>
-          {ui.body}
+          {body}
         </p>
+        {motivo && (
+          <blockquote
+            style={{
+              margin: 0,
+              width: "100%",
+              textAlign: "left",
+              padding: "12px 14px",
+              borderRadius: "var(--radius-input)",
+              background: ui.tint,
+              border: `1px solid ${ui.line}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: ui.color,
+              }}
+            >
+              Motivo indicado por administración
+            </span>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 12.5,
+                lineHeight: 1.6,
+                color: "var(--color-text-primary)",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {motivo}
+            </p>
+          </blockquote>
+        )}
         <div style={{ marginTop: 10, width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
           <Button
             variant="ghost"
