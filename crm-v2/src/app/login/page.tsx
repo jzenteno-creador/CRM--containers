@@ -12,6 +12,7 @@ import type { AuthError } from "@supabase/supabase-js";
 import { AuthBrandPanel } from "@/components/auth/brand-panel";
 import { Button } from "@/components/fd/button";
 import { Field, Input } from "@/components/fd/fields";
+import { FormAlert } from "@/components/fd/form-alert";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 
@@ -109,22 +110,7 @@ export default function LoginPage() {
                 onBlur={() => setTouched((t) => ({ ...t, password: true }))}
               />
             </Field>
-            {authError && (
-              <div
-                role="alert"
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-status-red)",
-                  background: "var(--color-red-tint)",
-                  border: "1px solid var(--color-red-line)",
-                  borderRadius: "var(--radius-input)",
-                  padding: "8px 12px",
-                  lineHeight: 1.5,
-                }}
-              >
-                {authError}
-              </div>
-            )}
+            {authError && <FormAlert>{authError}</FormAlert>}
             <Button type="submit" variant="primary" loading={submitting} style={{ padding: 11, fontSize: 13 }}>
               Ingresar
             </Button>

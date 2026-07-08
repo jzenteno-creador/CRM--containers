@@ -8,13 +8,16 @@ import { useMemo, useState } from "react";
 import { ContainerNumber } from "@/components/container-number";
 import { Badge, FilterChip } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
+import { CardIcon } from "@/components/fd/card-icon";
 import { BarChart, TrendLine } from "@/components/fd/charts";
 import { DataTable, type Column, type RowValidation } from "@/components/fd/data-table";
 import { Dropdown, Popover, Tooltip } from "@/components/fd/dropdown";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { Checkbox, DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
+import { FormAlert } from "@/components/fd/form-alert";
 import { FreetimeMeter, ProgressBar } from "@/components/fd/freetime-meter";
+import { GateFrame } from "@/components/fd/gate-frame";
 import { HelpPanel } from "@/components/fd/help-panel";
 import { Kbd } from "@/components/fd/kbd";
 import { KpiCard } from "@/components/fd/kpi-card";
@@ -637,6 +640,45 @@ export function DesignClient() {
             <div style={{ border: "1px dashed var(--color-border-strong)", borderRadius: "var(--radius-panel)" }}>
               <ErrorState detail="Sin conexión con la base. Los datos pueden estar desactualizados." onRetry={() => toast({ type: "info", title: "Reintentando…" })} />
             </div>
+          </div>
+        </Section>
+
+        {/* ============ chrome de auth / gate ============ */}
+        <Section
+          title="GateFrame · CardIcon · FormAlert"
+          note="chrome de auth/gate — consolidación #11, extracción pura (cero cambio visual)"
+        >
+          <Row label="card icon — tonal por estado (ámbar / rojo / verde / accent)">
+            <CardIcon icon="ti-hourglass-high" color="var(--color-status-amber)" tint="var(--color-amber-tint)" line="var(--color-amber-line)" />
+            <CardIcon icon="ti-user-x" color="var(--color-status-red)" tint="var(--color-red-tint)" line="var(--color-red-line)" />
+            <CardIcon icon="ti-circle-check" color="var(--color-status-green)" tint="var(--color-green-tint)" line="var(--color-green-line)" />
+            <CardIcon icon="ti-lock-cog" color="var(--color-accent-500)" tint="var(--color-accent-tint)" line="var(--color-accent-line)" />
+          </Row>
+          <Row label="form alert — error inline de formulario (login / registro / recuperar / reset)">
+            <div style={{ width: "min(340px, 100%)" }}>
+              <FormAlert>Correo o contraseña incorrectos.</FormAlert>
+            </div>
+          </Row>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span className="fd-label">gate frame — marco de compuerta (preview enmarcado; en prod ocupa el viewport)</span>
+            <GateFrame
+              style={{
+                minHeight: 0,
+                borderRadius: "var(--radius-panel)",
+                border: "1px solid var(--color-border-strong)",
+              }}
+            >
+              <div className="gate-card">
+                <CardIcon icon="ti-hourglass-high" color="var(--color-status-amber)" tint="var(--color-amber-tint)" line="var(--color-amber-line)" />
+                <h1 className="fd-display" style={{ fontSize: 17, margin: "4px 0 0", color: "var(--color-text-primary)" }}>
+                  Tu cuenta espera aprobación
+                </h1>
+                <p style={{ fontSize: 12.5, color: "var(--color-text-muted)", lineHeight: 1.6, margin: 0, maxWidth: 340 }}>
+                  Marco compartido por login, registro, recuperación, callback y las compuertas de sesión —
+                  dot-logo «S», wordmark SSB·INTERNATIONAL y footer «CRM DETENTION · v2».
+                </p>
+              </div>
+            </GateFrame>
           </div>
         </Section>
 

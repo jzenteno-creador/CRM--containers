@@ -13,7 +13,9 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/fd/button";
+import { CardIcon } from "@/components/fd/card-icon";
 import { ErrorState } from "@/components/fd/error-state";
+import { GateFrame } from "@/components/fd/gate-frame";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useSession, type EstadoCuenta } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
@@ -64,23 +66,6 @@ const ESTADO_UI: Record<
     line: "var(--color-amber-line)",
   },
 };
-
-function GateFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="gate-page">
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="dot-logo">S</span>
-        <span className="wordmark">
-          SSB<b>·</b>INTERNATIONAL
-        </span>
-      </div>
-      {children}
-      <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-        CRM DETENTION · v2
-      </span>
-    </div>
-  );
-}
 
 export default function EsperaAprobacionPage() {
   const router = useRouter();
@@ -197,22 +182,7 @@ export default function EsperaAprobacionPage() {
   return (
     <GateFrame>
       <div className="gate-card">
-        <span
-          aria-hidden
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: "50%",
-            display: "grid",
-            placeItems: "center",
-            background: ui.tint,
-            border: `1px solid ${ui.line}`,
-            color: ui.color,
-            fontSize: 24,
-          }}
-        >
-          <i className={`ti ${ui.icon}`} />
-        </span>
+        <CardIcon icon={ui.icon} color={ui.color} tint={ui.tint} line={ui.line} />
         <span
           style={{
             fontSize: 10.5,

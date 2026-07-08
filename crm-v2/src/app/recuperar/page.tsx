@@ -9,7 +9,10 @@ import Link from "next/link";
 import { useState } from "react";
 import type { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/fd/button";
+import { CardIcon } from "@/components/fd/card-icon";
 import { Field, Input } from "@/components/fd/fields";
+import { FormAlert } from "@/components/fd/form-alert";
+import { GateFrame } from "@/components/fd/gate-frame";
 import { getSupabase } from "@/lib/supabase";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,31 +61,14 @@ export default function RecuperarPage() {
   };
 
   return (
-    <div className="gate-page">
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="dot-logo">S</span>
-        <span className="wordmark">
-          SSB<b>·</b>INTERNATIONAL
-        </span>
-      </div>
-
+    <GateFrame>
       <div className="gate-card">
-        <span
-          aria-hidden
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: "50%",
-            display: "grid",
-            placeItems: "center",
-            background: "var(--color-accent-tint)",
-            border: "1px solid var(--color-accent-line)",
-            color: "var(--color-accent-500)",
-            fontSize: 24,
-          }}
-        >
-          <i className={`ti ${sentTo ? "ti-mail-forward" : "ti-key"}`} />
-        </span>
+        <CardIcon
+          icon={sentTo ? "ti-mail-forward" : "ti-key"}
+          color="var(--color-accent-500)"
+          tint="var(--color-accent-tint)"
+          line="var(--color-accent-line)"
+        />
 
         {sentTo ? (
           <>
@@ -124,22 +110,7 @@ export default function RecuperarPage() {
                   onBlur={() => setTouched(true)}
                 />
               </Field>
-              {authError && (
-                <div
-                  role="alert"
-                  style={{
-                    fontSize: 12,
-                    color: "var(--color-status-red)",
-                    background: "var(--color-red-tint)",
-                    border: "1px solid var(--color-red-line)",
-                    borderRadius: "var(--radius-input)",
-                    padding: "8px 12px",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {authError}
-                </div>
-              )}
+              {authError && <FormAlert>{authError}</FormAlert>}
               <Button type="submit" variant="primary" loading={submitting} style={{ padding: 11, fontSize: 13 }}>
                 Enviar link de recuperación
               </Button>
@@ -150,10 +121,6 @@ export default function RecuperarPage() {
           </>
         )}
       </div>
-
-      <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-        CRM DETENTION · v2
-      </span>
-    </div>
+    </GateFrame>
   );
 }

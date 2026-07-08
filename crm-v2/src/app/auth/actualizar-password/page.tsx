@@ -10,7 +10,10 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import type { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/fd/button";
+import { CardIcon } from "@/components/fd/card-icon";
 import { Field, Input } from "@/components/fd/fields";
+import { FormAlert } from "@/components/fd/form-alert";
+import { GateFrame } from "@/components/fd/gate-frame";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
@@ -44,44 +47,6 @@ function readLinkError(): string | null {
 
 const subscribeNoop = () => () => {};
 const linkErrorServerSnapshot = () => null;
-
-function GateFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="gate-page">
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="dot-logo">S</span>
-        <span className="wordmark">
-          SSB<b>·</b>INTERNATIONAL
-        </span>
-      </div>
-      {children}
-      <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-        CRM DETENTION · v2
-      </span>
-    </div>
-  );
-}
-
-function CardIcon({ icon, color, tint, line }: { icon: string; color: string; tint: string; line: string }) {
-  return (
-    <span
-      aria-hidden
-      style={{
-        width: 52,
-        height: 52,
-        borderRadius: "50%",
-        display: "grid",
-        placeItems: "center",
-        background: tint,
-        border: `1px solid ${line}`,
-        color,
-        fontSize: 24,
-      }}
-    >
-      <i className={`ti ${icon}`} />
-    </span>
-  );
-}
 
 export default function ActualizarPasswordPage() {
   const router = useRouter();
@@ -269,22 +234,7 @@ export default function ActualizarPasswordPage() {
               onBlur={() => setTouched((t) => ({ ...t, repeat: true }))}
             />
           </Field>
-          {authError && (
-            <div
-              role="alert"
-              style={{
-                fontSize: 12,
-                color: "var(--color-status-red)",
-                background: "var(--color-red-tint)",
-                border: "1px solid var(--color-red-line)",
-                borderRadius: "var(--radius-input)",
-                padding: "8px 12px",
-                lineHeight: 1.5,
-              }}
-            >
-              {authError}
-            </div>
-          )}
+          {authError && <FormAlert>{authError}</FormAlert>}
           <Button type="submit" variant="primary" loading={submitting} style={{ padding: 11, fontSize: 13 }}>
             Guardar contraseña
           </Button>

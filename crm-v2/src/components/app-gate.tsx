@@ -10,29 +10,21 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/fd/button";
 import { ErrorState } from "@/components/fd/error-state";
+import { GateFrame } from "@/components/fd/gate-frame";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useSession } from "@/lib/session";
 
 /** Skeleton a pantalla completa con la atmósfera del gate (misma familia que .gate-page). */
 function GateSkeleton() {
   return (
-    <div className="gate-page">
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="dot-logo">S</span>
-        <span className="wordmark">
-          SSB<b>·</b>INTERNATIONAL
-        </span>
-      </div>
+    <GateFrame>
       <div className="gate-card" aria-busy="true" aria-label="cargando sesión">
         <SkeletonBlock width={44} height={44} style={{ borderRadius: "50%" }} />
         <SkeletonBlock width="55%" height={14} delay={150} />
         <SkeletonBlock width="80%" delay={300} />
         <SkeletonBlock width="70%" delay={450} />
       </div>
-      <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-        CRM DETENTION · v2
-      </span>
-    </div>
+    </GateFrame>
   );
 }
 
@@ -57,13 +49,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
 
   if (status === "signedIn" && perfilError) {
     return (
-      <div className="gate-page">
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span className="dot-logo">S</span>
-          <span className="wordmark">
-            SSB<b>·</b>INTERNATIONAL
-          </span>
-        </div>
+      <GateFrame>
         <div className="gate-card">
           <ErrorState
             title="No pudimos resolver tu perfil"
@@ -80,10 +66,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
             Cerrar sesión
           </Button>
         </div>
-        <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-          CRM DETENTION · v2
-        </span>
-      </div>
+      </GateFrame>
     );
   }
 

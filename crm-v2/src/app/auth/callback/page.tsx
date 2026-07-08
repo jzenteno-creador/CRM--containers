@@ -11,7 +11,9 @@ import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { useEffect } from "react";
 import { Button } from "@/components/fd/button";
+import { CardIcon } from "@/components/fd/card-icon";
 import { ErrorState } from "@/components/fd/error-state";
+import { GateFrame } from "@/components/fd/gate-frame";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useSession } from "@/lib/session";
 
@@ -31,23 +33,6 @@ function readLinkError(): string | null {
 const subscribeNoop = () => () => {};
 const linkErrorServerSnapshot = () => null;
 
-function GateFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="gate-page">
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="dot-logo">S</span>
-        <span className="wordmark">
-          SSB<b>·</b>INTERNATIONAL
-        </span>
-      </div>
-      {children}
-      <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-        CRM DETENTION · v2
-      </span>
-    </div>
-  );
-}
-
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { status, perfil, perfilError, refreshPerfil } = useSession();
@@ -64,22 +49,12 @@ export default function AuthCallbackPage() {
     return (
       <GateFrame>
         <div className="gate-card">
-          <span
-            aria-hidden
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              background: "var(--color-red-tint)",
-              border: "1px solid var(--color-red-line)",
-              color: "var(--color-status-red)",
-              fontSize: 24,
-            }}
-          >
-            <i className="ti ti-link-off" />
-          </span>
+          <CardIcon
+            icon="ti-link-off"
+            color="var(--color-status-red)"
+            tint="var(--color-red-tint)"
+            line="var(--color-red-line)"
+          />
           <h1 className="fd-display" style={{ fontSize: 17, margin: "4px 0 0", color: "var(--color-text-primary)" }}>
             El link no sirvió
           </h1>
@@ -106,22 +81,12 @@ export default function AuthCallbackPage() {
     return (
       <GateFrame>
         <div className="gate-card">
-          <span
-            aria-hidden
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              background: "var(--color-amber-tint)",
-              border: "1px solid var(--color-amber-line)",
-              color: "var(--color-status-amber)",
-              fontSize: 24,
-            }}
-          >
-            <i className="ti ti-mail-question" />
-          </span>
+          <CardIcon
+            icon="ti-mail-question"
+            color="var(--color-status-amber)"
+            tint="var(--color-amber-tint)"
+            line="var(--color-amber-line)"
+          />
           <h1 className="fd-display" style={{ fontSize: 17, margin: "4px 0 0", color: "var(--color-text-primary)" }}>
             Nada que confirmar
           </h1>

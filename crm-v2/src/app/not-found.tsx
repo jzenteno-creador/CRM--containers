@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/fd/empty-state";
+import { GateFrame } from "@/components/fd/gate-frame";
 
 // 404 Flight Deck (review M0): el rail linkea solapas que recién existen desde M3+
 // (ingreso, egreso, contenedores, alertas, incidencias, admin, ayuda). Hasta que cada
@@ -7,14 +8,7 @@ import { EmptyState } from "@/components/fd/empty-state";
 // del 404 default de Next sin estilar. Misma familia visual que /espera-aprobacion.
 export default function NotFound() {
   return (
-    <div className="gate-page">
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="dot-logo">S</span>
-        <span className="wordmark">
-          SSB<b>·</b>INTERNATIONAL
-        </span>
-      </div>
-
+    <GateFrame>
       <div className="gate-card">
         <span
           className="mono"
@@ -55,10 +49,6 @@ export default function NotFound() {
           Volver al inicio
         </Link>
       </div>
-
-      <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
-        CRM DETENTION · v2
-      </span>
-    </div>
+    </GateFrame>
   );
 }
