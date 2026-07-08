@@ -24,7 +24,7 @@ export default function LoginPage() {
         ? "correo inválido"
         : null;
   const passwordError = (touched.password || submitted) && password === "" ? "ingresá tu contraseña" : null;
-  const valido = EMAIL_RE.test(email.trim()) && password !== "";
+  const valid = EMAIL_RE.test(email.trim()) && password !== "";
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +92,7 @@ export default function LoginPage() {
                 onBlur={() => setTouched((t) => ({ ...t, password: true }))}
               />
             </Field>
-            {submitted && valido && (
+            {submitted && valid && (
               <div
                 role="status"
                 style={{

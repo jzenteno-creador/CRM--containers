@@ -27,7 +27,7 @@ const TABS = [
   { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle" },
 ];
 
-const AYUDA_PLACEHOLDER = `El contenido de ayuda de cada solapa se edita desde **Admin** sobre \`ayuda_contenido\` (llega con M10) y cubre:
+const HELP_PLACEHOLDER = `El contenido de ayuda de cada solapa se edita desde **Admin** sobre \`ayuda_contenido\` (llega con M10) y cubre:
 
 - qué es esta solapa,
 - qué completa cada campo,
@@ -37,7 +37,7 @@ const AYUDA_PLACEHOLDER = `El contenido de ayuda de cada solapa se edita desde *
 
 /** Reloj en hora AR (mono). Client-only: renderiza placeholder hasta el mount. */
 function ClockAR() {
-  const [hora, setHora] = useState<string | null>(null);
+  const [time, setTime] = useState<string | null>(null);
   useEffect(() => {
     const fmt = new Intl.DateTimeFormat("es-AR", {
       timeZone: "America/Argentina/Buenos_Aires",
@@ -46,14 +46,14 @@ function ClockAR() {
       second: "2-digit",
       hour12: false,
     });
-    const tick = () => setHora(fmt.format(new Date()));
+    const tick = () => setTime(fmt.format(new Date()));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
   return (
     <span className="fd-clock mono" suppressHydrationWarning>
-      {hora ?? "--:--:--"}
+      {time ?? "--:--:--"}
     </span>
   );
 }
@@ -85,27 +85,27 @@ function NotificationBell() {
 
 export function FdShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [ayudaAbierta, setAyudaAbierta] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
-  const activa = TABS.find((t) => pathname.startsWith(t.href));
-  const titulo = activa?.label ?? "SSB·DETENTION";
+  const activeTab = TABS.find((t) => pathname.startsWith(t.href));
+  const title = activeTab?.label ?? "SSB·DETENTION";
 
-  const abrirBusqueda = () => window.dispatchEvent(new CustomEvent("fd-palette"));
+  const openSearch = () => window.dispatchEvent(new CustomEvent("fd-palette"));
 
   return (
     <div className="fd-shell">
       <CommandPalette />
       <HelpPanel
-        open={ayudaAbierta}
-        onClose={() => setAyudaAbierta(false)}
-        titulo={titulo}
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={title}
         footer={
-          <Link href="/ayuda" onClick={() => setAyudaAbierta(false)}>
+          <Link href="/ayuda" onClick={() => setHelpOpen(false)}>
             Ver el banco completo de consultas →
           </Link>
         }
       >
-        <Markdown source={AYUDA_PLACEHOLDER} />
+        <Markdown source={HELP_PLACEHOLDER} />
       </HelpPanel>
 
       {/* rail desktop */}
@@ -124,7 +124,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
 
       <div className="fd-main">
         <header className="fd-header">
-          <span className="fd-title fd-display">{titulo}</span>
+          <span className="fd-title fd-display">{title}</span>
           {pathname.startsWith("/inicio") && (
             <span className="fd-live hide-md">
               <i aria-hidden /> EN VIVO
@@ -133,7 +133,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
           <span style={{ flex: 1 }} />
 
           {/* búsqueda global — desktop (móvil: dentro del menú) */}
-          <button type="button" className="fd-kbd hide-md" title="Buscar (⌘K)" onClick={abrirBusqueda}>
+          <button type="button" className="fd-kbd hide-md" title="Buscar (⌘K)" onClick={openSearch}>
             <i className="ti ti-search" aria-hidden />
             <kbd
               className="mono"
@@ -157,7 +157,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
             className="fd-iconbtn hide-md"
             title="Ayuda de esta solapa"
             aria-label="ayuda de esta solapa"
-            onClick={() => setAyudaAbierta(true)}
+            onClick={() => setHelpOpen(true)}
           >
             <i className="ti ti-help-circle" aria-hidden />
           </button>
@@ -177,8 +177,8 @@ export function FdShell({ children }: { children: React.ReactNode }) {
               </div>
             }
             items={[
-              { id: "buscar", label: "Buscar (⌘K)", icon: "ti-search", onSelect: abrirBusqueda },
-              { id: "ayuda", label: "Ayuda de esta solapa", icon: "ti-help-circle", onSelect: () => setAyudaAbierta(true) },
+              { id: "buscar", label: "Buscar (⌘K)", icon: "ti-search", onSelect: openSearch },
+              { id: "ayuda", label: "Ayuda de esta solapa", icon: "ti-help-circle", onSelect: () => setHelpOpen(true) },
               { id: "logout", label: "Cerrar sesión", icon: "ti-logout", disabled: true, divider: true },
             ]}
             trigger={(p) => (

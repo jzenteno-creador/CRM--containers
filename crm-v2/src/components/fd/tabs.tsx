@@ -34,13 +34,13 @@ export function Tabs({
       }}
     >
       {tabs.map((t) => {
-        const activa = t.id === active;
+        const isActive = t.id === active;
         return (
           <button
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={activa}
+            aria-selected={isActive}
             onClick={() => onChange(t.id)}
             className="hover:[background:var(--color-surface-2)!important]"
             style={{
@@ -51,11 +51,11 @@ export function Tabs({
               padding: "9px 14px",
               border: "none",
               borderRadius: 0,
-              borderBottom: `2px solid ${activa ? "var(--color-accent-500)" : "transparent"}`,
+              borderBottom: `2px solid ${isActive ? "var(--color-accent-500)" : "transparent"}`,
               background: "transparent",
               fontSize: 12.5,
-              fontWeight: activa ? 600 : 400,
-              color: activa ? "var(--color-text-primary)" : "var(--color-text-muted)",
+              fontWeight: isActive ? 600 : 400,
+              color: isActive ? "var(--color-text-primary)" : "var(--color-text-muted)",
               whiteSpace: "nowrap",
               transition: "color 150ms var(--ease-out-expo), border-color 150ms var(--ease-out-expo)",
             }}
@@ -68,9 +68,9 @@ export function Tabs({
                   fontSize: 10.5,
                   padding: "1px 6px",
                   borderRadius: 999,
-                  background: activa ? "var(--color-accent-tint)" : "var(--color-surface-2)",
-                  border: `1px solid ${activa ? "var(--color-accent-line)" : "var(--color-border-strong)"}`,
-                  color: activa ? "var(--color-accent-500)" : "var(--color-text-muted)",
+                  background: isActive ? "var(--color-accent-tint)" : "var(--color-surface-2)",
+                  border: `1px solid ${isActive ? "var(--color-accent-line)" : "var(--color-border-strong)"}`,
+                  color: isActive ? "var(--color-accent-500)" : "var(--color-text-muted)",
                 }}
               >
                 {t.badge}

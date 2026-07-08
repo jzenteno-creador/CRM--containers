@@ -66,7 +66,7 @@ export function ProgressBar({
 }
 
 /** Semáforo del modelo → tono del meter. */
-export function semaforoATone(estado: "verde" | "amarillo" | "rojo" | "neutro"): MeterTone {
+export function semaforoToTone(estado: "verde" | "amarillo" | "rojo" | "neutro"): MeterTone {
   if (estado === "rojo") return "over";
   if (estado === "amarillo") return "warn";
   if (estado === "neutro") return "neutro";
@@ -86,20 +86,20 @@ export function FreetimeMeter({
   showLabel?: boolean;
   className?: string;
 }) {
-  const sinTarifa = diasLibres == null || diasLibres <= 0;
-  const pct = sinTarifa ? 100 : (diasUsados / diasLibres) * 100;
-  const tone: MeterTone = sinTarifa ? "neutro" : pct >= 100 ? "over" : pct >= 70 ? "warn" : "ok";
+  const noTariff = diasLibres == null || diasLibres <= 0;
+  const pct = noTariff ? 100 : (diasUsados / diasLibres) * 100;
+  const tone: MeterTone = noTariff ? "neutro" : pct >= 100 ? "over" : pct >= 70 ? "warn" : "ok";
   return (
     <span className={className} style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <ProgressBar
-        pct={sinTarifa ? 100 : pct}
+        pct={noTariff ? 100 : pct}
         tone={tone}
-        ariaLabel={sinTarifa ? "sin freetime vigente" : `${diasUsados} de ${diasLibres} días de freetime`}
+        ariaLabel={noTariff ? "sin freetime vigente" : `${diasUsados} de ${diasLibres} días de freetime`}
         className="grow"
       />
       {showLabel && (
         <span className="mono" style={{ fontSize: 11, color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
-          {sinTarifa ? "s/tarifa" : `${diasUsados}/${diasLibres} d`}
+          {noTariff ? "s/tarifa" : `${diasUsados}/${diasLibres} d`}
         </span>
       )}
     </span>

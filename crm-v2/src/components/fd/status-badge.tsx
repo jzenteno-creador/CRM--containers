@@ -7,13 +7,13 @@
 export type EstadoSemaforo = "verde" | "amarillo" | "rojo" | "neutro";
 
 /** Conversión única semáforo → color de token (la usan también RadialTimer y los meters). */
-export function semaforoAColor(estado: EstadoSemaforo): "green" | "amber" | "red" {
+export function semaforoToColor(estado: EstadoSemaforo): "green" | "amber" | "red" {
   if (estado === "rojo") return "red";
   if (estado === "amarillo") return "amber";
   return "green";
 }
 
-const ESTILOS: Record<EstadoSemaforo, { color: string; bg: string; border: string }> = {
+const STYLES: Record<EstadoSemaforo, { color: string; bg: string; border: string }> = {
   verde: { color: "var(--color-status-green)", bg: "var(--color-green-tint)", border: "var(--color-green-line)" },
   amarillo: { color: "var(--color-status-amber)", bg: "var(--color-amber-tint)", border: "var(--color-amber-line)" },
   rojo: { color: "var(--color-status-red)", bg: "var(--color-red-tint)", border: "var(--color-red-line)" },
@@ -29,7 +29,7 @@ export function StatusBadge({
   children: React.ReactNode;
   className?: string;
 }) {
-  const s = ESTILOS[estado];
+  const s = STYLES[estado];
   return (
     <span
       className={className}

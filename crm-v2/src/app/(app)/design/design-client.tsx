@@ -26,7 +26,7 @@ import { RadialTimer } from "@/components/fd/radial-timer";
 import { SkeletonRow } from "@/components/fd/skeleton-row";
 import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
 import { Tabs } from "@/components/fd/tabs";
-import { Timeline, type TimelineEvento } from "@/components/fd/timeline";
+import { Timeline, type TimelineItem } from "@/components/fd/timeline";
 import { useToast } from "@/components/fd/toast";
 import { validarISO6346 } from "@/lib/iso6346";
 import { fmtUSD } from "@/lib/format";
@@ -132,15 +132,15 @@ const TANDA_DEMO = [
   { id: "t4", numero: "ZIMU2648817", naviera: "ZIM LINES" },
 ];
 
-const TIMELINE_DEMO: TimelineEvento[] = [
-  { id: "e1", fecha: "28/06/26", hora: "08:40", titulo: "Retiro en depósito", detalle: "Depósito TERBASA · tanda #142", estado: "completado" },
-  { id: "e2", fecha: "28/06/26", hora: "11:15", titulo: "Ingreso a planta BAHIA", detalle: "Confirmado por operador", estado: "completado" },
-  { id: "e3", fecha: "06/07/26", hora: "23:59", titulo: "Fin del free time", detalle: "9 días libres MAERSK · vigencia 2026-05", estado: "hito" },
-  { id: "e4", fecha: "hoy", titulo: "En demora", detalle: "2 días · USD 85/día → USD 170 acumulado", estado: "en_curso" },
-  { id: "e5", fecha: "—", titulo: "Salida de planta / devolución", detalle: "Corta el freetime al confirmar gate-in", estado: "futuro" },
+const TIMELINE_DEMO: TimelineItem[] = [
+  { id: "e1", date: "28/06/26", time: "08:40", title: "Retiro en depósito", detail: "Depósito TERBASA · tanda #142", status: "completado" },
+  { id: "e2", date: "28/06/26", time: "11:15", title: "Ingreso a planta BAHIA", detail: "Confirmado por operador", status: "completado" },
+  { id: "e3", date: "06/07/26", time: "23:59", title: "Fin del free time", detail: "9 días libres MAERSK · vigencia 2026-05", status: "hito" },
+  { id: "e4", date: "hoy", title: "En demora", detail: "2 días · USD 85/día → USD 170 acumulado", status: "en_curso" },
+  { id: "e5", date: "—", title: "Salida de planta / devolución", detail: "Corta el freetime al confirmar gate-in", status: "futuro" },
 ];
 
-const BARRAS_DEMO = [
+const BARS_DEMO = [
   { label: "MAERSK", value: 4120 },
   { label: "MSC", value: 2380 },
   { label: "HAPAG", value: 1950 },
@@ -149,7 +149,7 @@ const BARRAS_DEMO = [
   { label: "ONE", value: 380 },
 ];
 
-const TENDENCIA_DEMO = [
+const TREND_DEMO = [
   { label: "feb", value: 5200 },
   { label: "mar", value: 4100 },
   { label: "abr", value: 6800 },
@@ -182,15 +182,15 @@ MSDU1750602
 
 Contenido editable desde Admin (M10) — script de ejemplo, no documentación real.`;
 
-const FOTO_SVG = (color: string, texto: string) =>
+const PHOTO_SVG = (color: string, text: string) =>
   `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="84" height="84"><rect width="84" height="84" fill="${color}"/><text x="42" y="46" font-family="monospace" font-size="11" fill="#e6eaf0" text-anchor="middle">${texto}</text></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="84" height="84"><rect width="84" height="84" fill="${color}"/><text x="42" y="46" font-family="monospace" font-size="11" fill="#e6eaf0" text-anchor="middle">${text}</text></svg>`,
   )}`;
 
-const FOTOS_INICIALES: PhotoItem[] = [
-  { id: "f1", url: FOTO_SVG("#10141b", "puerta 1"), nombre: "puerta-1.jpg", estado: "ok" },
-  { id: "f2", url: FOTO_SVG("#0e1218", "puerta 2"), nombre: "puerta-2.jpg", estado: "subiendo", progreso: 55 },
-  { id: "f3", url: FOTO_SVG("#151a21", "puerta 3"), nombre: "puerta-3.jpg", estado: "error", error: "sin conexión" },
+const INITIAL_PHOTOS: PhotoItem[] = [
+  { id: "f1", url: PHOTO_SVG("#10141b", "puerta 1"), name: "puerta-1.jpg", status: "ok" },
+  { id: "f2", url: PHOTO_SVG("#0e1218", "puerta 2"), name: "puerta-2.jpg", status: "subiendo", progress: 55 },
+  { id: "f3", url: PHOTO_SVG("#151a21", "puerta 3"), name: "puerta-3.jpg", status: "error", error: "sin conexión" },
 ];
 
 /* ---------- helpers de layout del showcase ---------- */
@@ -241,42 +241,42 @@ function Swatch({ varName, name }: { varName: string; name: string }) {
 
 /* ---------- página ---------- */
 
-type EstadoPatron = "carga" | "vacio" | "error" | "poblado";
+type PatternState = "carga" | "vacio" | "error" | "poblado";
 
 export function DesignClient() {
   const toast = useToast();
-  const [seleccion, setSeleccion] = useState<Set<string>>(new Set(["1"]));
-  const [filtros, setFiltros] = useState<string[]>(["naviera: MAERSK", "semáforo: rojo"]);
-  const [estadoPatron, setEstadoPatron] = useState<EstadoPatron>("poblado");
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [confirmAbierto, setConfirmAbierto] = useState(false);
-  const [confirmando, setConfirmando] = useState(false);
-  const [ayudaAbierta, setAyudaAbierta] = useState(false);
-  const [tabActiva, setTabActiva] = useState("solicitudes");
+  const [selection, setSelection] = useState<Set<string>>(new Set(["1"]));
+  const [filters, setFilters] = useState<string[]>(["naviera: MAERSK", "semáforo: rojo"]);
+  const [patternState, setPatternState] = useState<PatternState>("poblado");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("solicitudes");
   const [toggleOn, setToggleOn] = useState(true);
-  const [fotos, setFotos] = useState<PhotoItem[]>(FOTOS_INICIALES);
+  const [photos, setPhotos] = useState<PhotoItem[]>(INITIAL_PHOTOS);
   const [btnLoading, setBtnLoading] = useState(false);
 
-  const validacionTanda = useMemo(
+  const tandaValidation = useMemo(
     () => (row: (typeof TANDA_DEMO)[number]): RowValidation => {
       const err = validarISO6346(row.numero);
-      if (err) return { tipo: "error", mensaje: err };
-      if (row.naviera === "ZIM LINES") return { tipo: "warning", mensaje: "naviera sin freetime vigente → semáforo neutro (Decisión 7)" };
-      return { tipo: "ok" };
+      if (err) return { type: "error", message: err };
+      if (row.naviera === "ZIM LINES") return { type: "warning", message: "naviera sin freetime vigente → semáforo neutro (Decisión 7)" };
+      return { type: "ok" };
     },
     [],
   );
 
-  const simularConfirm = () => {
-    setConfirmando(true);
+  const simulateConfirm = () => {
+    setConfirming(true);
     window.setTimeout(() => {
-      setConfirmando(false);
-      setConfirmAbierto(false);
-      toast({ tipo: "exito", titulo: "Operación anulada", detalle: "demo — sin datasource en M0" });
+      setConfirming(false);
+      setConfirmOpen(false);
+      toast({ type: "exito", title: "Operación anulada", detail: "demo — sin datasource en M0" });
     }, 1200);
   };
 
-  const simularBoton = () => {
+  const simulateButton = () => {
     setBtnLoading(true);
     window.setTimeout(() => setBtnLoading(false), 1500);
   };
@@ -342,7 +342,7 @@ export function DesignClient() {
             <Button variant="ghost" disabled>Disabled</Button>
             <Button variant="danger" disabled>Disabled</Button>
             <Button variant="primary" loading>Enviando…</Button>
-            <Button variant="primary" loading={btnLoading} onClick={simularBoton}>
+            <Button variant="primary" loading={btnLoading} onClick={simulateButton}>
               {btnLoading ? "Procesando…" : "Probar loading"}
             </Button>
           </Row>
@@ -402,11 +402,11 @@ export function DesignClient() {
             <StatusBadge estado="neutro">sin tarifa</StatusBadge>
           </Row>
           <Row label="filtros activos removibles">
-            {filtros.map((f) => (
-              <FilterChip key={f} label={f} onRemove={() => setFiltros((xs) => xs.filter((x) => x !== f))} />
+            {filters.map((f) => (
+              <FilterChip key={f} label={f} onRemove={() => setFilters((xs) => xs.filter((x) => x !== f))} />
             ))}
-            {filtros.length < 2 && (
-              <Button variant="ghost" onClick={() => setFiltros(["naviera: MAERSK", "semáforo: rojo"])}>
+            {filters.length < 2 && (
+              <Button variant="ghost" onClick={() => setFilters(["naviera: MAERSK", "semáforo: rojo"])}>
                 restaurar filtros
               </Button>
             )}
@@ -458,34 +458,34 @@ export function DesignClient() {
               { id: "error", label: "error" },
               { id: "poblado", label: "poblado", badge: OPS_DEMO.length },
             ]}
-            active={estadoPatron}
-            onChange={(id) => setEstadoPatron(id as EstadoPatron)}
+            active={patternState}
+            onChange={(id) => setPatternState(id as PatternState)}
           />
           <DataTable<OpDemo>
             columns={COLS_DEMO}
-            rows={estadoPatron === "poblado" ? OPS_DEMO : []}
+            rows={patternState === "poblado" ? OPS_DEMO : []}
             rowKey={(r) => r.id}
             semaforo={(r) => r.semaforo}
-            loading={estadoPatron === "carga"}
+            loading={patternState === "carga"}
             errorState={
-              estadoPatron === "error" ? (
+              patternState === "error" ? (
                 <ErrorState
                   detail="Falló la consulta a vista_alertas. Reintentá; si persiste, avisá a administración."
-                  onRetry={() => setEstadoPatron("poblado")}
+                  onRetry={() => setPatternState("poblado")}
                 />
               ) : undefined
             }
             emptyState={
-              <EmptyState icon="ti-list-details" title="Sin operaciones para los filtros" action={<Button variant="primary" icon="ti-plus" onClick={() => setEstadoPatron("poblado")}>Registrar retiro</Button>}>
+              <EmptyState icon="ti-list-details" title="Sin operaciones para los filtros" action={<Button variant="primary" icon="ti-plus" onClick={() => setPatternState("poblado")}>Registrar retiro</Button>}>
                 Acá aparece la planilla global de contenedores con su semáforo de freetime. Los contenedores
                 entran desde <strong>Ingreso</strong> al registrar una tanda de retiro y salen al confirmar
                 devolución o embarque en <strong>Egreso</strong>.
               </EmptyState>
             }
-            seleccion={{ ids: seleccion, onChange: setSeleccion }}
+            selection={{ ids: selection, onChange: setSelection }}
             defaultSort={{ key: "restantes", dir: "asc" }}
             pageSize={6}
-            onRowClick={(r) => toast({ tipo: "info", titulo: r.numero, detalle: "la ficha llega en M5" })}
+            onRowClick={(r) => toast({ type: "info", title: r.numero, detail: "la ficha llega en M5" })}
           />
           <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-faint)" }}>
             DataTable: header sticky (con maxHeight), sort cyan, números right tabular-nums, dot semáforo +
@@ -502,7 +502,7 @@ export function DesignClient() {
             ]}
             rows={TANDA_DEMO}
             rowKey={(r) => r.id}
-            validacion={validacionTanda}
+            validation={tandaValidation}
           />
         </Section>
 
@@ -518,7 +518,7 @@ export function DesignClient() {
         {/* ============ timeline ============ */}
         <Section title="Timeline" note="anatomía 2c: fecha mono 96px · dot 12 + conector 2px · 4 estados">
           <div style={{ maxWidth: 560 }}>
-            <Timeline eventos={TIMELINE_DEMO} />
+            <Timeline items={TIMELINE_DEMO} />
           </div>
         </Section>
 
@@ -543,11 +543,11 @@ export function DesignClient() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
             <div>
               <span className="fd-label">costo por naviera (USD)</span>
-              <BarChart data={BARRAS_DEMO} formatValue={(v) => v.toLocaleString("es-AR")} color="var(--color-status-red-soft)" ariaLabel="costo por naviera" />
+              <BarChart data={BARS_DEMO} formatValue={(v) => v.toLocaleString("es-AR")} color="var(--color-status-red-soft)" ariaLabel="costo por naviera" />
             </div>
             <div>
               <span className="fd-label">tendencia mensual (USD)</span>
-              <TrendLine data={TENDENCIA_DEMO} ariaLabel="tendencia mensual de costo" />
+              <TrendLine data={TREND_DEMO} ariaLabel="tendencia mensual de costo" />
             </div>
           </div>
         </Section>
@@ -555,14 +555,14 @@ export function DesignClient() {
         {/* ============ overlays ============ */}
         <Section title="Modal · ConfirmDialog · Toast · Dropdown · Tooltip · HelpPanel">
           <Row label="overlays">
-            <Button variant="ghost" icon="ti-window" onClick={() => setModalAbierto(true)}>Abrir modal</Button>
-            <Button variant="danger" icon="ti-ban" onClick={() => setConfirmAbierto(true)}>Confirmación danger</Button>
-            <Button variant="ghost" icon="ti-help-circle" onClick={() => setAyudaAbierta(true)}>HelpPanel</Button>
+            <Button variant="ghost" icon="ti-window" onClick={() => setModalOpen(true)}>Abrir modal</Button>
+            <Button variant="danger" icon="ti-ban" onClick={() => setConfirmOpen(true)}>Confirmación danger</Button>
+            <Button variant="ghost" icon="ti-help-circle" onClick={() => setHelpOpen(true)}>HelpPanel</Button>
           </Row>
           <Row label="toasts (apilables, auto-dismiss)">
-            <Button variant="ghost" onClick={() => toast({ tipo: "exito", titulo: "Tanda registrada", detalle: "8 contenedores · BAHIA" })}>éxito</Button>
-            <Button variant="ghost" onClick={() => toast({ tipo: "error", titulo: "No se pudo confirmar", detalle: "la operación ya tiene ciclo abierto" })}>error</Button>
-            <Button variant="ghost" onClick={() => toast({ tipo: "info", titulo: "Realtime reconectado" })}>info</Button>
+            <Button variant="ghost" onClick={() => toast({ type: "exito", title: "Tanda registrada", detail: "8 contenedores · BAHIA" })}>éxito</Button>
+            <Button variant="ghost" onClick={() => toast({ type: "error", title: "No se pudo confirmar", detail: "la operación ya tiene ciclo abierto" })}>error</Button>
+            <Button variant="ghost" onClick={() => toast({ type: "info", title: "Realtime reconectado" })}>info</Button>
           </Row>
           <Row label="dropdown / popover / tooltip">
             <Dropdown
@@ -573,9 +573,9 @@ export function DesignClient() {
               )}
               header={<span className="fd-label">operación MSKU4829103</span>}
               items={[
-                { id: "ver", label: "Ver ficha", icon: "ti-eye", onSelect: () => toast({ tipo: "info", titulo: "Ficha en M5" }) },
-                { id: "mover", label: "Mover de planta", icon: "ti-transfer", onSelect: () => toast({ tipo: "info", titulo: "Movimiento en M5" }) },
-                { id: "anular", label: "Anular operación", icon: "ti-ban", danger: true, divider: true, onSelect: () => setConfirmAbierto(true) },
+                { id: "ver", label: "Ver ficha", icon: "ti-eye", onSelect: () => toast({ type: "info", title: "Ficha en M5" }) },
+                { id: "mover", label: "Mover de planta", icon: "ti-transfer", onSelect: () => toast({ type: "info", title: "Movimiento en M5" }) },
+                { id: "anular", label: "Anular operación", icon: "ti-ban", danger: true, divider: true, onSelect: () => setConfirmOpen(true) },
               ]}
             />
             <Popover
@@ -602,19 +602,19 @@ export function DesignClient() {
         {/* ============ photo upload ============ */}
         <Section title="PhotoUpload" note="UI pura en M0 — items controlados con estados ok/subiendo/error; Storage llega en M9">
           <PhotoUpload
-            items={fotos}
+            items={photos}
             onAdd={(files) =>
-              setFotos((xs) => [
+              setPhotos((xs) => [
                 ...xs,
                 ...files.map((f, i) => ({
                   id: `n${Date.now()}-${i}`,
                   url: URL.createObjectURL(f),
-                  nombre: f.name,
-                  estado: "pendiente" as const,
+                  name: f.name,
+                  status: "pendiente" as const,
                 })),
               ])
             }
-            onRemove={(id) => setFotos((xs) => xs.filter((x) => x.id !== id))}
+            onRemove={(id) => setPhotos((xs) => xs.filter((x) => x.id !== id))}
           />
         </Section>
 
@@ -635,7 +635,7 @@ export function DesignClient() {
               </EmptyState>
             </div>
             <div style={{ border: "1px dashed var(--color-border-strong)", borderRadius: "var(--radius-panel)" }}>
-              <ErrorState detail="Sin conexión con la base. Los datos pueden estar desactualizados." onRetry={() => toast({ tipo: "info", titulo: "Reintentando…" })} />
+              <ErrorState detail="Sin conexión con la base. Los datos pueden estar desactualizados." onRetry={() => toast({ type: "info", title: "Reintentando…" })} />
             </div>
           </div>
         </Section>
@@ -649,28 +649,28 @@ export function DesignClient() {
               { id: "navieras", label: "Navieras" },
               { id: "tarifas", label: "Tarifas" },
             ]}
-            active={tabActiva}
-            onChange={setTabActiva}
+            active={activeTab}
+            onChange={setActiveTab}
           />
           <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-muted)" }}>
-            pestaña activa: <span className="mono">{tabActiva}</span>
+            pestaña activa: <span className="mono">{activeTab}</span>
           </p>
         </Section>
       </div>
 
       {/* ---- overlays montados ---- */}
       <Modal
-        open={modalAbierto}
-        onClose={() => setModalAbierto(false)}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
         title="Registrar egreso"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setModalAbierto(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button
               variant="primary"
               onClick={() => {
-                setModalAbierto(false);
-                toast({ tipo: "exito", titulo: "Egreso registrado", detalle: "demo — sin datasource en M0" });
+                setModalOpen(false);
+                toast({ type: "exito", title: "Egreso registrado", detail: "demo — sin datasource en M0" });
               }}
             >
               Confirmar egreso
@@ -695,7 +695,7 @@ export function DesignClient() {
       </Modal>
 
       <ConfirmDialog
-        open={confirmAbierto}
+        open={confirmOpen}
         title="Anular operación"
         message={
           <>
@@ -705,15 +705,15 @@ export function DesignClient() {
         }
         confirmLabel="Anular"
         danger
-        loading={confirmando}
-        onConfirm={simularConfirm}
-        onCancel={() => setConfirmAbierto(false)}
+        loading={confirming}
+        onConfirm={simulateConfirm}
+        onCancel={() => setConfirmOpen(false)}
       />
 
       <HelpPanel
-        open={ayudaAbierta}
-        onClose={() => setAyudaAbierta(false)}
-        titulo="DESIGN"
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="DESIGN"
         footer={<span style={{ color: "var(--color-text-muted)" }}>Contenido editable desde Admin (M10).</span>}
       >
         <Markdown source={MD_DEMO} />

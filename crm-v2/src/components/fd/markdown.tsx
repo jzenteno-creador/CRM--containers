@@ -6,7 +6,7 @@
 
 import { Fragment } from "react";
 
-const URL_SEGURA = /^(https?:\/\/|mailto:|\/|#)/i;
+const SAFE_URL = /^(https?:\/\/|mailto:|\/|#)/i;
 
 /* ---- inline: `código` → **negrita** → *itálica* → [link](url) ---- */
 function renderInline(text: string, keyBase: string): React.ReactNode[] {
@@ -48,10 +48,10 @@ function renderInline(text: string, keyBase: string): React.ReactNode[] {
       out.push(<em key={key}>{renderInline(tok.slice(1, -1), key)}</em>);
     } else {
       const lm = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(tok);
-      if (lm && URL_SEGURA.test(lm[2])) {
-        const externo = /^https?:\/\//i.test(lm[2]);
+      if (lm && SAFE_URL.test(lm[2])) {
+        const isExternal = /^https?:\/\//i.test(lm[2]);
         out.push(
-          <a key={key} href={lm[2]} target={externo ? "_blank" : undefined} rel={externo ? "noopener noreferrer" : undefined}>
+          <a key={key} href={lm[2]} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noopener noreferrer" : undefined}>
             {renderInline(lm[1], key)}
           </a>,
         );
@@ -65,114 +65,114 @@ function renderInline(text: string, keyBase: string): React.ReactNode[] {
   return out;
 }
 
-/* ---- bloques ---- */
-type Bloque =
-  | { tipo: "h"; nivel: 1 | 2 | 3; texto: string }
-  | { tipo: "p"; texto: string }
-  | { tipo: "ul"; items: string[] }
-  | { tipo: "ol"; items: string[] }
-  | { tipo: "quote"; lineas: string[] }
-  | { tipo: "code"; codigo: string }
-  | { tipo: "hr" };
+/* ---- blocks ---- */
+type Block =
+  | { type: "h"; level: 1 | 2 | 3; text: string }
+  | { type: "p"; text: string }
+  | { type: "ul"; items: string[] }
+  | { type: "ol"; items: string[] }
+  | { type: "quote"; lines: string[] }
+  | { type: "code"; code: string }
+  | { type: "hr" };
 
-function parsearBloques(source: string): Bloque[] {
-  const lineas = source.replace(/\r\n?/g, "\n").split("\n");
-  const bloques: Bloque[] = [];
+function parseBlocks(source: string): Block[] {
+  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  const blocks: Block[] = [];
   let i = 0;
-  while (i < lineas.length) {
-    const linea = lineas[i];
-    if (linea.trim() === "") {
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim() === "") {
       i++;
       continue;
     }
     // bloque de código
-    if (linea.trimStart().startsWith("```")) {
+    if (line.trimStart().startsWith("```")) {
       const buf: string[] = [];
       i++;
-      while (i < lineas.length && !lineas[i].trimStart().startsWith("```")) {
-        buf.push(lineas[i]);
+      while (i < lines.length && !lines[i].trimStart().startsWith("```")) {
+        buf.push(lines[i]);
         i++;
       }
       i++; // consume el cierre
-      bloques.push({ tipo: "code", codigo: buf.join("\n") });
+      blocks.push({ type: "code", code: buf.join("\n") });
       continue;
     }
     // heading
-    const h = /^(#{1,3})\s+(.*)$/.exec(linea);
+    const h = /^(#{1,3})\s+(.*)$/.exec(line);
     if (h) {
-      bloques.push({ tipo: "h", nivel: h[1].length as 1 | 2 | 3, texto: h[2] });
+      blocks.push({ type: "h", level: h[1].length as 1 | 2 | 3, text: h[2] });
       i++;
       continue;
     }
     // hr
-    if (/^\s*(-{3,}|\*{3,})\s*$/.test(linea)) {
-      bloques.push({ tipo: "hr" });
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
+      blocks.push({ type: "hr" });
       i++;
       continue;
     }
     // lista sin orden
-    if (/^\s*[-*]\s+/.test(linea)) {
+    if (/^\s*[-*]\s+/.test(line)) {
       const items: string[] = [];
-      while (i < lineas.length && /^\s*[-*]\s+/.test(lineas[i])) {
-        items.push(lineas[i].replace(/^\s*[-*]\s+/, ""));
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[-*]\s+/, ""));
         i++;
       }
-      bloques.push({ tipo: "ul", items });
+      blocks.push({ type: "ul", items });
       continue;
     }
     // lista ordenada
-    if (/^\s*\d+[.)]\s+/.test(linea)) {
+    if (/^\s*\d+[.)]\s+/.test(line)) {
       const items: string[] = [];
-      while (i < lineas.length && /^\s*\d+[.)]\s+/.test(lineas[i])) {
-        items.push(lineas[i].replace(/^\s*\d+[.)]\s+/, ""));
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+[.)]\s+/, ""));
         i++;
       }
-      bloques.push({ tipo: "ol", items });
+      blocks.push({ type: "ol", items });
       continue;
     }
     // cita
-    if (/^\s*>\s?/.test(linea)) {
+    if (/^\s*>\s?/.test(line)) {
       const buf: string[] = [];
-      while (i < lineas.length && /^\s*>\s?/.test(lineas[i])) {
-        buf.push(lineas[i].replace(/^\s*>\s?/, ""));
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+        buf.push(lines[i].replace(/^\s*>\s?/, ""));
         i++;
       }
-      bloques.push({ tipo: "quote", lineas: buf });
+      blocks.push({ type: "quote", lines: buf });
       continue;
     }
     // párrafo: acumula hasta línea vacía o inicio de otro bloque
-    const buf: string[] = [linea];
+    const buf: string[] = [line];
     i++;
     while (
-      i < lineas.length &&
-      lineas[i].trim() !== "" &&
-      !/^(#{1,3})\s+/.test(lineas[i]) &&
-      !/^\s*[-*]\s+/.test(lineas[i]) &&
-      !/^\s*\d+[.)]\s+/.test(lineas[i]) &&
-      !/^\s*>\s?/.test(lineas[i]) &&
-      !lineas[i].trimStart().startsWith("```")
+      i < lines.length &&
+      lines[i].trim() !== "" &&
+      !/^(#{1,3})\s+/.test(lines[i]) &&
+      !/^\s*[-*]\s+/.test(lines[i]) &&
+      !/^\s*\d+[.)]\s+/.test(lines[i]) &&
+      !/^\s*>\s?/.test(lines[i]) &&
+      !lines[i].trimStart().startsWith("```")
     ) {
-      buf.push(lineas[i]);
+      buf.push(lines[i]);
       i++;
     }
-    bloques.push({ tipo: "p", texto: buf.join(" ") });
+    blocks.push({ type: "p", text: buf.join(" ") });
   }
-  return bloques;
+  return blocks;
 }
 
 export function Markdown({ source, className = "" }: { source: string; className?: string }) {
-  const bloques = parsearBloques(source);
+  const blocks = parseBlocks(source);
   return (
     <div className={`fd-md ${className}`}>
-      {bloques.map((b, i) => {
+      {blocks.map((b, i) => {
         const key = `b${i}`;
-        switch (b.tipo) {
+        switch (b.type) {
           case "h": {
-            const Tag = (`h${b.nivel + 1}` as unknown) as "h2" | "h3" | "h4"; // h1 md → h2 html (jerarquía de página)
-            return <Tag key={key}>{renderInline(b.texto, key)}</Tag>;
+            const Tag = (`h${b.level + 1}` as unknown) as "h2" | "h3" | "h4"; // h1 md → h2 html (jerarquía de página)
+            return <Tag key={key}>{renderInline(b.text, key)}</Tag>;
           }
           case "p":
-            return <p key={key}>{renderInline(b.texto, key)}</p>;
+            return <p key={key}>{renderInline(b.text, key)}</p>;
           case "ul":
             return (
               <ul key={key}>
@@ -192,10 +192,10 @@ export function Markdown({ source, className = "" }: { source: string; className
           case "quote":
             return (
               <blockquote key={key}>
-                {b.lineas.map((l, j) => (
+                {b.lines.map((l, j) => (
                   <Fragment key={j}>
                     {renderInline(l, `${key}-${j}`)}
-                    {j < b.lineas.length - 1 && <br />}
+                    {j < b.lines.length - 1 && <br />}
                   </Fragment>
                 ))}
               </blockquote>
@@ -203,7 +203,7 @@ export function Markdown({ source, className = "" }: { source: string; className
           case "code":
             return (
               <pre key={key} className="mono">
-                <code>{b.codigo}</code>
+                <code>{b.code}</code>
               </pre>
             );
           case "hr":

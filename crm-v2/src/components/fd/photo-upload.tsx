@@ -7,20 +7,20 @@
 import { useRef } from "react";
 import { ProgressBar } from "./freetime-meter";
 
-export type PhotoEstado = "pendiente" | "subiendo" | "ok" | "error";
+export type PhotoStatus = "pendiente" | "subiendo" | "ok" | "error";
 
 export type PhotoItem = {
   id: string;
   /** object URL o URL remota del preview. */
   url: string;
-  nombre: string;
-  estado: PhotoEstado;
+  name: string;
+  status: PhotoStatus;
   /** 0-100 mientras sube. */
-  progreso?: number;
+  progress?: number;
   error?: string;
 };
 
-const ESTADO_UI: Record<PhotoEstado, { icon: string; color: string } | null> = {
+const STATUS_UI: Record<PhotoStatus, { icon: string; color: string } | null> = {
   pendiente: null,
   subiendo: null,
   ok: { icon: "ti-check", color: "var(--color-status-green)" },
@@ -43,12 +43,12 @@ export function PhotoUpload({
   className?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const llenó = items.length >= max;
+  const isFull = items.length >= max;
 
   return (
     <div className={className} style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
       {items.map((it) => {
-        const badge = ESTADO_UI[it.estado];
+        const badge = STATUS_UI[it.status];
         return (
           <div
             key={it.id}
@@ -58,7 +58,7 @@ export function PhotoUpload({
               height: 84,
               borderRadius: "var(--radius-input)",
               overflow: "hidden",
-              border: `1px solid ${it.estado === "error" ? "var(--color-status-red)" : "var(--color-border-strong)"}`,
+              border: `1px solid ${it.status === "error" ? "var(--color-status-red)" : "var(--color-border-strong)"}`,
               background: "var(--color-surface-2)",
             }}
           >
@@ -66,25 +66,25 @@ export function PhotoUpload({
             {/* eslint-disable-next-line @next/next/no-img-element -- object URLs locales, next/image no aplica */}
             <img
               src={it.url}
-              alt={it.nombre}
+              alt={it.name}
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                opacity: it.estado === "subiendo" ? 0.55 : 1,
+                opacity: it.status === "subiendo" ? 0.55 : 1,
                 display: "block",
               }}
             />
             {/* progreso de subida */}
-            {it.estado === "subiendo" && (
+            {it.status === "subiendo" && (
               <div style={{ position: "absolute", left: 6, right: 6, bottom: 6 }}>
-                <ProgressBar pct={it.progreso ?? 30} tone="ok" height={4} minWidth={0} ariaLabel={`subiendo ${it.nombre}`} />
+                <ProgressBar pct={it.progress ?? 30} tone="ok" height={4} minWidth={0} ariaLabel={`subiendo ${it.name}`} />
               </div>
             )}
             {/* badge de estado */}
             {badge && (
               <span
-                aria-label={it.estado === "ok" ? "subida" : `error: ${it.error ?? "falló la subida"}`}
+                aria-label={it.status === "ok" ? "subida" : `error: ${it.error ?? "falló la subida"}`}
                 title={it.error}
                 style={{
                   position: "absolute",
@@ -104,10 +104,10 @@ export function PhotoUpload({
               </span>
             )}
             {/* quitar */}
-            {!disabled && it.estado !== "subiendo" && (
+            {!disabled && it.status !== "subiendo" && (
               <button
                 type="button"
-                aria-label={`quitar ${it.nombre}`}
+                aria-label={`quitar ${it.name}`}
                 onClick={() => onRemove(it.id)}
                 style={{
                   position: "absolute",
@@ -135,7 +135,7 @@ export function PhotoUpload({
       })}
 
       {/* picker */}
-      {!llenó && (
+      {!isFull && (
         <button
           type="button"
           disabled={disabled}

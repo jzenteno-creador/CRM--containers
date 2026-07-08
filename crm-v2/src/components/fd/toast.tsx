@@ -6,16 +6,16 @@
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 
-export type ToastTipo = "exito" | "error" | "info";
+export type ToastType = "exito" | "error" | "info";
 
 type ToastItem = {
   id: number;
-  tipo: ToastTipo;
-  titulo: string;
-  detalle?: string;
+  type: ToastType;
+  title: string;
+  detail?: string;
 };
 
-type ToastFn = (t: { tipo: ToastTipo; titulo: string; detalle?: string }) => void;
+type ToastFn = (t: { type: ToastType; title: string; detail?: string }) => void;
 
 const ToastContext = createContext<ToastFn | null>(null);
 
@@ -27,29 +27,29 @@ export function useToast(): ToastFn {
   return fn;
 }
 
-const UI: Record<ToastTipo, { icon: string; color: string; border: string }> = {
+const UI: Record<ToastType, { icon: string; color: string; border: string }> = {
   exito: { icon: "ti-circle-check", color: "var(--color-status-green)", border: "var(--color-green-line)" },
   error: { icon: "ti-alert-circle", color: "var(--color-status-red)", border: "var(--color-red-line)" },
   info: { icon: "ti-info-circle", color: "var(--color-accent-500)", border: "var(--color-accent-line)" },
 };
 
-const DURACION: Record<ToastTipo, number> = { exito: 4200, info: 4200, error: 6500 };
+const DURATION: Record<ToastType, number> = { exito: 4200, info: 4200, error: 6500 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
-  const quitar = useCallback((id: number) => {
+  const dismiss = useCallback((id: number) => {
     setItems((xs) => xs.filter((x) => x.id !== id));
   }, []);
 
   const toast = useCallback<ToastFn>(
-    ({ tipo, titulo, detalle }) => {
+    ({ type, title, detail }) => {
       const id = nextId.current++;
-      setItems((xs) => [...xs, { id, tipo, titulo, detalle }]);
-      window.setTimeout(() => quitar(id), DURACION[tipo]);
+      setItems((xs) => [...xs, { id, type, title, detail }]);
+      window.setTimeout(() => dismiss(id), DURATION[type]);
     },
-    [quitar],
+    [dismiss],
   );
 
   return (
@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }}
       >
         {items.map((t) => {
-          const ui = UI[t.tipo];
+          const ui = UI[t.type];
           return (
             <div
               key={t.id}
@@ -90,15 +90,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               <i className={`ti ${ui.icon}`} aria-hidden style={{ color: ui.color, fontSize: 16, marginTop: 1 }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--color-text-primary)" }}>{t.titulo}</div>
-                {t.detalle && (
-                  <div style={{ fontSize: 11.5, color: "var(--color-text-muted)", marginTop: 2 }}>{t.detalle}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--color-text-primary)" }}>{t.title}</div>
+                {t.detail && (
+                  <div style={{ fontSize: 11.5, color: "var(--color-text-muted)", marginTop: 2 }}>{t.detail}</div>
                 )}
               </div>
               <button
                 type="button"
                 aria-label="cerrar aviso"
-                onClick={() => quitar(t.id)}
+                onClick={() => dismiss(t.id)}
                 style={{
                   minHeight: 0,
                   marginLeft: "auto",

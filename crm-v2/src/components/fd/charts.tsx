@@ -127,9 +127,9 @@ export function TrendLine({
   const px = (i: number) => padX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
   const py = (v: number) => padTop + plotH - (max > 0 ? (v / max) * plotH : 0);
 
-  const puntos = data.map((d, i) => `${px(i)},${py(d.value)}`).join(" ");
-  const area = n > 0 ? `${px(0)},${padTop + plotH} ${puntos} ${px(n - 1)},${padTop + plotH}` : "";
-  const ultimo = n > 0 ? data[n - 1] : null;
+  const points = data.map((d, i) => `${px(i)},${py(d.value)}`).join(" ");
+  const area = n > 0 ? `${px(0)},${padTop + plotH} ${points} ${px(n - 1)},${padTop + plotH}` : "";
+  const lastPoint = n > 0 ? data[n - 1] : null;
 
   return (
     <svg
@@ -154,7 +154,7 @@ export function TrendLine({
       <line x1={0} x2={W} y1={padTop + plotH} y2={padTop + plotH} stroke="var(--color-border-strong)" />
       {n > 1 && <polygon points={area} fill={color} opacity={0.07} />}
       {n > 1 && (
-        <polyline points={puntos} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       )}
       {data.map((d, i) => (
         <circle
@@ -178,10 +178,10 @@ export function TrendLine({
           {d.label}
         </text>
       ))}
-      {ultimo && (
+      {lastPoint && (
         <text
           x={px(n - 1)}
-          y={py(ultimo.value) - 10}
+          y={py(lastPoint.value) - 10}
           textAnchor="middle"
           style={{
             fill: "var(--color-text-primary)",
@@ -191,7 +191,7 @@ export function TrendLine({
             fontVariantNumeric: "tabular-nums",
           }}
         >
-          {formatValue(ultimo.value)}
+          {formatValue(lastPoint.value)}
         </text>
       )}
     </svg>

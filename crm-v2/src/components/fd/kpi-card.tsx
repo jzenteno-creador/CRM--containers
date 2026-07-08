@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function KpiCard({ label, value, sub, critical = false, amber = false, prefix, suffix }: Props) {
-  const animado = useCountUp(value);
+  const animated = useCountUp(value);
   const color = critical
     ? "var(--color-status-red-soft)"
     : amber
@@ -46,7 +46,7 @@ export function KpiCard({ label, value, sub, critical = false, amber = false, pr
         }}
       >
         {prefix}
-        {animado.toLocaleString("es-AR")}
+        {animated.toLocaleString("es-AR")}
         {suffix}
       </div>
       {sub && (

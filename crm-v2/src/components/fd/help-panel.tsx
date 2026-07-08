@@ -9,14 +9,14 @@ import { useEffect } from "react";
 export function HelpPanel({
   open,
   onClose,
-  titulo,
+  title,
   children,
   footer,
 }: {
   open: boolean;
   onClose: () => void;
   /** Nombre de la solapa (ej: "INGRESO"). */
-  titulo: string;
+  title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
@@ -38,7 +38,7 @@ export function HelpPanel({
     >
       <aside
         role="dialog"
-        aria-label={`ayuda: ${titulo}`}
+        aria-label={`ayuda: ${title}`}
         onClick={(e) => e.stopPropagation()}
         style={{
           position: "absolute",
@@ -66,7 +66,7 @@ export function HelpPanel({
         >
           <i className="ti ti-help-circle" aria-hidden style={{ color: "var(--color-accent-500)", fontSize: 17 }} />
           <span className="fd-display fd-display-sm" style={{ color: "var(--color-text-secondary)" }}>
-            Ayuda · {titulo}
+            Ayuda · {title}
           </span>
           <button
             type="button"

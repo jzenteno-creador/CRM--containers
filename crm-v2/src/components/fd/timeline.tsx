@@ -6,19 +6,19 @@
 // hueco, título ámbar, chip HITO) / en curso (dot rojo relleno + glow + pulso, chip
 // EN CURSO) / futuro (dot gris hueco, texto muted).
 
-export type TimelineEstado = "completado" | "hito" | "en_curso" | "futuro";
+export type TimelineStatus = "completado" | "hito" | "en_curso" | "futuro";
 
-export type TimelineEvento = {
+export type TimelineItem = {
   id: string;
   /** Fecha ya formateada para display (ej: "03/07/26"). */
-  fecha: string;
-  hora?: string;
-  titulo: string;
-  detalle?: string;
-  estado: TimelineEstado;
+  date: string;
+  time?: string;
+  title: string;
+  detail?: string;
+  status: TimelineStatus;
 };
 
-const CHIP: Partial<Record<TimelineEstado, { label: string; color: string; bg: string; border: string }>> = {
+const CHIP: Partial<Record<TimelineStatus, { label: string; color: string; bg: string; border: string }>> = {
   hito: {
     label: "HITO",
     color: "var(--color-status-red)",
@@ -33,7 +33,7 @@ const CHIP: Partial<Record<TimelineEstado, { label: string; color: string; bg: s
   },
 };
 
-function Dot({ estado }: { estado: TimelineEstado }) {
+function Dot({ status }: { status: TimelineStatus }) {
   const base: React.CSSProperties = {
     width: 12,
     height: 12,
@@ -41,7 +41,7 @@ function Dot({ estado }: { estado: TimelineEstado }) {
     flexShrink: 0,
     boxSizing: "border-box",
   };
-  switch (estado) {
+  switch (status) {
     case "completado":
       return <span aria-hidden style={{ ...base, background: "var(--color-status-green)" }} />;
     case "hito":
@@ -69,12 +69,12 @@ function Dot({ estado }: { estado: TimelineEstado }) {
   }
 }
 
-export function TimelineEvent({ evento, last = false }: { evento: TimelineEvento; last?: boolean }) {
-  const muted = evento.estado === "futuro";
-  const chip = CHIP[evento.estado];
-  const tituloColor = muted
+export function TimelineEvent({ item, last = false }: { item: TimelineItem; last?: boolean }) {
+  const muted = item.status === "futuro";
+  const chip = CHIP[item.status];
+  const titleColor = muted
     ? "var(--color-text-faint)"
-    : evento.estado === "hito"
+    : item.status === "hito"
       ? "var(--color-status-amber)"
       : "var(--color-text-primary)";
   return (
@@ -82,17 +82,17 @@ export function TimelineEvent({ evento, last = false }: { evento: TimelineEvento
       {/* fecha mono, right */}
       <div style={{ textAlign: "right", paddingRight: 4, paddingTop: 1 }}>
         <div className="mono" style={{ fontSize: 11, color: muted ? "var(--color-text-faint)" : "var(--color-text-secondary)" }}>
-          {evento.fecha}
+          {item.date}
         </div>
-        {evento.hora && (
+        {item.time && (
           <div className="mono" style={{ fontSize: 10.5, color: "var(--color-text-faint)", marginTop: 1 }}>
-            {evento.hora}
+            {item.time}
           </div>
         )}
       </div>
       {/* dot + conector 2px */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <Dot estado={evento.estado} />
+        <Dot status={item.status} />
         {!last && (
           <span
             aria-hidden
@@ -109,7 +109,7 @@ export function TimelineEvent({ evento, last = false }: { evento: TimelineEvento
       {/* contenido */}
       <div style={{ paddingBottom: last ? 0 : 16, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: tituloColor }}>{evento.titulo}</span>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: titleColor }}>{item.title}</span>
           {chip && (
             <span
               style={{
@@ -128,9 +128,9 @@ export function TimelineEvent({ evento, last = false }: { evento: TimelineEvento
             </span>
           )}
         </div>
-        {evento.detalle && (
+        {item.detail && (
           <div style={{ fontSize: 12, color: muted ? "var(--color-text-faint)" : "var(--color-text-label)", marginTop: 3 }}>
-            {evento.detalle}
+            {item.detail}
           </div>
         )}
       </div>
@@ -138,12 +138,12 @@ export function TimelineEvent({ evento, last = false }: { evento: TimelineEvento
   );
 }
 
-/** Eventos distribuidos en la altura del panel (flex column, cada evento flex:1). */
-export function Timeline({ eventos, className = "" }: { eventos: TimelineEvento[]; className?: string }) {
+/** Eventos distribuidos en la altura del panel (flex column, cada item flex:1). */
+export function Timeline({ items, className = "" }: { items: TimelineItem[]; className?: string }) {
   return (
     <div className={className} style={{ display: "flex", flexDirection: "column" }}>
-      {eventos.map((e, i) => (
-        <TimelineEvent key={e.id} evento={e} last={i === eventos.length - 1} />
+      {items.map((e, i) => (
+        <TimelineEvent key={e.id} item={e} last={i === items.length - 1} />
       ))}
     </div>
   );

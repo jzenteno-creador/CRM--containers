@@ -5,7 +5,7 @@
 
 export type BadgeTone = "accent" | "verde" | "amarillo" | "rojo" | "neutro";
 
-const TONOS: Record<BadgeTone, { color: string; bg: string; border: string }> = {
+const TONES: Record<BadgeTone, { color: string; bg: string; border: string }> = {
   accent: { color: "var(--color-accent-500)", bg: "var(--color-accent-tint)", border: "var(--color-accent-line)" },
   verde: { color: "var(--color-status-green)", bg: "var(--color-green-tint)", border: "var(--color-green-line)" },
   amarillo: { color: "var(--color-status-amber)", bg: "var(--color-amber-tint)", border: "var(--color-amber-line)" },
@@ -27,7 +27,7 @@ export function Badge({
   children: React.ReactNode;
   className?: string;
 }) {
-  const t = TONOS[tone];
+  const t = TONES[tone];
   return (
     <span
       className={`${mono ? "mono " : ""}${className}`}

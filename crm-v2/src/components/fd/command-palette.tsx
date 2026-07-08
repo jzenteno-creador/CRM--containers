@@ -3,7 +3,7 @@
 // Command palette ⌘K (spec artboard 2e): modal 640px top 72px, apertura scale(.98)→1
 // + fade 200ms out-expo. ↑↓ navega, ↵ abre, ESC cierra. Se abre con ⌘K/Ctrl+K o el
 // evento window "fd-palette" (botón del header).
-// M0 = shell SIN datasource: la búsqueda se inyecta por prop `buscar` (la conectan
+// M0 = shell SIN datasource: la búsqueda se inyecta por prop `search` (la conectan
 // M5/M6 contra vista_alertas + operaciones cerradas); sin prop muestra solo Acciones.
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,22 +14,22 @@ import type { EstadoSemaforo } from "./status-badge";
 
 const MAX_SEL_RESET = 0;
 
-export type PaletteResultado = {
+export type PaletteResult = {
   id: string;
   /** Encabezado del grupo (ej: "Contenedores", "Cerradas"). */
-  grupo: string;
+  group: string;
   /** Si viene, se renderiza con <ContainerNumber>. */
   numeroContenedor?: string;
-  titulo?: string;
+  title?: string;
   /** Metadata secundaria: "MAERSK · BAHIA · en planta · 3 d restantes". */
   meta?: string;
   semaforo?: EstadoSemaforo;
   href: string;
 };
 
-export type PaletteAccion = { id: string; label: string; icon: string; href: string; kbd?: string };
+export type PaletteAction = { id: string; label: string; icon: string; href: string; kbd?: string };
 
-const ACCIONES_DEFAULT: PaletteAccion[] = [
+const DEFAULT_ACTIONS: PaletteAction[] = [
   { id: "ingreso", label: "Registrar tanda de retiro", icon: "ti-login-2", href: "/ingreso", kbd: "I" },
   { id: "egreso", label: "Registrar egreso / devolución", icon: "ti-logout-2", href: "/egreso", kbd: "E" },
   { id: "alertas", label: "Ver alertas de freetime", icon: "ti-bell", href: "/alertas", kbd: "A" },
@@ -43,18 +43,18 @@ const DOT: Record<EstadoSemaforo, string> = {
 };
 
 export function CommandPalette({
-  buscar,
-  acciones = ACCIONES_DEFAULT,
+  search,
+  actions = DEFAULT_ACTIONS,
 }: {
   /** Datasource inyectado (M5/M6). Sin él, la palette ofrece solo acciones. */
-  buscar?: (term: string) => Promise<PaletteResultado[]>;
-  acciones?: PaletteAccion[];
+  search?: (term: string) => Promise<PaletteResult[]>;
+  actions?: PaletteAction[];
 }) {
   const router = useRouter();
-  const [abierta, setAbierta] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [resultados, setResultados] = useState<PaletteResultado[]>([]);
-  const [buscando, setBuscando] = useState(false);
+  const [results, setResults] = useState<PaletteResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const [sel, setSel] = useState(MAX_SEL_RESET);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -63,70 +63,70 @@ export function CommandPalette({
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setAbierta((v) => !v);
+        setIsOpen((v) => !v);
       }
     };
-    const onEvento = () => setAbierta(true);
+    const onEvent = () => setIsOpen(true);
     window.addEventListener("keydown", onKey);
-    window.addEventListener("fd-palette", onEvento);
+    window.addEventListener("fd-palette", onEvent);
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("fd-palette", onEvento);
+      window.removeEventListener("fd-palette", onEvent);
     };
   }, []);
 
   // el reset se hace al CERRAR, así abrir siempre encuentra estado limpio y el
   // effect solo sincroniza con el DOM (focus) — regla react-hooks/set-state-in-effect
-  const cerrar = useCallback(() => {
-    setAbierta(false);
+  const close = useCallback(() => {
+    setIsOpen(false);
     setQ("");
-    setResultados([]);
+    setResults([]);
     setSel(MAX_SEL_RESET);
-    setBuscando(false);
+    setSearching(false);
   }, []);
 
   useEffect(() => {
-    if (abierta) {
+    if (isOpen) {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [abierta]);
+  }, [isOpen]);
 
   // búsqueda debounced 250ms sobre el datasource inyectado
   useEffect(() => {
-    if (!abierta || !buscar) return;
+    if (!isOpen || !search) return;
     const term = q.trim().replace(/[,()]/g, " ").trim();
     const t = setTimeout(async () => {
       if (!term) {
-        setResultados([]);
-        setBuscando(false);
+        setResults([]);
+        setSearching(false);
         return;
       }
-      setBuscando(true);
+      setSearching(true);
       try {
-        const rs = await buscar(term);
-        setResultados(rs);
+        const rs = await search(term);
+        setResults(rs);
       } catch {
-        setResultados([]);
+        setResults([]);
       }
       setSel(0);
-      setBuscando(false);
+      setSearching(false);
     }, 250);
     return () => clearTimeout(t);
-  }, [q, abierta, buscar]);
+  }, [q, isOpen, search]);
 
-  const items = resultados.length + acciones.length;
+  const items = results.length + actions.length;
 
-  const abrir = useCallback(
+  const openItem = useCallback(
     (idx: number) => {
-      const href = idx < resultados.length ? resultados[idx].href : acciones[idx - resultados.length].href;
+      const href = idx < results.length ? results[idx].href : actions[idx - results.length].href;
       router.push(href);
-      cerrar();
+      close();
     },
-    [resultados, acciones, router, cerrar],
+    [results, actions, router, close],
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") cerrar();
+    if (e.key === "Escape") close();
     else if (e.key === "ArrowDown") {
       e.preventDefault();
       setSel((s) => Math.min(items - 1, s + 1));
@@ -135,21 +135,21 @@ export function CommandPalette({
       setSel((s) => Math.max(0, s - 1));
     } else if (e.key === "Enter" && items > 0) {
       e.preventDefault();
-      abrir(sel);
+      openItem(sel);
     }
   };
 
-  if (!abierta) return null;
+  if (!isOpen) return null;
 
   // agrupa resultados preservando el orden de aparición
-  const grupos: { nombre: string; desde: number; items: PaletteResultado[] }[] = [];
-  resultados.forEach((r, i) => {
-    const g = grupos.find((x) => x.nombre === r.grupo);
+  const groups: { name: string; fromIndex: number; items: PaletteResult[] }[] = [];
+  results.forEach((r, i) => {
+    const g = groups.find((x) => x.name === r.group);
     if (g) g.items.push(r);
-    else grupos.push({ nombre: r.grupo, desde: i, items: [r] });
+    else groups.push({ name: r.group, fromIndex: i, items: [r] });
   });
 
-  const filaStyle = (activa: boolean): React.CSSProperties => ({
+  const rowStyle = (active: boolean): React.CSSProperties => ({
     display: "flex",
     alignItems: "center",
     gap: 10,
@@ -158,16 +158,16 @@ export function CommandPalette({
     textAlign: "left",
     padding: "9px 16px",
     border: "none",
-    borderLeft: activa ? "2px solid var(--color-accent-500)" : "2px solid transparent",
+    borderLeft: active ? "2px solid var(--color-accent-500)" : "2px solid transparent",
     borderRadius: 0,
-    background: activa ? "var(--color-surface-selected)" : "transparent",
+    background: active ? "var(--color-surface-selected)" : "transparent",
     fontSize: 12.5,
     color: "var(--color-text-secondary)",
   });
 
   return (
     <div
-      onClick={cerrar}
+      onClick={close}
       style={{
         position: "fixed",
         inset: 0,
@@ -221,31 +221,31 @@ export function CommandPalette({
         </div>
 
         {/* resultados agrupados */}
-        {buscar ? (
-          (grupos.length > 0 || buscando || q.trim()) && (
+        {search ? (
+          (groups.length > 0 || searching || q.trim()) && (
             <div style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-              {buscando && (
+              {searching && (
                 <div style={{ padding: "10px 16px", fontSize: 12.5, color: "var(--color-text-muted)" }}>buscando…</div>
               )}
-              {!buscando && q.trim() && resultados.length === 0 && (
+              {!searching && q.trim() && results.length === 0 && (
                 <div style={{ padding: "10px 16px", fontSize: 12.5, color: "var(--color-text-muted)" }}>
                   sin resultados para “{q.trim()}”
                 </div>
               )}
-              {grupos.map((g) => (
-                <div key={g.nombre} style={{ padding: "8px 0" }}>
+              {groups.map((g) => (
+                <div key={g.name} style={{ padding: "8px 0" }}>
                   <div className="fd-label" style={{ padding: "4px 16px 6px" }}>
-                    {g.nombre}
+                    {g.name}
                   </div>
                   {g.items.map((r, j) => {
-                    const i = g.desde + j;
+                    const i = g.fromIndex + j;
                     return (
                       <button
                         key={r.id}
                         type="button"
-                        onClick={() => abrir(i)}
+                        onClick={() => openItem(i)}
                         onMouseEnter={() => setSel(i)}
-                        style={filaStyle(sel === i)}
+                        style={rowStyle(sel === i)}
                       >
                         <span
                           aria-hidden
@@ -261,7 +261,7 @@ export function CommandPalette({
                         {r.numeroContenedor ? (
                           <ContainerNumber value={r.numeroContenedor} />
                         ) : (
-                          <span style={{ color: "var(--color-text-primary)" }}>{r.titulo}</span>
+                          <span style={{ color: "var(--color-text-primary)" }}>{r.title}</span>
                         )}
                         {r.meta && (
                           <span
@@ -309,15 +309,15 @@ export function CommandPalette({
           <div className="fd-label" style={{ padding: "4px 16px 6px" }}>
             Acciones
           </div>
-          {acciones.map((a, j) => {
-            const i = resultados.length + j;
+          {actions.map((a, j) => {
+            const i = results.length + j;
             return (
               <button
                 key={a.id}
                 type="button"
-                onClick={() => abrir(i)}
+                onClick={() => openItem(i)}
                 onMouseEnter={() => setSel(i)}
-                style={filaStyle(sel === i)}
+                style={rowStyle(sel === i)}
               >
                 <i className={`ti ${a.icon}`} aria-hidden style={{ color: "var(--color-text-muted)", fontSize: 15 }} />
                 <span style={{ flex: 1 }}>{a.label}</span>

@@ -26,9 +26,9 @@ export type Column<T> = {
   hideOnMobile?: boolean;
 };
 
-export type RowValidation = { tipo: "ok" | "warning" | "error"; mensaje?: string };
+export type RowValidation = { type: "ok" | "warning" | "error"; message?: string };
 
-type Seleccion = {
+type RowSelection = {
   ids: ReadonlySet<string>;
   onChange: (ids: Set<string>) => void;
   /** Deshabilita el checkbox de una fila (ej: ya procesada). */
@@ -52,15 +52,15 @@ type Props<T> = {
   /** Habilita paginación interna. */
   pageSize?: number;
   /** Selección múltiple (estado controlado por el consumidor). */
-  seleccion?: Seleccion;
+  selection?: RowSelection;
   /** Slot de validación por fila: badge + mensaje inline (ej: ISO 6346 en la tanda). */
-  validacion?: (row: T) => RowValidation | null;
+  validation?: (row: T) => RowValidation | null;
   /** Alto máximo: activa scroll-y interno (el header sticky pega contra el contenedor). */
   maxHeight?: number | string;
   className?: string;
 };
 
-const VALIDACION_UI: Record<RowValidation["tipo"], { icon: string; color: string; bg: string; border: string }> = {
+const VALIDATION_UI: Record<RowValidation["type"], { icon: string; color: string; bg: string; border: string }> = {
   ok: { icon: "ti-check", color: "var(--color-status-green)", bg: "var(--color-green-tint)", border: "var(--color-green-line)" },
   warning: { icon: "ti-alert-triangle", color: "var(--color-status-amber)", bg: "var(--color-amber-tint)", border: "var(--color-amber-line)" },
   error: { icon: "ti-x", color: "var(--color-status-red)", bg: "var(--color-red-tint)", border: "var(--color-red-line)" },
@@ -108,8 +108,8 @@ export function DataTable<T>({
   onRowClick,
   defaultSort,
   pageSize,
-  seleccion,
-  validacion,
+  selection,
+  validation,
   maxHeight,
   className = "",
 }: Props<T>) {
@@ -136,20 +136,20 @@ export function DataTable<T>({
 
   const pages = pageSize ? Math.max(1, Math.ceil(sorted.length / pageSize)) : 1;
   const pageClamped = Math.min(page, pages - 1);
-  const visibles = pageSize ? sorted.slice(pageClamped * pageSize, (pageClamped + 1) * pageSize) : sorted;
+  const visibleRows = pageSize ? sorted.slice(pageClamped * pageSize, (pageClamped + 1) * pageSize) : sorted;
 
   // ids de la página visible (para el select-all)
-  const idsVisibles = useMemo(() => visibles.map(rowKey), [visibles, rowKey]);
-  const seleccionables = seleccion ? idsVisibles.filter((id) => !seleccion.disabled?.(id)) : [];
-  const todosSeleccionados =
-    seleccionables.length > 0 && seleccionables.every((id) => seleccion!.ids.has(id));
-  const algunoSeleccionado = seleccionables.some((id) => seleccion?.ids.has(id));
+  const visibleIds = useMemo(() => visibleRows.map(rowKey), [visibleRows, rowKey]);
+  const selectableIds = selection ? visibleIds.filter((id) => !selection.disabled?.(id)) : [];
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selection!.ids.has(id));
+  const someSelected = selectableIds.some((id) => selection?.ids.has(id));
 
   useEffect(() => {
     if (selectAllRef.current) {
-      selectAllRef.current.indeterminate = algunoSeleccionado && !todosSeleccionados;
+      selectAllRef.current.indeterminate = someSelected && !allSelected;
     }
-  }, [algunoSeleccionado, todosSeleccionados]);
+  }, [someSelected, allSelected]);
 
   const toggleSort = (col: Column<T>) => {
     if (!col.sortValue) return;
@@ -159,30 +159,30 @@ export function DataTable<T>({
     setPage(0);
   };
 
-  const toggleTodos = () => {
-    if (!seleccion) return;
-    const next = new Set(seleccion.ids);
-    if (todosSeleccionados) seleccionables.forEach((id) => next.delete(id));
-    else seleccionables.forEach((id) => next.add(id));
-    seleccion.onChange(next);
+  const toggleAll = () => {
+    if (!selection) return;
+    const next = new Set(selection.ids);
+    if (allSelected) selectableIds.forEach((id) => next.delete(id));
+    else selectableIds.forEach((id) => next.add(id));
+    selection.onChange(next);
   };
 
-  const toggleFila = (id: string) => {
-    if (!seleccion) return;
-    const next = new Set(seleccion.ids);
+  const toggleRow = (id: string) => {
+    if (!selection) return;
+    const next = new Set(selection.ids);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    seleccion.onChange(next);
+    selection.onChange(next);
   };
 
-  const nCols = columns.length + (semaforo ? 1 : 0) + (seleccion ? 1 : 0) + (validacion ? 1 : 0);
+  const nCols = columns.length + (semaforo ? 1 : 0) + (selection ? 1 : 0) + (validation ? 1 : 0);
 
   const alignOf = (c: Column<T>): React.CSSProperties["textAlign"] => c.align ?? (c.numeric ? "right" : "left");
 
   return (
     <div className={className}>
       {/* contador de seleccionados */}
-      {seleccion && seleccion.ids.size > 0 && (
+      {selection && selection.ids.size > 0 && (
         <div
           style={{
             display: "flex",
@@ -198,11 +198,11 @@ export function DataTable<T>({
           }}
         >
           <i className="ti ti-checkbox" aria-hidden />
-          <span className="mono">{seleccion.ids.size}</span>
-          <span>seleccionado{seleccion.ids.size === 1 ? "" : "s"}</span>
+          <span className="mono">{selection.ids.size}</span>
+          <span>seleccionado{selection.ids.size === 1 ? "" : "s"}</span>
           <button
             type="button"
-            onClick={() => seleccion.onChange(new Set())}
+            onClick={() => selection.onChange(new Set())}
             style={{
               minHeight: 0,
               marginLeft: "auto",
@@ -240,20 +240,20 @@ export function DataTable<T>({
         >
           <thead>
             <tr>
-              {seleccion && (
+              {selection && (
                 <th style={{ ...TH_BASE, width: 34, padding: "8px 10px" }}>
                   <input
                     ref={selectAllRef}
                     type="checkbox"
                     aria-label="seleccionar todo"
-                    checked={todosSeleccionados}
-                    onChange={toggleTodos}
+                    checked={allSelected}
+                    onChange={toggleAll}
                   />
                 </th>
               )}
               {semaforo && <th style={{ ...TH_BASE, width: 26, padding: "8px 8px 8px 12px" }} aria-label="semáforo" />}
               {columns.map((c) => {
-                const activa = sort?.key === c.key;
+                const active = sort?.key === c.key;
                 return (
                   <th
                     key={c.key}
@@ -263,22 +263,22 @@ export function DataTable<T>({
                       width: c.width,
                       textAlign: alignOf(c),
                       cursor: c.sortValue ? "pointer" : undefined,
-                      color: activa ? "var(--color-accent-500)" : TH_BASE.color,
+                      color: active ? "var(--color-accent-500)" : TH_BASE.color,
                       userSelect: "none",
                     }}
-                    aria-sort={activa ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}
+                    aria-sort={active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}
                     onClick={() => toggleSort(c)}
                   >
                     {c.header}
                     {c.sortValue && (
-                      <span aria-hidden style={{ marginLeft: 4, opacity: activa ? 1 : 0.35 }}>
-                        {activa ? (sort!.dir === "asc" ? "↑" : "↓") : "↕"}
+                      <span aria-hidden style={{ marginLeft: 4, opacity: active ? 1 : 0.35 }}>
+                        {active ? (sort!.dir === "asc" ? "↑" : "↓") : "↕"}
                       </span>
                     )}
                   </th>
                 );
               })}
-              {validacion && <th style={{ ...TH_BASE, width: 40, textAlign: "center" }} aria-label="validación" />}
+              {validation && <th style={{ ...TH_BASE, width: 40, textAlign: "center" }} aria-label="validación" />}
             </tr>
           </thead>
           <tbody>
@@ -290,7 +290,7 @@ export function DataTable<T>({
                   {errorState}
                 </td>
               </tr>
-            ) : visibles.length === 0 ? (
+            ) : visibleRows.length === 0 ? (
               <tr>
                 <td colSpan={nCols} style={{ padding: 0 }}>
                   {emptyState ?? (
@@ -301,13 +301,13 @@ export function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              visibles.map((row, i) => {
+              visibleRows.map((row, i) => {
                 const id = rowKey(row);
                 const sem = semaforo?.(row) ?? null;
-                const val = validacion?.(row) ?? null;
-                const critica = sem === "rojo";
-                const seleccionada = seleccion?.ids.has(id) ?? false;
-                const vUi = val ? VALIDACION_UI[val.tipo] : null;
+                const val = validation?.(row) ?? null;
+                const critical = sem === "rojo";
+                const selected = selection?.ids.has(id) ?? false;
+                const vUi = val ? VALIDATION_UI[val.type] : null;
                 return (
                   <Fragment key={id}>
                     <tr
@@ -315,25 +315,25 @@ export function DataTable<T>({
                       className={i < 10 ? "fd-reveal" : undefined}
                       style={{
                         cursor: onRowClick ? "pointer" : undefined,
-                        background: seleccionada ? "var(--color-surface-selected)" : undefined,
+                        background: selected ? "var(--color-surface-selected)" : undefined,
                         animationDelay: i < 10 ? `${i * 40}ms` : undefined,
                         transition: "background 150ms var(--ease-out-expo)",
                       }}
                       onMouseEnter={(e) => {
-                        if (!seleccionada) e.currentTarget.style.background = "var(--color-surface-2)";
+                        if (!selected) e.currentTarget.style.background = "var(--color-surface-2)";
                       }}
                       onMouseLeave={(e) => {
-                        if (!seleccionada) e.currentTarget.style.background = "";
+                        if (!selected) e.currentTarget.style.background = "";
                       }}
                     >
-                      {seleccion && (
+                      {selection && (
                         <td style={{ ...TD_BASE, width: 34, padding: "8px 10px" }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             aria-label={`seleccionar fila ${id}`}
-                            checked={seleccionada}
-                            disabled={seleccion.disabled?.(id) ?? false}
-                            onChange={() => toggleFila(id)}
+                            checked={selected}
+                            disabled={selection.disabled?.(id) ?? false}
+                            onChange={() => toggleRow(id)}
                           />
                         </td>
                       )}
@@ -343,7 +343,7 @@ export function DataTable<T>({
                             ...TD_BASE,
                             width: 26,
                             padding: "8px 8px 8px 12px",
-                            borderLeft: critica ? "2px solid var(--color-status-red)" : "2px solid transparent",
+                            borderLeft: critical ? "2px solid var(--color-status-red)" : "2px solid transparent",
                           }}
                         >
                           {sem && (
@@ -355,7 +355,7 @@ export function DataTable<T>({
                                 borderRadius: "50%",
                                 display: "inline-block",
                                 background: DOT[sem],
-                                boxShadow: critica ? "var(--shadow-glow-red-soft)" : undefined,
+                                boxShadow: critical ? "var(--shadow-glow-red-soft)" : undefined,
                               }}
                             />
                           )}
@@ -369,7 +369,7 @@ export function DataTable<T>({
                             ...TD_BASE,
                             textAlign: alignOf(c),
                             borderLeft:
-                              !semaforo && !seleccion && ci === 0 && critica
+                              !semaforo && !selection && ci === 0 && critical
                                 ? "2px solid var(--color-status-red)"
                                 : undefined,
                           }}
@@ -377,12 +377,12 @@ export function DataTable<T>({
                           {c.render(row)}
                         </td>
                       ))}
-                      {validacion && (
+                      {validation && (
                         <td style={{ ...TD_BASE, width: 40, textAlign: "center" }}>
                           {vUi && (
                             <span
-                              title={val?.mensaje}
-                              aria-label={`validación: ${val!.tipo}`}
+                              title={val?.message}
+                              aria-label={`validación: ${val!.type}`}
                               style={{
                                 display: "inline-grid",
                                 placeItems: "center",
@@ -401,7 +401,7 @@ export function DataTable<T>({
                         </td>
                       )}
                     </tr>
-                    {val?.mensaje && (
+                    {val?.message && (
                       <tr>
                         <td
                           colSpan={nCols}
@@ -414,7 +414,7 @@ export function DataTable<T>({
                             borderLeft: `2px solid ${vUi!.color}`,
                           }}
                         >
-                          {val.mensaje}
+                          {val.message}
                         </td>
                       </tr>
                     )}

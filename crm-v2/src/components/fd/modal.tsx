@@ -28,19 +28,19 @@ export function Modal({
   closeOnBackdrop?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const previoRef = useRef<HTMLElement | null>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
 
   // focus trap: entra al abrir, Tab cicla adentro, al cerrar vuelve al disparador
   useEffect(() => {
     if (!open) return;
-    previoRef.current = document.activeElement as HTMLElement | null;
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
     const raf = requestAnimationFrame(() => {
       const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
       (first ?? panelRef.current)?.focus();
     });
     return () => {
       cancelAnimationFrame(raf);
-      previoRef.current?.focus?.();
+      prevFocusRef.current?.focus?.();
     };
   }, [open]);
 

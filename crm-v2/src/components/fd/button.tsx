@@ -23,7 +23,7 @@ const BASE: React.CSSProperties = {
     "background 150ms var(--ease-out-expo), border-color 150ms var(--ease-out-expo), color 150ms var(--ease-out-expo)",
 };
 
-const VARIANTES: Record<Variant, React.CSSProperties> = {
+const VARIANTS: Record<Variant, React.CSSProperties> = {
   primary: {
     background: "var(--color-accent-500)",
     color: "var(--color-accent-ink)",
@@ -65,7 +65,7 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={`${HOVER[variant]} ${className}`}
-      style={{ ...BASE, ...VARIANTES[variant], ...style }}
+      style={{ ...BASE, ...VARIANTS[variant], ...style }}
       {...rest}
     >
       {loading ? (
