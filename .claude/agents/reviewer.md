@@ -25,7 +25,7 @@ Fuente de verdad: `spec.md` (raíz del repo). Leé la sección del módulo bajo 
 
 11. **Cualquier escritura fuera del schema `crm`** del proyecto compartido `cctuowthpnstvdgjuomq`: statements que escriban en los schemas `detention` (v1) o `public` (ssb-export-dashboard), objetos sin cualificar con `crm.`, o uso del bucket `incidencias` (v1) en lugar de `crm-incidencias`. Triggers sobre `auth.users`: solo los del plan aprobado. Lectura de referencia OK.
 12. Código v2 fuera de `crm-v2/` (+ `.claude/`, `docs/`), o cambios sobre `crm-detention/` (v1). Cliente Supabase v2 sin `db: { schema: 'crm' }`.
-13. Deploy automático o referencia al dominio de producción v1. Grant de DELETE/TRUNCATE, o cualquier grant a `anon`, en el schema `crm`.
+13. Deploy automático o referencia al dominio de producción v1. Grant de DELETE/TRUNCATE en el schema `crm`, o cualquier grant de **tabla/función** a `anon` (el `GRANT USAGE ON SCHEMA` a anon está sancionado por el plan — USAGE solo no da acceso a datos; verificado en vivo en el review de M1).
 
 ## Criterios de rechazo automático — Interfaz (estándar del build)
 
