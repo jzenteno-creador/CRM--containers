@@ -173,3 +173,13 @@ Fuente de VALORES: Excel `free time origin.xlsx` (14 filas parseadas). Fuente de
 - **`service_role` sin grants en `crm`** (mínimo privilegio): el digest F2 de n8n necesitará su GRANT puntual de SELECT sobre `vista_alertas` cuando exista.
 - **`crm_reabrir_operacion` / `crm_corregir_operacion`:** los valores de evento ya están en el CHECK; RPCs al cutover/F2 (plan §4).
 - **Discrepancias HAPAG (14 vs 21 días) y ZIM (versión 0/84 post-Excel en v1)** — decisión de John en cutover (§6).
+
+---
+
+## Addendum — Decisiones de CP1 (John, 2026-07-08)
+
+1. **CP1 APROBADO** — merge de `v2/m1-schema` a `v2-rebuild` (`1220709`); loop continúa a M2.
+2. **HAPAG LLOYD = 14 días** ("son 14 días"): la v1 tenía el valor correcto, el Excel queda desmentido en ese punto. Aplicado en migración `011_fix_hapag_dias` (UPDATE de seed pre-go-live, excepción documentada al versionado) y verificado en vivo. ZIM queda como Excel (21d/$25); la versión 0d/$84 de la disputa NO entra salvo confirmación de negocio.
+3. **Campana (finding menor 2 del review): corregir en M6** — `get_pendientes()` debe incluir para el operador las operaciones en tránsito hacia su planta en la categoría `alertas` (consistencia con la solapa).
+4. **Toggles de dashboard (John) diferidos a CP2:** exponer `crm` en Data API + Leaked Password Protection. El verify E2E de M2 reportará qué queda gateado hasta entonces.
+5. Wording del criterio 13 del reviewer precisado (grants de tabla/función a anon; USAGE sancionado) — commit `c806520`.
