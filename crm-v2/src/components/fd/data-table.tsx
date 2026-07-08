@@ -55,7 +55,10 @@ type Props<T> = {
   selection?: RowSelection;
   /** Slot de validación por fila: badge + mensaje inline (ej: ISO 6346 en la tanda). */
   validation?: (row: T) => RowValidation | null;
-  /** Alto máximo: activa scroll-y interno (el header sticky pega contra el contenedor). */
+  /**
+   * Alto máximo: activa scroll-y interno. OBLIGATORIO para tablas operativas largas —
+   * ver JSDoc del componente.
+   */
   maxHeight?: number | string;
   className?: string;
 };
@@ -96,6 +99,14 @@ const TD_BASE: React.CSSProperties = {
   height: 40,
 };
 
+/**
+ * Tabla operativa Flight Deck (contrato de 4 estados: loading/vacío/error/poblado).
+ *
+ * `maxHeight` es OBLIGATORIO para tablas operativas largas (planilla M3/M5, alertas M6):
+ * el header sticky solo "pega" cuando el scroll-y es INTERNO al contenedor — que es
+ * exactamente lo que `maxHeight` activa. Sin `maxHeight` scrollea la página entera y el
+ * thead se va del viewport con el resto. Decisión de M0; M3/M5 la siguen.
+ */
 export function DataTable<T>({
   columns,
   rows,
