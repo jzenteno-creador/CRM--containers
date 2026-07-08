@@ -530,11 +530,11 @@ export function DesignClient() {
             <div style={{ width: 160 }}><ProgressBar pct={100} tone="over" /></div>
             <div style={{ width: 160 }}><ProgressBar pct={100} tone="neutro" /></div>
           </Row>
-          <Row label="freetime meter (usados/libres · null = sin tarifa → neutro)">
-            <div style={{ width: 220 }}><FreetimeMeter diasUsados={3} diasLibres={10} showLabel /></div>
-            <div style={{ width: 220 }}><FreetimeMeter diasUsados={8} diasLibres={10} showLabel /></div>
-            <div style={{ width: 220 }}><FreetimeMeter diasUsados={13} diasLibres={10} showLabel /></div>
-            <div style={{ width: 220 }}><FreetimeMeter diasUsados={13} diasLibres={null} showLabel /></div>
+          <Row label="freetime meter (semáforo por prop desde la DB · null = sin tarifa → neutro)">
+            <div style={{ width: 220 }}><FreetimeMeter diasUsados={3} diasLibres={10} semaforo="verde" showLabel /></div>
+            <div style={{ width: 220 }}><FreetimeMeter diasUsados={8} diasLibres={10} semaforo="amarillo" showLabel /></div>
+            <div style={{ width: 220 }}><FreetimeMeter diasUsados={13} diasLibres={10} semaforo="rojo" showLabel /></div>
+            <div style={{ width: 220 }}><FreetimeMeter diasUsados={13} diasLibres={null} semaforo="neutro" showLabel /></div>
           </Row>
         </Section>
 

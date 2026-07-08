@@ -6,6 +6,8 @@
 // global .ok y quedó invisible en prod). El fill va en flujo normal, NUNCA absoluto
 // (dentro de celdas de tabla el absoluto se corría fuera del track).
 
+import type { EstadoSemaforo } from "./status-badge";
+
 export type MeterTone = "ok" | "warn" | "over" | "neutro";
 
 const FILL: Record<MeterTone, string> = {
@@ -66,29 +68,36 @@ export function ProgressBar({
 }
 
 /** Semáforo del modelo → tono del meter. */
-export function semaforoToTone(estado: "verde" | "amarillo" | "rojo" | "neutro"): MeterTone {
+export function semaforoToTone(estado: EstadoSemaforo): MeterTone {
   if (estado === "rojo") return "over";
   if (estado === "amarillo") return "warn";
   if (estado === "neutro") return "neutro";
   return "ok";
 }
 
-/** Medidor de freetime consumido: barra + label mono "usados/libres d" opcional. */
+/**
+ * Medidor de freetime consumido: barra + label mono "usados/libres d" opcional.
+ * El tono NO se calcula acá (regla 20: cero lógica de negocio en el front): el
+ * consumidor pasa `semaforo` tal como lo devuelve la DB (`vista_alertas` en M6/M7).
+ */
 export function FreetimeMeter({
   diasUsados,
   diasLibres,
+  semaforo,
   showLabel = false,
   className = "",
 }: {
   diasUsados: number;
   /** null = naviera sin freetime vigente → tono neutro (Decisión 7). */
   diasLibres: number | null;
+  /** Semáforo calculado por la DB (vista_alertas). Con `diasLibres` null el tono cae a neutro. */
+  semaforo: EstadoSemaforo;
   showLabel?: boolean;
   className?: string;
 }) {
   const noTariff = diasLibres == null || diasLibres <= 0;
   const pct = noTariff ? 100 : (diasUsados / diasLibres) * 100;
-  const tone: MeterTone = noTariff ? "neutro" : pct >= 100 ? "over" : pct >= 70 ? "warn" : "ok";
+  const tone: MeterTone = noTariff ? "neutro" : semaforoToTone(semaforo);
   return (
     <span className={className} style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <ProgressBar
