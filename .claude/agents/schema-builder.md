@@ -35,9 +35,19 @@ Sos el schema-builder del rebuild v2 del CRM Detention (spec.md en la raíz del 
 5. Escrituras según la matriz §7, INSERT/UPDATE separadas; UPDATE con USING + WITH CHECK (+ policy SELECT para RETURNING). Sin DELETE.
 6. `usuarios`: cada uno lee su fila; listado solo admin; `rol`/`estado_cuenta`/`planta_asignada_id` solo mutables vía RPCs de admin. Joins de nombres vía view `usuarios_publicos` (security_invoker).
 7. NUNCA autorización por `user_metadata`. La verdad vive en la tabla `usuarios`.
-8. RPCs operativas = SECURITY INVOKER (RLS aplica adentro). Solo las 4 del spec (`perfil`, `aprobar_usuario`, `rechazar_usuario`, `get_pendientes`) son SECURITY DEFINER, con `SET search_path` pinneado y check de rol interno.
+8. RPCs operativas = SECURITY INVOKER (RLS aplica adentro). **Lista CERRADA de SECURITY DEFINER** (plan M0+M1 aprobado): `perfil`, `aprobar_usuario`, `rechazar_usuario`, `set_estado_usuario`, `get_pendientes`, `crm_nueva_version_freetime`, `crm_validar_reforzado`, y TODAS las funciones de trigger que escriben en otra tabla (`handle_new_user`, timeline, `planta_actual` — los triggers corren con los privilegios del que dispara, NO del owner). Toda DEFINER: `SET search_path` pinneado + primera línea guard `perfil().estado='activo'` (+ check de rol).
 9. Storage: buckets privados, policies solo para activos.
 10. Toda función con `SET search_path` explícito.
+
+## Decisiones aprobadas por John (2026-07-08 — vinculantes)
+
+- **Fórmula de días: INCLUSIVA como v1** — el día del retiro cuenta como día 1: `(hoy_AR::date - retiro_AR::date) + 1`. Definida UNA vez (helper `dias_estadia`) y consumida por todo. NO usar "día 0" literal del spec.
+- **Schema `public`** en el proyecto v2 (dedicado).
+- **Paridad v1 paquete completo:** `freetime_origin.regimen` (vacios|cargados|sin_uso; índice único vigente por `(naviera_id, regimen)`; filtro `regimen='vacios'` en el lookup de alertas; `p_regimen` en la RPC de versiones), `operaciones.sin_cargo` (guard BEFORE UPDATE anti-operador + evento de timeline al cambiar; costo 0 en views), `navieras.cobra_detention_origen` (costo NULL si false), `producto`, `gmid`, `observaciones`.
+- **Semáforo con 4to estado `neutro`** (naviera sin freetime vigente) — extensión documentada del §10.
+- **`usuarios_publicos`**: view owner-based (SIN security_invoker — excepción §14.8 documentada en la migración) que expone SOLO `id, nombre`, gateada a callers activos.
+- **Bootstrap admin**: trigger AFTER UPDATE OF email_confirmed_at (no seed, no en signup) — promueve solo con email confirmado = `admin_bootstrap_email` ∧ sin otro admin activo; consume la clave tras el uso.
+- **CHECK `tipo_evento`** incluye `reapertura` y `correccion` (paridad de timeline v1; sin RPCs hasta el cutover).
 
 ## Output
 

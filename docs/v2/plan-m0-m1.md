@@ -1,6 +1,7 @@
 # Plan M0 + M1 — Rebuild v2 CRM Detention
 
-**Fecha:** 2026-07-08 · **Spec:** `spec.md` v2.1 (raíz) · **Estado:** PENDIENTE DE APROBACIÓN de John
+**Fecha:** 2026-07-08 · **Spec:** `spec.md` v2.1 (raíz) · **Estado:** ✅ APROBADO por John (2026-07-08) — decisiones: (1) crear Supabase OK · (2) fórmula v1: retiro = día 1 inclusivo · (3) schema `public` · (4) paridad v1 paquete completo (A) · (5) `/design` sí · (6) `usuarios_publicos` owner-based (excepción §14.8 documentada) · (7) semáforo `neutro` · (8) bootstrap por trigger post-confirmación.
+**Bloqueo infra (2026-07-08):** límite de 2 proyectos free alcanzado en la org (ambos producción) — la creación de `crm-detention-v2` espera decisión de John (Pro US$25/mes u org alternativa). Gatea M1, no M0.
 **Reglas de convivencia:** §21 — v1 (`cctuowthpnstvdgjuomq`, crm-detention.vercel.app) intocable; todo v2 en branch `v2-rebuild`, Supabase nuevo, Vercel nuevo.
 **Rev. 2:** versión corregida tras verificación adversarial (3 lentes, 26 findings — 2 bloqueantes, 13 mayores incorporados; detalle en el historial git de este archivo).
 
