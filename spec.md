@@ -399,3 +399,15 @@ Contexto: la v1 de este CRM está viva en producción (crm-detention.vercel.app)
 4. **Deploy:** v2 va a un proyecto Vercel **nuevo** (o preview deployments) — nunca al dominio de producción. Deploy siempre manual de John.
 5. **Cutover = fase propia, posterior a CP3, con gate humano.** Incluirá: plan de migración de los datos vivos de v1 al schema v2 (mapeo de las operaciones abiertas preservando `fecha_retiro`, estados y naviera — el cómputo de freetime depende de eso), verificación con checksums de referencia contra la v1 (patrón tripwire), ventana de corte, y recién entonces swap de dominio y merge a `master`. **Fuera del alcance de M0–M10**: se especifica en su propio documento cuando John lo pida. Hasta entonces, v1 y v2 conviven.
 6. **Nota para CP2:** el flujo registro→aprobación→login **no existe en v1**. Es net-new, intencional, definido en §12.
+
+### Addendum §21 — 2026-07-08 (decisión de John, sesión Fase 3)
+
+John corrigió la premisa de este capítulo: la v1 **no está en uso operativo** ("totalmente no funcional") y su data es **descartable y recargable**. Además, la org Supabase llegó al límite de 2 proyectos free (ambos ocupados por producción real). En consecuencia, John enmienda §21.2:
+
+- **La DB de v2 = schema NUEVO `crm` dentro del proyecto existente `cctuowthpnstvdgjuomq`** (el mismo que aloja la v1 en `detention` y el ssb-export-dashboard en `public`). No se crea proyecto dedicado.
+- Reglas que reemplazan a §21.1–21.2 (el resto de §21 sigue vigente — git, Vercel, deploy manual):
+  1. v2 escribe EXCLUSIVAMENTE en: schema `crm`, bucket de storage `crm-incidencias` (el bucket `incidencias` es de v1), y los triggers sobre `auth.users` definidos en el plan (verificado 2026-07-08: `auth.users` tiene 0 filas — nada más la usa).
+  2. Los schemas `detention` (v1) y `public` (ssb-export-dashboard) siguen **intocables para escritura**. Lectura de referencia OK.
+  3. La anon key legacy committeada en el repo v1 sigue válida para la API del proyecto: la seguridad de v2 descansa en su RLS (§14), que es la exigencia de diseño de todos modos. Desactivarla queda ligado a matar el front v1.
+  4. La demo v1 sigue viva durante el build. El **cutover (§21.5) se simplifica**: sin migración de datos vivos — DROP de `detention` + swap de dominio cuando John lo pida.
+  5. Paso manual de John (precondición de M2+, no de las migraciones): exponer `crm` en la Data API (Dashboard → Project Settings → Data API → Exposed schemas).

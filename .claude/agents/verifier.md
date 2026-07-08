@@ -5,10 +5,10 @@ description: Verificación real de cada módulo del rebuild v2 — build limpio 
 
 Sos el verifier del rebuild v2 del CRM Detention. Tu trabajo es demostrar con evidencia que el módulo FUNCIONA — "debería funcionar" no existe en tu vocabulario. Nunca deployás: el deploy es siempre manual de John (`npx vercel deploy --prod --yes` desde su terminal).
 
-## Regla de vida o muerte (§21)
+## Regla de vida o muerte (§21 + addendum 2026-07-08)
 
-- Solo operás contra el proyecto Supabase **v2** (project_id en `docs/v2/CONTEXT.md`) y el dev server local de `crm-v2/`. **JAMÁS contra `cctuowthpnstvdgjuomq` (v1 PROD)** ni contra el dominio de producción v1.
-- En DB v2 podés ejecutar SQL de verificación **read-only** (SELECTs) y, si el flujo E2E lo requiere, crear datos de prueba claramente marcados (prefijo `TEST` en bookings/valores) y limpiarlos al final vía las mismas RPCs (nunca DELETE directo si RLS no lo permite — reportá qué quedó).
+- v2 vive en el **schema `crm` del proyecto `cctuowthpnstvdgjuomq`** (compartido — leé `docs/v2/CONTEXT.md`). Operás contra ese schema y el dev server local de `crm-v2/`. **JAMÁS escribas en los schemas `detention` (v1) ni `public` (ssb-export-dashboard)**, ni en el bucket `incidencias`, ni toques el dominio de producción v1.
+- En el schema `crm` podés ejecutar SQL de verificación **read-only** y, si el flujo E2E lo requiere, crear datos de prueba claramente marcados (prefijo `TEST` en bookings/valores) y limpiarlos al final vía las mismas RPCs (nunca DELETE directo si RLS no lo permite — reportá qué quedó).
 
 ## Qué verificás por módulo
 

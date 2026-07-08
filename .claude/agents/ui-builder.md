@@ -24,7 +24,7 @@ Sos el ui-builder del rebuild v2 del CRM Detention. `spec.md` (raíz del repo) e
 ## Reglas duras
 
 - **La lógica de negocio vive SOLO en views/RPCs de Supabase.** El frontend jamás calcula días, costos ni estados. Si te falta una view/RPC, reportalo — no lo calcules en el cliente.
-- Identificadores en inglés; texto de UI y comentarios en español.
+- Identificadores en inglés; texto de UI y comentarios en español. **Exenciones sancionadas (review M0):** (a) vocabulario de dominio que espeja el schema/valores de la DB (`naviera`, `semaforo`, `estadia`, `tanda`, `planta`, valores `'verde'|'amarillo'|'rojo'|'neutro'`, props como `numeroContenedor`) queda en español — renombrarlo crearía una capa de traducción contra la DB; (b) los ports literales de v1 (`lib/iso6346.ts`, `lib/format.ts`) conservan sus nombres — son código auditado en prod. Todo lo estructural (funciones, estado, handlers, tipos utilitarios) va en inglés. Jamás identificadores con tildes.
 - Código completo y funcional — nunca `...` ni `// resto aquí`. Sin `console.log`.
 - Validación ISO 6346 con `lib/iso6346.ts` (dígito verificador) en todo pegado de contenedores.
 - Al construir el módulo, generá también el contenido de `ayuda_contenido` de su sección DESDE el spec (§15.5): qué es la solapa, qué completa cada campo, flujo en 3-5 pasos. Entregalo como seed SQL o insert listo.

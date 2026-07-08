@@ -7,14 +7,18 @@
 
 ---
 
-## 0. Infraestructura previa a M1 (gate de costo)
+## 0. Infraestructura previa a M1 — ACTUALIZADO por addendum §21 (2026-07-08)
 
-| Item | Valor propuesto |
+La org llegó al límite de 2 proyectos free (ambos producción). John corrigió la premisa de §21 (la v1 no está en uso operativo, data descartable) y decidió: **v2 vive en el schema NUEVO `crm` del proyecto existente `cctuowthpnstvdgjuomq`** — US$ 0, sin proyecto dedicado. Verificado read-only (2026-07-08): `auth.users` = 0 filas (v2 se apropia de Auth sin conflicto), bucket `incidencias` ya existe (v1) → v2 usa **`crm-incidencias`**, schema `crm` libre.
+
+| Item | Valor |
 |---|---|
-| Proyecto Supabase v2 | `crm-detention-v2` · org `gemnehksomchaloyfhlg` (única) · región `sa-east-1` (São Paulo) |
-| Costo verificado vía MCP | **US$ 0/mes** (free tier) — se crea recién con confirmación explícita de John |
-| Credenciales | `crm-v2/.env.local` (gitignored) + `.env.example` committeado. **Nada hardcodeado** (la excepción documentada de v1 no se repite en v2). |
-| Proyecto Vercel | Nuevo, lo crea John al primer deploy manual (`npx vercel deploy --prod --yes` desde `crm-v2/`). Ningún módulo depende de que exista antes. |
+| DB v2 | Schema `crm` en `cctuowthpnstvdgjuomq`. Escritura SOLO ahí (+ bucket `crm-incidencias` + triggers de auth.users). `detention` y `public` intocables. |
+| Decisión 3 (schema `public`) | **Revertida** → schema `crm` con `db: { schema: 'crm' }` (patrón v1 probado en este mismo proyecto). |
+| Grants | Desde cero, mínimo privilegio: `anon` sin grants (todo requiere sesión); `authenticated` SELECT/INSERT/UPDATE + EXECUTE según matriz; DELETE/TRUNCATE jamás. `GRANT USAGE ON SCHEMA crm` en la migración 001. |
+| Paso manual de John | Exponer `crm` en la Data API (Dashboard → Project Settings → Data API → Exposed schemas). Precondición del front (M2+), NO de las migraciones — puede hacerse en cualquier momento antes de CP2. |
+| Credenciales | `crm-v2/.env.local` (gitignored) + `.env.example` committeado. Usar la publishable key nueva del proyecto, no la legacy committeada en v1. |
+| Proyecto Vercel | Nuevo, lo crea John al primer deploy manual (`npx vercel deploy --prod --yes` desde `crm-v2/`). |
 
 ---
 
@@ -94,7 +98,7 @@ las funciones de trigger de arriba.
 
 | # | Nombre | Contenido |
 |---|---|---|
-| 001 | `extensions_base` | `pg_trgm`; `set_updated_at()`; helpers de fecha AR: `hoy_ar()` y `dias_estadia(desde, hasta)` — **UNA definición del cómputo de días** (Decisión 2) consumida por views/RPCs |
+| 001 | `extensions_base` | `CREATE SCHEMA crm` + `GRANT USAGE` a anon/authenticated (sin grants de tabla para anon — mínimo privilegio); `pg_trgm`; `set_updated_at()`; helpers de fecha AR: `hoy_ar()` y `dias_estadia(desde, hasta)` — **UNA definición del cómputo de días** (Decisión 2: inclusivo, retiro = día 1) consumida por views/RPCs |
 | 002 | `maestros_config` | `plantas` (+ seed BAHIA/ABBOTT — el CHECK las fija), `navieras`, `freetime_origin` (versionado; `ux_freetime_vigente` — clave según Decisión 4), `configuracion` (+ **seed acá**: `umbral_alerta_amarillo=3`, `dominios_sugeridos=["ssbint.com"]`, `admin_bootstrap_email="jzenteno@ssbint.com"` — el trigger de 003 la lee), `ayuda_contenido`. Todos + updated_at + RLS: SELECT activos; `configuracion`/`ayuda_contenido`/`navieras` escritura admin; **`freetime_origin` sin policies de escritura** (solo RPC DEFINER); `plantas` sin escritura de app |
 | 003 | `identidad` | `usuarios` (§4: `auth_user_id` FK auth.users UNIQUE, rol nullable, `estado_cuenta`, FK plantas ya existente, CHECK operador⇒planta) + RLS (propia fila; todas solo admin; **cero UPDATE self**) + `perfil()` DEFINER STABLE + `handle_new_user` (AFTER INSERT auth.users, DEFINER): inserta `pendiente_aprobacion`, **idempotente** (`ON CONFLICT (auth_user_id) DO NOTHING`), tolerante a config ausente (default pendiente) + **bootstrap admin en trigger separado AFTER UPDATE OF email_confirmed_at**: promueve a `activo`/`administrador` SOLO con email confirmado ∧ email = `admin_bootstrap_email` ∧ **no existe otro admin activo** (cierra el vector de pre-registro: un atacante que registre ese email nunca lo confirma — el inbox es de John; y aunque John confirmara por error, el guard de primer-admin-único + la clave consumida post-uso acotan el daño) — Decisión 8 + RPCs `aprobar_usuario` (valida operador⇒planta), `rechazar_usuario`, `set_estado_usuario` — DEFINER, check admin, `SET search_path` |
 | 004 | `operacion` | `contenedores` (sin policies de escritura directa salvo INSERT vía tanda — ver 006; reforzado solo RPC), `operaciones` (+ CHECKs de coherencia v1: `ck_devolucion_post_retiro`, `ck_cerrado_tiene_devolucion`, `ck_egreso_post_retiro`), `movimientos_planta`, `operacion_eventos` (**cero policies de escritura**), `incidencias`, `incidencia_fotos` + `ux_operacion_abierta` + índices (trgm numero/bookings/orden; btree FKs/estado/fecha) + RLS matriz 2.2 — **sin recursión**: las policies de `movimientos_planta` se expresan DIRECTO por plantas (origen/destino vs `perfil()`), nunca subconsultando `operaciones`; las de `operaciones` sí subconsultan `movimientos_planta` (una sola dirección → no hay ciclo 42P17) |
@@ -102,7 +106,7 @@ las funciones de trigger de arriba.
 | 006 | `rpcs_operativas` | `crm_crear_tanda_retiro`, `crm_confirmar_ingreso_planta`, `crm_registrar_salida_planta`, `crm_confirmar_devolucion`, `crm_mover_entre_plantas`, `crm_anular_operacion` — adaptadas de v1, **SECURITY INVOKER** (RLS aplica adentro), sin inserts manuales de eventos, sin estado `cargado` (§18.1). **Sin RETURNING sobre filas recién insertadas**: los uuid se generan en la función ANTES del INSERT (la fila nueva con `planta_actual_id` NULL no matchea el SELECT del operador → RETURNING fallaría con 42501). *Justificación de tenerlas en M1 y no en M3–M5: toda la superficie de lógica DB queda bajo el único checkpoint de schema (CP1); su E2E llega con cada módulo.* |
 | 007 | `views_notificaciones` | `vista_alertas` (§10 + Decisión 2 + semáforo `neutro` — Decisión 7; umbral desde configuracion; lookup de vigencia con filtro según Decisión 4) — `security_invoker=true` + `usuarios_publicos(id, nombre)` según **Decisión 6** + `get_pendientes()` DEFINER (§13): **primera línea guard activo**, scope planta para operador |
 | 008 | `seeds` | navieras: 14 suppliers del xlsx (canónicos) + **mapa de alias del histórico como artefacto** (`CMA/MERCOSUL LINE→CMA CGM`, `HAPAG→HAPAG LLOYD`, `ZIM→ZIM LINES`, `MAERSK→MAERSK`); freetime_origin: 14 filas — vigencias leídas de v1 **read-only** matcheando por alias, y si una naviera de v1 no matchea → **fallback RUIDOSO** (se reporta en el entregable CP1, no silencioso a `2025-08-01`); ayuda_contenido: FAQ global inicial (§15.2; contenido por solapa lo siembra cada módulo §15.5) |
-| 009 | `storage_incidencias` | Bucket `incidencias` **privado** + policies de `storage.objects`: INSERT/SELECT solo `perfil()` activo, path scoped por incidencia (§14.9). Entra en M1 para que CP1 revise TODA la superficie de seguridad |
+| 009 | `storage_incidencias` | Bucket **`crm-incidencias`** privado (el bucket `incidencias` es de v1 — intocable) + policies de `storage.objects` scoped al bucket: INSERT/SELECT solo `perfil()` activo, path scoped por incidencia (§14.9). Entra en M1 para que CP1 revise TODA la superficie de seguridad |
 
 Después de cada migración: `get_advisors` (security + performance) y corrección inmediata.
 
