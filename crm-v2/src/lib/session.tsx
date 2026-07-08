@@ -120,7 +120,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (changedUser || event === "SIGNED_IN") {
         // setTimeout: no bloquear el lock interno de GoTrue con llamadas dentro del callback
         window.setTimeout(() => {
-          void refreshPerfil();
+          void (async () => {
+            // Auto-reparación best-effort de la fila espejo (migración 016): si el
+            // trigger de signup cayó en su catch defensivo, el usuario quedó sin fila
+            // en crm.usuarios ("muerto"). sync_mi_usuario() la recrea desde auth.users
+            // antes de leer el perfil. Si falla (schema aún sin exponer, red), se
+            // ignora: perfil() degrada como ya lo hace.
+            try {
+              await getSupabase().rpc("sync_mi_usuario");
+            } catch {
+              // best-effort: la auto-reparación nunca corta el flujo de sesión
+            }
+            await refreshPerfil();
+          })();
         }, 0);
       }
     });
