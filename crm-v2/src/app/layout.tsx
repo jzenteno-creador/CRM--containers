@@ -28,7 +28,6 @@ export default function RootLayout({
     <html lang="es" className={`${archivo.variable} ${jetbrains.variable}`}>
       <head>
         {/* Íconos Tabler outline (mismo canal que v1 en producción) */}
-        {/* eslint-disable-next-line @next/next/no-css-tags */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css"
