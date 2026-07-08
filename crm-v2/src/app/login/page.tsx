@@ -1,21 +1,48 @@
 "use client";
 
-// Login estático (plan 1.5, calidad de portada): panel de marca + form Flight Deck
-// con validación visual en vivo. SIN lógica de auth — M2 conecta Supabase Auth,
-// "olvidé mi contraseña" (reset) y "crear cuenta" (registro abierto §12.1).
-// Logos reales SSB/Dow en el footer (.logo-slot) desde /public/logos/ (patrón v1).
+// Login (§12, wireado en M2): signInWithPassword + errores claros (credenciales,
+// email sin confirmar, rate limit). Con sesión ya activa redirige a /inicio y el
+// gate decide (activo → app / no activo → espera). Links reales a /registro y
+// /recuperar (reset de contraseña).
 
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { AuthError } from "@supabase/supabase-js";
+import { AuthBrandPanel } from "@/components/auth/brand-panel";
 import { Button } from "@/components/fd/button";
 import { Field, Input } from "@/components/fd/fields";
+import { getSupabase } from "@/lib/supabase";
+import { useSession } from "@/lib/session";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function loginErrorMessage(error: AuthError): string {
+  if (error.code === "invalid_credentials") return "Correo o contraseña incorrectos.";
+  if (error.code === "email_not_confirmed") {
+    return "Tu correo todavía no está confirmado. Buscá el mail de confirmación (revisá spam) y tocá el link antes de ingresar.";
+  }
+  if (error.code === "over_request_rate_limit") return "Demasiados intentos. Esperá un momento y volvé a probar.";
+  if (/failed to fetch|networkerror|load failed/i.test(error.message)) {
+    return "No hay conexión con el servidor. Verificá tu red y reintentá.";
+  }
+  return `No se pudo iniciar sesión: ${error.message}`;
+}
+
 export default function LoginPage() {
+  const router = useRouter();
+  const { status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Ya logueado → afuera del login (el gate resuelve espera vs app)
+  useEffect(() => {
+    if (status === "signedIn") router.replace("/inicio");
+  }, [status, router]);
 
   const emailError =
     (touched.email || submitted) && email.trim() === ""
@@ -26,38 +53,28 @@ export default function LoginPage() {
   const passwordError = (touched.password || submitted) && password === "" ? "ingresá tu contraseña" : null;
   const valid = EMAIL_RE.test(email.trim()) && password !== "";
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    setAuthError(null);
+    const { error } = await getSupabase().auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) {
+      setAuthError(loginErrorMessage(error));
+      setSubmitting(false);
+      return;
+    }
+    // submitting queda en true: bloquea el doble-submit mientras navega
+    router.replace("/inicio");
   };
 
   return (
     <div className="login-grid">
-      <div className="login-brand">
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span className="dot-logo">S</span>
-          <span className="wordmark">
-            SSB<b>·</b>INTERNATIONAL
-          </span>
-        </div>
-        <div style={{ maxWidth: 460 }}>
-          <div className="login-eyebrow">Detention · Origen</div>
-          <h1 className="login-h1">Control de contenedores en detention.</h1>
-          <p className="login-blurb">
-            Retiro, tránsito, carga y devolución de la exportación de polietileno desde Bahía Blanca — con el
-            freetime de cada naviera bajo control.
-          </p>
-        </div>
-        <div className="login-foot">
-          <span>Operado por</span>
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático de marca, sin optimización */}
-          <img src="/logos/ssb-white.svg" alt="SSB International" className="logo-slot" />
-          <span>·</span>
-          <span>en asociación con</span>
-          {/* eslint-disable-next-line @next/next/no-img-element -- logo estático de marca */}
-          <img src="/logos/dow.png" alt="Dow" className="logo-slot" />
-        </div>
-      </div>
+      <AuthBrandPanel />
 
       <div className="login-form">
         <div style={{ width: "100%", maxWidth: 340 }}>
@@ -92,22 +109,23 @@ export default function LoginPage() {
                 onBlur={() => setTouched((t) => ({ ...t, password: true }))}
               />
             </Field>
-            {submitted && valid && (
+            {authError && (
               <div
-                role="status"
+                role="alert"
                 style={{
                   fontSize: 12,
-                  color: "var(--color-accent-500)",
-                  background: "var(--color-accent-tint)",
-                  border: "1px solid var(--color-accent-line)",
+                  color: "var(--color-status-red)",
+                  background: "var(--color-red-tint)",
+                  border: "1px solid var(--color-red-line)",
                   borderRadius: "var(--radius-input)",
                   padding: "8px 12px",
+                  lineHeight: 1.5,
                 }}
               >
-                La autenticación se conecta en M2 — esta pantalla es estática.
+                {authError}
               </div>
             )}
-            <Button type="submit" variant="primary" style={{ padding: 11, fontSize: 13 }}>
+            <Button type="submit" variant="primary" loading={submitting} style={{ padding: 11, fontSize: 13 }}>
               Ingresar
             </Button>
           </form>
@@ -120,13 +138,8 @@ export default function LoginPage() {
               fontSize: 12,
             }}
           >
-            {/* sin lógica — M2 conecta reset de Supabase Auth y registro abierto */}
-            <a href="#" onClick={(e) => e.preventDefault()} title="Se conecta en M2">
-              ¿Olvidaste tu contraseña?
-            </a>
-            <a href="#" onClick={(e) => e.preventDefault()} title="Se conecta en M2">
-              Crear cuenta
-            </a>
+            <Link href="/recuperar">¿Olvidaste tu contraseña?</Link>
+            <Link href="/registro">Crear cuenta</Link>
           </div>
         </div>
       </div>
