@@ -401,7 +401,7 @@ export default function SolicitudesPage() {
       align: "right",
       render: (r) => (
         <span style={{ display: "inline-flex", gap: 6 }}>
-          <Button variant="primary" icon="ti-user-check" style={actionButtonStyle} onClick={() => setApproveTarget(r)}>
+          <Button variant="ghost" icon="ti-user-check" style={actionButtonStyle} onClick={() => setApproveTarget(r)}>
             Aprobar
           </Button>
           <Button variant="danger" icon="ti-user-x" style={actionButtonStyle} onClick={() => setRejectTarget(r)}>
