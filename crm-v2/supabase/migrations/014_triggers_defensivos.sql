@@ -104,6 +104,9 @@ begin
   return new;
 end $$;
 
--- ACL (regla 010): CREATE OR REPLACE re-otorga EXECUTE a PUBLIC por default.
+-- ACL: CREATE OR REPLACE preserva la ACL existente (NO re-otorga a PUBLIC — eso
+-- solo pasa en un CREATE nuevo). El REVOKE va igual como defensa-en-profundidad,
+-- idempotente y alineado con la regla 010. Estas funciones de trigger no son
+-- invocables por API igual; el REVOKE cierra cualquier grant heredado.
 revoke execute on function crm.handle_new_user() from public, anon, authenticated;
 revoke execute on function crm.bootstrap_admin() from public, anon, authenticated;
