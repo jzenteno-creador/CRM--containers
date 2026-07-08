@@ -411,3 +411,8 @@ John corrigió la premisa de este capítulo: la v1 **no está en uso operativo**
   3. La anon key legacy committeada en el repo v1 sigue válida para la API del proyecto: la seguridad de v2 descansa en su RLS (§14), que es la exigencia de diseño de todos modos. Desactivarla queda ligado a matar el front v1.
   4. La demo v1 sigue viva durante el build. El **cutover (§21.5) se simplifica**: sin migración de datos vivos — DROP de `detention` + swap de dominio cuando John lo pida.
   5. Paso manual de John (precondición de M2+, no de las migraciones): exponer `crm` en la Data API (Dashboard → Project Settings → Data API → Exposed schemas).
+
+**Actualización 2026-07-08 (post-CP1, condiciones de John al ratificar la convivencia):**
+  6. Toggles ejecutados por John: `crm` expuesto en la Data API, y **"Automatically expose new tables" DESACTIVADO** (tabla nueva ⇒ exposición explícita, consciente).
+  7. **Regla permanente — triggers defensivos:** todo trigger del CRM sobre `auth.users` (tabla compartida por el proyecto entero) captura TODAS las excepciones (`exception when others` → `raise warning`) y jamás las propaga: un RAISE ahí bloquearía el signup/confirmación de TODO el proyecto. Aplicado en migración `014_triggers_defensivos`; el reviewer rebota triggers de auth sin captura total.
+  8. La auditoría de lectura anónima del §14.10 sobre la superficie PostgREST viva se ejecuta **al momento de exponer el schema** (no recién en CP3), y se repite en CP3.
