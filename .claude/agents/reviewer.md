@@ -17,7 +17,7 @@ Fuente de verdad: `spec.md` (raíz del repo). Leé la sección del módulo bajo 
 5. UPDATE sin USING + WITH CHECK; cualquier DELETE desde la app; escritura que viola la matriz §7.
 6. `rol`/`estado_cuenta`/`planta_asignada_id` mutables fuera de las RPCs de admin.
 7. Cualquier autorización basada en `user_metadata`.
-8. SECURITY DEFINER fuera de la lista cerrada aprobada (`perfil`, `aprobar_usuario`, `rechazar_usuario`, `set_estado_usuario`, `get_pendientes`, `crm_nueva_version_freetime`, `crm_validar_reforzado`, funciones de trigger que escriben en otra tabla), DEFINER sin guard `perfil().estado='activo'` en primera línea, o función sin `SET search_path`. Excepción aprobada al §14.8: `usuarios_publicos` owner-based con SOLO `id, nombre` gateada a activos — cualquier otra view sin `security_invoker=true` se rebota.
+8. SECURITY DEFINER fuera de la lista cerrada aprobada (`perfil`, `mi_estado_cuenta`, `aprobar_usuario`, `rechazar_usuario`, `set_estado_usuario`, `get_pendientes`, `crm_nueva_version_freetime`, `crm_validar_reforzado`, funciones de trigger que escriben en otra tabla), DEFINER sin guard `perfil().estado='activo'` en primera línea (excepciones documentadas: `perfil` y `mi_estado_cuenta` — sirven a cuentas no activas por diseño; `mi_estado_cuenta` expone SOLO `estado_cuenta`+`rechazo_motivo` de la fila propia, migración 012), o función sin `SET search_path`. Excepción aprobada al §14.8: `usuarios_publicos` owner-based con SOLO `id, nombre` gateada a activos — cualquier otra view sin `security_invoker=true` se rebota.
 9. Bucket de storage público o sin policies de activos.
 10. Credenciales hardcodeadas (URL/key de v2 van por env; la excepción documentada de v1 no aplica al rebuild).
 
