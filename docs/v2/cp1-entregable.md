@@ -183,3 +183,17 @@ Fuente de VALORES: Excel `free time origin.xlsx` (14 filas parseadas). Fuente de
 3. **Campana (finding menor 2 del review): corregir en M6** — `get_pendientes()` debe incluir para el operador las operaciones en tránsito hacia su planta en la categoría `alertas` (consistencia con la solapa).
 4. **Toggles de dashboard (John) diferidos a CP2:** exponer `crm` en Data API + Leaked Password Protection. El verify E2E de M2 reportará qué queda gateado hasta entonces.
 5. Wording del criterio 13 del reviewer precisado (grants de tabla/función a anon; USAGE sancionado) — commit `c806520`.
+
+---
+
+## CORRECCIÓN al reporte de RLS (2026-07-08, tras exponer crm en la Data API)
+
+**Error del reporte original:** la afirmación "anon 56/56 privilegios en false" (`has_table_privilege`) era cierta *en el instante de la medición* (schema `crm` aún sin exponer, "Automatically expose new tables" sin haber corrido) pero **NO describe el estado post-exposición**.
+
+**Estado real verificado (grants vivos, 2026-07-08):**
+- `crm`: **anon Y authenticated tienen SELECT/INSERT/UPDATE/DELETE** sobre las 14 objetos (12 tablas + 2 views). Los otorgó el mecanismo de exposición de Supabase (auto-expose, ahora apagado — pero los grants ya otorgados persisten).
+- `detention` (v1): anon Y authenticated con SELECT/INSERT/UPDATE (+ REFERENCES/TRIGGER) sobre 15 objetos; sin DELETE (revocado por el hardening v1). **RLS OFF en las 13 tablas, 0 policies** → exposición real de datos de producción (hallazgo separado, plan aparte).
+
+**Qué protege crm:** la RLS (ON en las 12 tablas, policies presentes), **NO la ausencia de grants** — tal cual la tesis del §14 ("la anon key es pública; sin RLS cualquiera lee todo"). El test §14.10 debe verificar que la RLS **bloquea de verdad**, no asumir grant-absence.
+
+**Deuda a corregir (migración 015, defense-in-depth):** el plan quería anon con CERO grants sobre `crm` y authenticated sin DELETE. Los grants de auto-expose violan ambas. Se revoca: todos los grants de anon sobre crm; DELETE de authenticated. RLS queda como segunda capa. Con RLS ON y sin policy DELETE, el DELETE ya está denegado hoy — pero el grant se revoca igual (si una migración futura agrega por error una policy permisiva, el grant importaría).
