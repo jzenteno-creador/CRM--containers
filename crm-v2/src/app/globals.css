@@ -188,13 +188,117 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
 /* stagger 40ms/fila máx 10 (spec motion): aplicar índice con animationDelay inline */
 .fd-reveal { animation: fd-reveal 300ms var(--ease-out-expo) backwards; }
 
-/* view transitions 250ms sin cortes secos */
-@media (prefers-reduced-motion: no-preference) {
-  ::view-transition-old(root) { animation: fd-vt-out 250ms var(--ease-out-expo) both; }
-  ::view-transition-new(root) { animation: fd-vt-in 250ms var(--ease-out-expo) both; }
+/* view transitions 250ms sin cortes secos: el shell re-keyea el contenido por ruta */
+@keyframes fd-view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.fd-view { animation: fd-view-in 250ms var(--ease-out-expo); }
+@media (prefers-reduced-motion: reduce) {
+  .fd-view, .fd-reveal { animation: none; }
 }
-@keyframes fd-vt-out { to { opacity: 0; } }
-@keyframes fd-vt-in { from { opacity: 0; } }
+
+/* ---- shell Flight Deck: rail 60px + header 58px + bottom-bar móvil ---- */
+.dot-logo {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--color-accent-500), #0e7f96);
+  display: inline-grid; place-items: center;
+  color: var(--color-accent-ink); font-family: var(--font-display); font-weight: 800; font-size: 13px;
+}
+.fd-shell { min-height: 100vh; }
+.fd-rail {
+  position: fixed; top: 0; bottom: 0; left: 0; width: 60px; z-index: 40;
+  background: var(--color-bg-rail); border-right: 1px solid var(--color-border-subtle);
+  display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px;
+}
+.fd-rail-logo { margin-bottom: 10px; }
+.fd-rail a {
+  position: relative; width: 44px; height: 42px; border-radius: 9px;
+  display: grid; place-items: center; color: var(--color-text-muted);
+  font-size: 17px; text-decoration: none;
+  transition: color 150ms var(--ease-out-expo), background 150ms var(--ease-out-expo);
+}
+.fd-rail a:hover { background: var(--color-surface-2); color: var(--color-text-primary); }
+.fd-rail a.active { background: var(--color-surface-2); color: var(--color-accent-500); }
+.fd-rail a.active::before {
+  content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px;
+  width: 2px; border-radius: 2px; background: var(--color-accent-500);
+}
+.fd-rail a .fd-tip {
+  position: absolute; left: 52px; top: 50%; transform: translateY(-50%);
+  background: var(--color-surface-2); border: 1px solid var(--color-border-strong);
+  border-radius: 6px; padding: 4px 9px; font-size: 11.5px; color: var(--color-text-primary);
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 150ms var(--ease-out-expo); z-index: 50;
+}
+.fd-rail a:hover .fd-tip { opacity: 1; }
+.fd-rail-spacer { flex: 1; }
+.fd-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: var(--color-surface-2); border: 1px solid var(--color-border-strong);
+  display: inline-grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--color-text-secondary);
+}
+.fd-main { margin-left: 60px; min-height: 100vh; display: flex; flex-direction: column; }
+.fd-header {
+  height: 58px; flex-shrink: 0; position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 10px; padding: 0 20px;
+  background: var(--color-bg-base); border-bottom: 1px solid var(--color-border-subtle);
+}
+.fd-title { font-size: 17px; color: var(--color-text-primary); }
+.fd-live {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; letter-spacing: 0.13em; font-weight: 600; color: var(--color-status-green);
+}
+.fd-live i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--color-status-green);
+  animation: fd-live 2.4s ease-in-out infinite;
+}
+.fd-clock { font-size: 12px; color: var(--color-text-secondary); }
+.fd-kbd {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 9px; font-size: 12px; color: var(--color-text-secondary);
+  border: none; background: transparent;
+}
+.fd-iconbtn {
+  position: relative;
+  width: 34px; height: 34px; min-height: 0; padding: 0;
+  display: inline-grid; place-items: center;
+  border: none; border-radius: 9px; background: transparent;
+  color: var(--color-text-muted); font-size: 17px;
+}
+.fd-iconbtn:hover { background: var(--color-surface-2); color: var(--color-text-primary); }
+.fd-iconbtn .fd-badge-count {
+  position: absolute; top: 3px; right: 3px;
+  min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 999px; background: var(--color-status-red);
+  color: #fff; font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  display: inline-grid; place-items: center; line-height: 1;
+}
+.fd-content { flex: 1; padding: 16px 20px 20px; }
+.fd-bottombar { display: none; }
+
+/* rail → bottom-bar entre 640 y 900 también (tablet chico) */
+@media (max-width: 900px) {
+  .fd-rail { display: none; }
+  .fd-main { margin-left: 0; }
+  .fd-content { padding: 12px 10px calc(84px + env(safe-area-inset-bottom)); }
+  .fd-header { padding: 0 12px; height: 52px; gap: 8px; }
+  .fd-title { font-size: 13px; }
+  .hide-md { display: none !important; }
+  .fd-bottombar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding: 0 4px env(safe-area-inset-bottom);
+    background: var(--color-bg-rail); border-top: 1px solid var(--color-border-subtle);
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .fd-bottombar::-webkit-scrollbar { display: none; }
+  .fd-bottombar a {
+    flex: 0 0 auto; min-width: 64px; height: 58px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    text-decoration: none; color: var(--color-text-muted); font-size: 10px; font-weight: 500;
+  }
+  .fd-bottombar a i { font-size: 18px; }
+  .fd-bottombar a.active { color: var(--color-accent-500); }
+}
 
 /* ---- mobile: se opera en depósito/planta con el dedo ---- */
 @media (max-width: 640px) {
