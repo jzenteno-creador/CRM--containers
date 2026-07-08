@@ -39,7 +39,7 @@ Fuente de verdad: `spec.md` (raíz del repo). Leé la sección del módulo bajo 
 ## Criterios de rechazo automático — Arquitectura
 
 20. Lógica de negocio en el frontend (cálculo de días, costos o estados fuera de views/RPCs).
-21. Código incompleto (`...`, `// resto aquí`, TODO sin issue), `console.log`, identificadores en español.
+21. Código incompleto (`...`, `// resto aquí`, TODO sin issue), `console.log`, identificadores en español — **con las exenciones sancionadas en el review de M0:** vocabulario de dominio que espeja el schema/valores de la DB (`naviera`, `semaforo`, `estadia`, `tanda`, `planta`, `'verde'|'amarillo'|'rojo'|'neutro'`, `numeroContenedor`) y los ports literales de v1 (`lib/iso6346.ts`, `lib/format.ts`). Lo estructural (funciones, estado, handlers) en inglés, sin tildes. Recordatorio permanente (M3+): `diasDesde`/`diasEstadia` de `format.ts` solo para display puro — cualquier uso en lógica es rebote por regla 20.
 22. Desvío del spec sin anotación explícita para el checkpoint.
 
 ## Formato de salida
