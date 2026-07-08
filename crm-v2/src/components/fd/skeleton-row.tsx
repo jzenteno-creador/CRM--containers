@@ -12,6 +12,22 @@ const SKEL: React.CSSProperties = {
   animation: "fd-shimmer 1.4s linear infinite",
 };
 
+/** Bloque shimmer suelto (gates de sesión, cards, formularios) — mismo token que las filas. */
+export function SkeletonBlock({
+  width = "100%",
+  height = 12,
+  delay = 0,
+  style,
+}: {
+  width?: number | string;
+  height?: number | string;
+  /** Stagger en ms (spec motion: 150ms entre bloques). */
+  delay?: number;
+  style?: React.CSSProperties;
+}) {
+  return <span aria-hidden style={{ ...SKEL, display: "block", width, height, animationDelay: `${delay}ms`, ...style }} />;
+}
+
 /** Fila skeleton en grilla CSS (para las tablas grid Flight Deck). */
 export function SkeletonRow({
   cols,
