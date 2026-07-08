@@ -113,6 +113,15 @@ export default function EsperaAprobacionPage() {
     })();
   }, [status, loadEstadoCuenta]);
 
+  // Refetch al recuperar foco (mismo criterio que solicitudes): si el admin aprobó
+  // con esta tab abierta, la card se entera sola — el copy promete "no hacer nada más".
+  useEffect(() => {
+    if (status !== "signedIn") return;
+    const onFocus = () => void loadEstadoCuenta();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [status, loadEstadoCuenta]);
+
   useEffect(() => {
     if (status === "signedOut") router.replace("/login");
   }, [status, router]);

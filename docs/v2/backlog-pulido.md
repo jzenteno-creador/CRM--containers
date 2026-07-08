@@ -13,3 +13,6 @@
 | 7 | PKCE: si John activa PKCE en el dashboard, el callback necesita `exchangeCodeForSession` (hoy flujo implicit default) | self-critique M2 | verificar en verify M2 |
 | 8 | Grants de `service_role` sobre schema `crm` — necesarios recién para F2 (digest n8n) | entregable CP1 | F2 |
 | 9 | RPCs `crm_reabrir_operacion`/`crm_corregir_operacion` (F-02/F-03 de v1) — valores de evento ya en el CHECK; las RPCs quedan para cutover salvo pedido | plan M1 | cutover |
+| 10 | `/registro` revela existencia de cuentas ("ya existe una cuenta…") — decisión: ACEPTADO por UX (el oráculo vive igual en la respuesta del API de GoTrue; herramienta interna con gate de aprobación). Vetable por John en CP2 | review M2 (finding 1) | decidido |
+| 11 | Consolidar `GateFrame`, `CardIcon` y el alert-box rojo de formularios como componentes del design system (hoy duplicados en 3-4 pantallas de auth) — hacerlo ANTES de que M3 copie el patrón | review M2 (finding 2) | pre-M3 |
+| 12 | Estándar de acciones por fila en tablas operativas — DECIDIDO: `ghost` por fila, `primary` solo en el modal de confirmación (una primaria por pantalla). Ajustar Aprobar de /admin/solicitudes; el reviewer lo exige desde M3 | review M2 (finding 3) | M3 en adelante + pulido |
