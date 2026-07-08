@@ -1,61 +1,47 @@
 # SESSION_HANDOFF — CRM Detention de Contenedores
 
-**Fecha:** 2026-07-05 (sesión 7: Fase 2 APPLY — money-path aplicado + frontend/UX)
-**Rama:** `feat/fase2-apply` (desde `feat/fase2-etapa0`) · SIN mergear a master.
-**Handoff previo (auditoría + Etapa 0 + diseño money-path):** en git history de este archivo.
+**Fecha:** 2026-07-06 (sesión 8: Fase 2 DEPLOY — código en prod + VERIFY)
+**Rama:** `master` @ `33ad084` (== `feat/fase2-apply`) · pusheado a `origin/master` · **deployado a prod**.
+**Handoff previo (Fase 2 APPLY: money-path + frontend/UX):** en git history de este archivo.
 
 ---
 
-## Estado actual
+## ✅ Lo que quedó DEPLOYADO esta sesión
 
-**Rama `feat/fase2-apply`: 18 commits nuevos vs master**, build de Next VERDE (`npm run build` OK, 13 rutas), typecheck limpio, dev server corriendo en `localhost:3000`. **Nada mergeado a master.**
+- **`git push origin master`** — fast-forward limpio `806c515..33ad084` (20 commits). El merge local de `feat/fase2-apply` (que arrastra `feat/fase2-etapa0` + la base `feat/login-logos`) ya estaba hecho de la sesión previa; solo faltaba el push.
+- **`npx vercel deploy --prod --yes`** — corrido a mano desde `crm-detention/` (John, terminal propia). Prod (`crm-detention.vercel.app`) sirve el build nuevo. Ready in 32s.
+- **VERIFY (2026-07-06):** asset `/logos/ssb-white.svg` → 200; `age: 0`; login con logos SSB/Dow; carga de datos real OK (`vista_alertas` = 70 filas vivas vía anon key + schema `detention`). Ruta de datos end-to-end confirmada.
 
-### Backend / money-path (aplicado a la DB de prod + `db/schema/` sincronizado)
-Cada cambio de SQL se auto-verificó en `BEGIN…ROLLBACK` contra datos reales ANTES de aplicar. D-01 pasó además verificación adversarial (sesión previa).
-- `f9b7ce3` **D-01 + D-10**: `crm_nueva_version_freetime` scopea el cierre por naviera+régimen, parametriza `p_regimen`, valida entradas/fecha, idempotente + índice único parcial `ux_freetime_vigente`. Front (admin) pasa el régimen.
-- `2fa8b24` **D-04**: `crm_confirmar_ingreso_planta` con `IF FOUND` (no más eventos duplicados por carrera).
-- `e4a02a9` **D-05**: 3 CHECKs de coherencia fecha/estado en `operaciones`.
-- `5397897` **F-02 + FE-01**: RPC `crm_reabrir_operacion` (reversa contable, sup+) + `ConfirmDialog` reutilizable; el anular ahora confirma.
-- `39c902d` **F-03**: RPC `crm_corregir_operacion` (edición auditada, sup+) + panel en la ficha.
-- `6e910a2` **BE-03**: RPC `crm_registrar_incidencia` atómica + **backfill de 13 eventos** de timeline faltantes (additive, verificado).
+### ⚠️ Aprendizaje crítico de deploy (guardado en memoria)
+Este repo **NO auto-deploya desde `git push`**. La regla global "push → Vercel" es de **ssb-workspace**, no de acá. Deploy real = `cd crm-detention && npx vercel deploy --prod --yes` (per `crm-detention/AGENTS.md`). El token del CLI Vercel (`~/.local/share/com.vercel.cli/auth.json`) venció 2026-07-04 pero refrescó OK al deployar desde terminal.
 
-### Frontend / UX (solo código, en branch)
-- `10f8127` **F-01**: helper `descargarCSV` (BOM UTF-8).
-- `caa8a3a` **egreso**: FE-01 (confirmación de lote), FE-02 (selección cross-página), FE-03 (scope planta fase 2), FE-06 (debounce realtime).
-- `494e761` **ingreso**: FE-09 (fail-visible prefijos DOW), F-12 (planta fija operador), FE-03 (scope fase 2), FE-06.
-- `caa6b86` **contenedores**: FE-04 (orden por columna), FE-09 (fail-visible freetime), FE-06.
-- `8c8c5de` **historial**: F-09 (totales del filtro, suma client-side), F-01 (export CSV), FE-04 (orden).
-- `40a387c` **alertas**: FE-04 (orden client-side), F-01 (export CSV), FE-06.
-- `f0ab62e` **inicio**: FE-07 (label umbral configurable), FE-06.
-- `82a0e89` **FE-05**: command palette ⌘K busca también cerradas.
+### DB de prod (aplicado en sesión previa, NO se tocó ahora)
+Los RPCs money-path (D-01/D-04/D-05, F-02/F-03, BE-03), el REVOKE de grants y las 3 passwords rotadas ya estaban aplicados (cada uno en `BEGIN…ROLLBACK` verificado). **El deploy de hoy solo subió frontend + schema versionado + el workflow yml.** No corrió ninguna migración.
 
 ---
 
-## Excluido a propósito (NO se tocó)
-- **Parte B (restore de datos ZIM):** NO ejecutada — mutación irreversible, backup aún no activo, espera confirmación de rama A/B. SQL listo en `docs/plans/moneypath-plan-20260705.md`.
-- **F-06 (brecha 2,4x) y día-1/día-0 (NT-1):** diferidos (Excel = fuente de verdad).
-- **Los 5 NO-TOCAR** del audit: intactos.
-- **BE-01 (auth server-side), D-07, D-06/D-09/BE-04, F-08, D-08:** no en el scope de este run (ver plan money-path para su diseño).
+## 🧪 PENDIENTE inmediato — Smoke test visual (John, browser logueado)
+La capa UX nunca corrió contra prod con un usuario real. Checklist first-run-in-prod (server pega contra prod, **sin staging**):
+1. **Realtime + debounce (FE-06):** `/alertas` e `/inicio` en 2 pestañas, refresco sin recargar.
+2. **Export CSV (F-01, sup+):** `/historial`, `/alertas`, `/contenedores` — acentos OK (BOM UTF-8, sep `;`), exporta el filtro aplicado.
+3. **Selección persistente cross-página (FE-02):** `/egreso` — selección sobrevive cambio de página; contador de lote correcto.
+4. **Command palette ⌘K (FE-05):** busca cerradas. ⚠️ ver decisión planta-scope abajo.
+5. **Orden naviera/planta `/contenedores`:** puede no reordenar filas padre (embeds no-`!inner`). Cosmético.
+6. **`/inicio`** (label umbral FE-07) e **`/ingreso`** (pill planta fija, fail-visible prefijos DOW).
+7. **🔴 F-02 / F-03** (reabrir contable / edición auditada, sup+): **SOLO sobre un contenedor de PRUEBA reversible, NUNCA una operación real.** Confirmar flujo (confirm → efecto → evento timeline), luego revertir el contenedor de prueba.
 
 ---
 
-## Caveats a smoke-testear (los propios agents los marcaron)
-1. **contenedores — orden por naviera/planta:** usa `referencedTable` sobre embeds que NO son `!inner`; puede que no reordene las filas padre. Verificar en pantalla; si no ordena, marcar esos embeds `!inner` (ojo nullability). El orden por estado/retiro/contenedor sí es seguro.
-2. **command palette — cerradas sin scope de planta:** `vista_costos_cerrados` no expone `planta_actual`, así que un operador ve cerradas de todas las plantas al buscar. Aceptable o requiere cambio de DB.
-3. **Verificación visual pendiente:** no se abrió browser (el dev pega contra prod — BE-02). Mirar: modales de confirmación en egreso, botones reabrir/corregir en la ficha, export CSV (sup+), headers ordenables, pill de planta en ingreso.
+## ⏳ Follow-ups gateados (fuera de scope de esta sesión)
+1. **Secret `SUPABASE_DB_URL`** (repo → Settings → Secrets → Actions): activa el backup diario (D-02). Sin él, la GitHub Action `backup-detention.yml` **fallará en la próxima corrida cron (06:00 UTC diaria)**. No bloqueante, no peligroso. Precondición de la Parte B.
+2. **Decisión A/B — Parte B (restore ZIM):** mutación irreversible, NO ejecutada. SQL listo en `docs/plans/moneypath-plan-20260705.md`. Requiere backup activo (item 1) + confirmar si `vacios 0d@$84` de ZIM es legítima. Estado ZIM en prod sigue corrupto pero con **cero daño vivo** (0 ops ZIM abiertas).
+3. **Decisión planta-scope (command palette):** `vista_costos_cerrados` no expone `planta_actual` → un operador ve cerradas de **todas las plantas** al buscar. Aceptar o cambiar la DB. **Decisión de negocio.**
+4. **Cosmético `.gitignore`:** el patrón `*.Zone.Identifier` no matchea los 2 archivos basura `docs/*:Zone.Identifier` (dos puntos vs punto). Fix trivial, quedaron untracked.
 
 ---
 
-## Lo que le toca a John
-1. **Smoke test visual** de los puntos de arriba (app corriendo en `localhost:3000`; para levantarla: `cd crm-detention && npm run dev`).
-2. **Setear secret `SUPABASE_DB_URL`** (repo → Settings → Secrets → Actions) para activar el backup — precondición de la Parte B.
-3. **Confirmar rama A/B de la Parte B** (¿`sin_uso` 0d@$84 de ZIM es legítima?) para el restore de datos.
-4. **Mergear/deployar** `feat/fase2-apply` cuando el smoke test cierre (esto también deploya el login sin credenciales demo).
-5. **Working tree sin commitear:** `SESSION_HANDOFF.md`, `docs/audit/`, `docs/plans/` (decidir si versionarlos).
-
----
-
-## Money-path — referencia rápida
-- Estado ZIM en prod SIGUE corrupto (`vacios 0d@$84` espuria vigente) — la Parte B lo arregla, no se corrió. Cero daño vivo (0 ops ZIM abiertas).
-- Todas las RPCs nuevas/cambiadas están versionadas en `db/schema/05_functions.sql`; índices en `03_indexes.sql`; CHECKs y CHECK de tipo_evento en `02_tables.sql`.
-- Los 5 NO-TOCAR: trío RPC+`ux_operacion_abierta`+día-1 · búsqueda dual-query de Contenedores · advisors de índices · CRUD de plantas · clases globales de `globals.css`.
+## Estado git al cierre
+- `master` local == `origin/master` == `33ad084` (tras el push).
+- `feat/fase2-apply` y `feat/fase2-etapa0` locales: contenidas en master, backupeadas implícitamente en origin. Seguras de borrar cuando quieras.
+- Untracked: solo `docs/*:Zone.Identifier` (basura WSL, no commitear).
+- `SESSION_HANDOFF.md` (este archivo): modificado en working tree, **sin commitear** (a decisión de John).
