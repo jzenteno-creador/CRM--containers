@@ -9,15 +9,16 @@ import { Fragment } from "react";
 const URL_SEGURA = /^(https?:\/\/|mailto:|\/|#)/i;
 
 /* ---- inline: `código` → **negrita** → *itálica* → [link](url) ---- */
-const INLINE_RE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\([^)\s]+\))/g;
-
 function renderInline(text: string, keyBase: string): React.ReactNode[] {
+  // La regex se crea POR LLAMADA: renderInline recurre (negrita/itálica/link) y una
+  // /g compartida a nivel módulo corrompe lastIndex entre niveles → loop infinito
+  // (OOM real detectado al prerender /design).
+  const inlineRe = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\[[^\]]+\]\([^)\s]+\))/g;
   const out: React.ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
-  INLINE_RE.lastIndex = 0;
-  while ((m = INLINE_RE.exec(text)) !== null) {
+  while ((m = inlineRe.exec(text)) !== null) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const tok = m[0];
     const key = `${keyBase}-${k++}`;
