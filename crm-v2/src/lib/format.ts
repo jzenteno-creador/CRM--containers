@@ -61,9 +61,33 @@ export function fmtHora(iso: string | null | undefined): string {
   return `${hour}:${minute}`;
 }
 
+/**
+ * Fecha PLANA 'YYYY-MM-DD' (columnas DATE: vigente_desde/vigente_hasta) → 'DD/MM/YY'
+ * SIN pasar por Date: new Date("YYYY-MM-DD") parsea UTC medianoche y en AR (UTC-3)
+ * retrocede un día — fmtFecha() solo sirve para timestamptz.
+ */
+export function fmtFechaDia(ymd: string | null | undefined): string {
+  if (!ymd) return "—";
+  const [y, m, d] = ymd.split("-");
+  if (!y || !m || !d) return ymd;
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
 export function fmtUSD(n: number | null | undefined): string {
   if (n == null) return "USD —";
   return "USD " + Math.round(n).toLocaleString("es-AR");
+}
+
+/** USD exacto para tarifas (sin redondear): 55 → "USD 55" · 55.5 → "USD 55,50". */
+export function fmtUSDTarifa(n: number | null | undefined): string {
+  if (n == null) return "USD —";
+  return (
+    "USD " +
+    n.toLocaleString("es-AR", {
+      minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
 
 /** USD compacto para labels de charts: 875 → "USD 875" · 7350 → "USD 7,4 k" · 2.1M → "USD 2,1 M". */
