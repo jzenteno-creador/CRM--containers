@@ -5,7 +5,7 @@
 // palette navegable, link del footer de ayuda vivo).
 export const ROUTE_BUILT: Record<string, boolean> = {
   "/inicio": true,
-  "/ingreso": false,
+  "/ingreso": true,
   "/egreso": false,
   "/contenedores": false,
   "/alertas": false,
