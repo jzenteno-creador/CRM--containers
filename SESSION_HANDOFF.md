@@ -1,83 +1,67 @@
-# Handoff de sesión — 2026-07-08 (sesión 9: REBUILD v2 — Fase 3, M0→M2 + hallazgo de seguridad)
+# Handoff de sesión — 2026-07-12 (sesión 10: run autónomo de cierre → CP2-READY)
 
-**Rama al cierre:** `v2/m2-auth` (13+ commits sobre M2) · base `v2-rebuild` (M0+M1 mergeados, CP1 aprobado) · `master` intacta (= v1).
-**Modelo sugerido para retomar:** el próximo paso es ejecución+verificación (correr SQL, §14.10, verify E2E) → **Opus o Sonnet alcanza**; la decisión de seguridad ya está tomada. M3+ build → estándar.
-
----
-
-## 🔴 BLOQUEO ÚNICO PARA RETOMAR — SQL que corre JOHN en el SQL Editor del dashboard
-
-Proyecto Supabase `cctuowthpnstvdgjuomq` → SQL Editor (corre como `postgres`, sin el guard del MCP que auto-deniega escrituras de infra prod):
-
-```sql
-ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, crm';
-NOTIFY pgrst, 'reload config';
-```
-
-**Rollback** (10 s): `ALTER ROLE authenticator SET pgrst.db_schemas = 'public, graphql_public, detention, crm'; NOTIFY pgrst, 'reload config';`
-
-**⚠️ Qué hace este SQL, explícito (decisión de John: Opción A, "apagar v1 ahora"):**
-- **Saca `detention` de la Data API → el browser de v1 (crm-detention.vercel.app) se queda SIN API.** v1 deja de leer/escribir: pantallas rotas (ingreso/egreso/alertas/admin/etc. muestran error). **Los datos NO se tocan** — siguen en la base, solo dejan de ser alcanzables por la API pública. Aceptado porque v1 es uso interno solo de John y v2 la reemplaza.
-- **Agrega `crm`** → v2 puede hablar con su base (lo que M2+ necesita).
-- `public` y `graphql_public` quedan → ssb-export-dashboard (en `public`) sigue sin cambios.
-- No escribe sobre `detention` (solo lo quita de exposición → respeta §21).
-
-**Estado actual VIVO (verificado 2026-07-08):** el Save del dashboard NO persistió — `pg_db_role_setting` de `authenticator` = `pgrst.db_schemas = public, graphql_public, detention` (crm NO figura). Por eso el SQL de arriba es necesario: el dashboard no toma, hay que hacerlo por SQL.
-
-### 🟡 ALTERNATIVA si John decide NO romper v1 (RLS sobre detention)
-
-RLS "con el patrón de crm" (keyed en `auth.uid()`) **es imposible en detention**: v1 no usa Supabase Auth (login propio con password en texto plano contra `detention.usuarios`, cookie base64; cada request llega como rol `anon`). Sin `auth.uid()`, la única RLS escribible es `USING(true)` (no protege — el atacante tiene la misma anon key pública que la app) o `USING(false)` (rompe v1). A nivel DB, `anon`-app y `anon`-atacante son el mismo principal. Menú real si NO se rompe v1:
-- **Opción B — lockdown read-only:** `REVOKE INSERT, UPDATE ON ALL TABLES IN SCHEMA detention FROM anon, authenticated;` (mantener SELECT + mantener detention expuesto). v1 queda **solo-lectura** (mirar sí, escribir no); corta el tampering anónimo; la LECTURA de todo el dato sigue abierta a quien tenga la anon key. Interino hasta el cutover. Requiere OK explícito de John (toca detention, §21).
-- **Protección real manteniendo v1 funcional** = darle identidad Supabase Auth (reescribir su login) o un proxy server-side con service role → esfuerzo sobre una app que se reemplaza. No recomendado.
-- Detalle completo en `docs/v2/plan-remediacion-detention.md`.
-
-**Apenas John corra el SQL de Opción A (o elija B), el próximo Claude verifica:** `detention` anónimo → HTTP 406; `crm` anónimo → 200. Con la anon key `sb_publishable_mgVDKvuCNwEG26GOLL2-fg_g4o3gEE4`, URL `https://cctuowthpnstvdgjuomq.supabase.co/rest/v1`.
+**Rama al cierre:** `v2/m2-auth` (+3 commits de este run: 94af5f1, 949b2c3, 4a83984) · base `v2-rebuild` · `master` intacta.
+**Estado macro: CP2-READY.** M2 verificado E2E; 015 y 017 aplicadas Y versionadas (ledger == repo); DB limpia de usuarios de test. **No queda ningún paso autónomo pendiente: lo que sigue es de John.**
 
 ---
 
-## HECHO (esta sesión)
+## 🟢 QUÉ SIGUE (John)
 
-- **M0** (scaffold + design system Flight Deck completo): mergeado a `v2-rebuild`, verificado (build/tsc/lint + smoke visual browser real).
-- **M1** (schema `crm` + RLS + triggers + seeds): 11 migraciones (001–011), **CP1 APROBADO** por John, re-verificado en vivo por reviewer independiente. HAPAG=14 días (011, decisión de John).
-- **M2** (auth + aprobación): código completo + **2 reviews APROBADOS** (el base y el de adiciones). Falta SOLO el verify E2E (gated por exposición de crm).
-- **Hallazgo de seguridad detention** (elevado por John): auditado con evidencia; plan presentado; Opción A aprobada; SQL pendiente de que lo corra John.
-- **Condición #4 de John (auto-reparación):** migración 016 `crm.sync_mi_usuario()` + integración en `session.tsx` (llamada al login antes de `perfil()`). Aplicada y revisada.
-- **Triggers de auth defensivos** (condición #2 de John): migración 014 — `handle_new_user`/`bootstrap_admin` capturan toda excepción (un RAISE ahí bloqueaba el signup de TODO el proyecto compartido). Aplicada y revisada.
-- **Consolidaciones pre-M3 #11 y #12:** GateFrame/CardIcon/FormAlert extraídos al design system; acciones por fila a `ghost`. Aplicadas y revisadas.
-- **Protocolo Fable 5** instalado en `docs/v2/WORKSTYLE-fable5.md` (versionado).
-- **Reporte de CP1 corregido:** crm está protegido por RLS, NO por ausencia de grants (auto-expose otorgó CRUD+DELETE a anon/authenticated sobre las 14 objetos).
+1. **Auditar CP2**: levantar `npm run dev` en `crm-v2/` y recorrer el flujo M2 (login admin real, /admin/solicitudes, registro de prueba si quiere). La evidencia del run está en `.claude/state/progress.md` (gitignored, local) y los screenshots en el scratchpad de la sesión.
+2. Si CP2 aprueba → **merge `v2/m2-auth` → `v2-rebuild`** y arranca **M3 (Ingreso)** en sesión nueva (M3 quedó explícitamente fuera de este run; §14.1 del spec sigue abierto y depende del feedback de CP2).
+3. Decidir destino de 3 archivos untracked que NO son del repo (abajo).
 
-## DECISIONES (de John, esta sesión)
+## HECHO en este run (todo con evidencia cruda, verifier independiente del implementador)
 
-- **Infra v2 = schema `crm` en el proyecto compartido `cctuowthpnstvdgjuomq`** (no proyecto dedicado; límite de 2 free). `detention`/`public` intocables. Addendum §21 en `spec.md`.
-- **detention → Opción A** (des-exponer, apagar v1). v1 es uso interno solo de John; v2 la reemplaza.
-- Fórmula de días inclusiva (retiro = día 1); paquete de paridad v1 completo; semáforo `neutro`; `usuarios_publicos` owner-based; bootstrap por trigger post-confirmación; HAPAG=14.
-- "Automatically expose new tables" → DESACTIVADO por John (tabla nueva = exposición explícita).
+- **ITEM 1 — Baseline authenticated**: 2 usuarios de test creados (SQL directo en auth.users: no hay service_role key en env y el signup por API gasta cuota SMTP), aprobados por SQL, sign-in real. Asserts 1.0–1.6 PASS. **Primera prueba en vivo del scoping por planta**: operador ve SOLO su planta (BAHIA), supervisor ve todas; `usuarios` devuelve solo la fila propia; `usuarios_publicos` los 3 activos.
+- **ITEM 2 — §14.10 pre-hardening**: anon con grants presentes → 12/14 objetos `200+[]`, 2 views `401 permission denied for function` (anon nunca tuvo EXECUTE en funciones crm — bloqueo MÁS fuerte que lo esperado, no leak). 14/14 sin fila filtrada.
+- **ITEM 3 — Migración 015 aplicada** (`m2_015_hardening_grants_crm`): anon sin ningún privilegio en crm; authenticated sin DELETE; `usuarios_publicos` read-only para authenticated; default privileges blindados. Rollback exacto (desde ACLs reales) en `crm-v2/supabase/rollbacks/015_rollback.sql` (NO aplicado). Verify post: anon 401 en los 14; sup lee (200+filas); DELETE 403 con fila intacta; scoping intacto; detention 406 y ACLs de detention idénticos pre/post.
+- **ITEM 4 — E2E M2 (agent-browser, dev server local)**:
+  - Registro real por UI → 200 → "Revisá tu correo".
+  - Confirmación por el **link real de verificación** (GET /auth/v1/verify?token=<hash de auth.users>) → redirect a /auth/callback → fragment implicit resuelto → gate `/espera-aprobacion` correcto, retiene también en `/`.
+  - Pendiente NO lee NADA: 4 superficies (operaciones, usuarios, usuarios_publicos, vista_alertas) → `200+[]` con su JWT, ni su propia fila.
+  - **Auto-reparación (016)**: espejo borrado por SQL → login UI → `rpc/sync_mi_usuario` 204 → **fila reconstruida verificada en DB** (pendiente, sin rol).
+  - **Backlog #7 (PKCE/implicit)**: flowType=implicit (default, sin flowType en createClient) y el callback implicit FUNCIONA con link real. PKCE no está activado; si John lo activa, el callback necesita `exchangeCodeForSession` — sigue en backlog, no es deuda.
+- **ITEM 5 — Housekeeping**: 017 versionada (divergencia ledger/repo cerrada), 015+rollback commiteados, agentes del run commiteados, `.claude/state/` y `skills-lock.json` al gitignore. **Cleanup S9 verificado: auth.users=1 (solo John), 0 usuarios test.**
 
-## HALLAZGOS (abiertos)
+## DECISIONES (del run, autónomas)
 
-1. **detention RLS-off + expuesto** (el hueco): anon puede leer/escribir ~2.952 operaciones reales vía la anon key pública del bundle. **Sigue vivo hasta que John corra el SQL.** Único consumidor por API = browser de v1 (inventariado, Regla 6). El backup (`.github/workflows/backup-detention.yml`) usa conexión directa → inmune. n8n apunta a otro proyecto.
-2. **Riesgo residual declarado:** la corrección 014/016 está verificada por lectura + catálogo, no por un signup real que caiga en el catch (gated por crm sin exponer) → se prueba en el verify E2E. No se abrió el host de cada credencial n8n (MCP redacta el secreto).
-3. Backlog no bloqueante en `docs/v2/backlog-pulido.md` (12 items) + bucket `incidencias` de v1 es público (advisor).
+- Usuarios test por INSERT SQL (sin service_role key; preserva cuota SMTP). Passwords descartables; usuarios borrados al cierre.
+- Email e2e con dominio `ssbint.com` (GoTrue bloquea example.com con `email_address_invalid`). **Se disparó 1 email de confirmación a `test-crmv2-e2e@ssbint.com` (casilla inexistente → rebote interno en tu dominio, inofensivo).**
+- Operaciones de test (TEST0000001/2, booking TEST-CRMV2): **anuladas, no borradas** (guardrail: DELETE solo de usuarios test). Quedan en el histórico con motivo explícito; fuera de vista_alertas y vistas operativas. Si las querés fuera del todo, es un DELETE tuyo de 1 línea.
+- ITEM 2 declarado PASS-con-desviación (los 2 "FAIL" de views eran denegación más fuerte, evidencia en catálogo).
 
-## ESTADO (migraciones en la DB `crm`)
+## HALLAZGOS (elevados, no enterrados)
 
-Aplicadas y verificadas: 001–014, 016. **015 (hardening de grants) PREPARADO pero NO aplicado** — se aplica DESPUÉS del test §14.10 (para probar que la RLS bloquea a anon CON los grants presentes, no confundir con grant-absence). Archivo: `crm-v2/supabase/migrations/015_hardening_grants_crm.sql`.
+1. **Bootstrap admin es case-INSENSITIVE por diseño** (`lower()` en ambos lados) — el check de CP2 esperaba que una variante en mayúsculas NO matchee. En la práctica es irrelevante: la clave `admin_bootstrap_email` ya está CONSUMIDA (null) + guard de admin activo ⇒ nadie más puede bootstrapearse, con cualquier casing. La variante del email real de John no se probó en vivo (habría creado una cuenta no borrable por guardrail). Si querés match case-sensitive, es 1 línea en `bootstrap_admin` — pero el estándar de emails avala el diseño actual.
+2. **Views y funciones**: el `[]` de anon en las views pre-hardening NO era el accidente del WHERE que decía el baseline — anon carecía de EXECUTE sobre `perfil()`/`dias_estadia()` desde M1 (la 010 hizo bien su trabajo). Post-015 es doblemente irrelevante.
+3. **Lección GoTrue** (para futuros usuarios por SQL): columnas token de `auth.users` deben ser `''`, no NULL (si no: 500 "Database error querying schema" en el sign-in). Y el endpoint GET de verify usa `token=`, no `token_hash=`.
+4. `vista_alertas` conserva INSERT/UPDATE para authenticated (superficie inerte — view de solo lectura funcional). No bloqueante; anotado por db-hardening.
 
-## PRÓXIMO PASO (orden exacto, autónomo tras el SQL de John)
+## Untracked que NO van a este repo (decisión pendiente de John)
 
-1. John corre el SQL de Opción A (o decide B). Avisa "listo".
-2. Verificar flip: `detention` anon → 406; `crm` anon → 200.
-3. **Test §14.10** anónimo sobre las 12 tablas + 2 views de crm: con la anon key, cada una debe dar 0 filas o permiso denegado (probar que la RLS bloquea CON grants presentes).
-4. **Aplicar 015** (hardening): revocar grants de anon + DELETE de authenticated. Re-verificar que authenticated conserva SELECT/INSERT/UPDATE y anon queda en USAGE-solo. (El MCP puede auto-denegar; si pasa, va por SQL Editor o apply_migration.)
-5. **Verify E2E de M2** (verifier): registro→confirmación→espera→aprobación→login. **Check puntual de John:** bootstrap = match exacto de email + one-shot (nunca "primer registrado = admin"), probado con una 2da cuenta que queda pendiente y NO lee nada. Incluye probar auto-reparación (sync_mi_usuario) y PKCE-vs-implicit del callback (backlog #7).
-6. **CP2** (checkpoint): mostrar el flujo funcionando → merge `v2/m2-auth` → `v2-rebuild`.
-7. Recién ahí: **M3 (Ingreso)** — orden §17. Las consolidaciones pre-M3 ya están hechas.
+- `Caso-de-Negocio-CRM-Detention.pdf` + `Presentacion-CRM-Detention-Contenedores.html` → material de negocio: Drive (Team Exportación) u carpeta docs de gestión, no el repo de código.
+- `HANDOFF-cross-ssb-workspace-20260707.md` → pertenece al workstream ssb-workspace; moverlo a ese repo.
 
-## Contexto no obvio
+## ESTADO — stopping condition del run (S1–S9)
 
-- **Regla de oro §21:** v2 escribe SOLO en schema `crm` + bucket `crm-incidencias` + triggers `crm_*` de auth.users. Los subagentes (`.claude/agents/`) lo tienen grabado.
-- Canal de migraciones: archivo en `crm-v2/supabase/migrations/` + MCP `apply_migration` (mismo contenido). Regla ACL: cada función nueva necesita `REVOKE EXECUTE FROM PUBLIC, anon` explícito (default de Postgres es aditivo).
-- MCP auto-deniega escrituras de infra prod (ALTER ROLE, etc.) → van por SQL Editor de John.
-- MCP playwright/chrome-devtools ROTOS en WSL → verify visual = skill agent-browser (clicks nativos vía eval).
-- Cupo Fable agotado esta sesión → se pasó a Opus 4.8. Nada del spec depende del modelo.
+| S | assert | estado |
+|---|---|---|
+| S1 | anon → 14 objetos crm ⇒ 401 | **PASS** (post-015, 14/14 con body) |
+| S2 | authN → operaciones ⇒ 200 + ≥1 fila | **PASS** (sup: 2 filas) |
+| S3 | authN → vista_alertas ⇒ 200 + ≥1 fila | **PASS al momento del verify** (2 filas en 3.3). Al cierre da `200+[]`: los datos eran de test y se anularon; v2 no tiene datos reales hasta M3. No es error de permisos. |
+| S4 | authN DELETE operaciones ⇒ 401/403 | **PASS** (403 + fila intacta) |
+| S5 | anon detention ⇒ 406 | **PASS** |
+| S6 | op solo su planta / sup todas | **PASS** (1ª prueba real del scoping) |
+| S7 | git limpio; 015+017 commiteadas; ledger==repo | **PASS con salvedad**: tracked limpio y ledger==repo; quedan 3 untracked de negocio cuya ubicación decide John (arriba) |
+| S8 | E2E M2 4 checks | **PASS** (check 1 con salvedad case-insensitive, hallazgo #1) |
+| S9 | test users eliminados; auth.users=1 | **PASS** (verificado por count) |
+
+## Contexto no obvio (persiste)
+
+- Regla §21: v2 escribe SOLO en schema `crm` + bucket `crm-incidencias` + triggers `crm_*`. detention READ-ONLY absoluto.
+- Canal migraciones: archivo en `crm-v2/supabase/migrations/` + MCP `apply_migration` (mismo contenido, mismo turno). Rollbacks en `crm-v2/supabase/rollbacks/` (nunca en migrations/).
+- MCP browsers rotos en WSL → agent-browser. Deploy v2: manual de John (`npx vercel deploy --prod --yes`), nunca del agente.
+- Agentes del run en `.claude/agents/` (scout/verifier/db-hardening/e2e-runner) — el registro los toma al inicio de sesión.
+
+**Modelo sugerido para retomar:** M3 es build de UI+DB sobre spec cerrado → estándar (Sonnet/Opus). El review de M3 → reviewer habitual.
