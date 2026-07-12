@@ -41,6 +41,26 @@ export function fmtFechaHora(iso: string | null | undefined): string {
   });
 }
 
+/**
+ * Solo la hora 'HH:mm' (h23) en zona AR (slot `time` del Timeline). Vacío si es
+ * medianoche exacta (fechas cargadas sin hora). Comparación NUMÉRICA por
+ * formatToParts: es-AR sin hourCycle formatea h12 ("12:00 a. m."), así que
+ * comparar contra el string "00:00" no detectaba la medianoche.
+ */
+export function fmtHora(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const parts = new Intl.DateTimeFormat("es-AR", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  if (Number(hour) === 0 && Number(minute) === 0) return "";
+  return `${hour}:${minute}`;
+}
+
 export function fmtUSD(n: number | null | undefined): string {
   if (n == null) return "USD —";
   return "USD " + Math.round(n).toLocaleString("es-AR");
