@@ -6,9 +6,10 @@
 // M0 = shell SIN datasource: la búsqueda se inyecta por prop `search` (la conectan
 // M5/M6 contra vista_alertas + operaciones cerradas); sin prop muestra solo Acciones.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContainerNumber } from "@/components/container-number";
+import { isRouteBuilt } from "@/lib/nav";
 import { Kbd } from "./kbd";
 import type { EstadoSemaforo } from "./status-badge";
 
@@ -51,6 +52,9 @@ export function CommandPalette({
   actions?: PaletteAction[];
 }) {
   const router = useRouter();
+  // Solo acciones cuya ruta está construida (ROUTE_BUILT, lib/nav.ts): una acción
+  // a una ruta M3+ haría router.push a un 404. Al construir el módulo, reaparece.
+  const navActions = useMemo(() => actions.filter((a) => isRouteBuilt(a.href)), [actions]);
   const [isOpen, setIsOpen] = useState(false);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<PaletteResult[]>([]);
@@ -114,15 +118,15 @@ export function CommandPalette({
     return () => clearTimeout(t);
   }, [q, isOpen, search]);
 
-  const items = results.length + actions.length;
+  const items = results.length + navActions.length;
 
   const openItem = useCallback(
     (idx: number) => {
-      const href = idx < results.length ? results[idx].href : actions[idx - results.length].href;
+      const href = idx < results.length ? results[idx].href : navActions[idx - results.length].href;
       router.push(href);
       close();
     },
-    [results, actions, router, close],
+    [results, navActions, router, close],
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -304,12 +308,13 @@ export function CommandPalette({
           )
         )}
 
-        {/* grupo acciones */}
+        {/* grupo acciones — solo las de rutas construidas (evita router.push a 404) */}
+        {navActions.length > 0 && (
         <div style={{ padding: "8px 0" }}>
           <div className="fd-label" style={{ padding: "4px 16px 6px" }}>
             Acciones
           </div>
-          {actions.map((a, j) => {
+          {navActions.map((a, j) => {
             const i = results.length + j;
             return (
               <button
@@ -326,6 +331,7 @@ export function CommandPalette({
             );
           })}
         </div>
+        )}
 
         {/* footer hints */}
         <div

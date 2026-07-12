@@ -11,25 +11,26 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { isRouteBuilt } from "@/lib/nav";
 import { ROL_LABELS, useSession } from "@/lib/session";
 import { CommandPalette } from "./command-palette";
 import { Dropdown, Popover } from "./dropdown";
 import { HelpPanel } from "./help-panel";
 import { Markdown } from "./markdown";
 
-// Solapas §8 — Admin se filtra por rol (abajo, en FdShell).
-// `built`: la ruta existe hoy. Las no construidas (llegan con M3+) se renderizan
-// deshabilitadas — sin <Link>, así Next no las prefetchea (evita el 404 en red) ni
-// navega al click (evita el 404 en pantalla). Al construir cada módulo, poné true.
+// Solapas §8 — Admin se filtra por rol (abajo, en FdShell). El estado "construida"
+// NO vive acá: sale de ROUTE_BUILT (lib/nav.ts), fuente de verdad única. Las no
+// construidas (M3+) se renderizan deshabilitadas — sin <Link>, así Next no las
+// prefetchea (evita 404 en red) ni navega al click (evita 404 en pantalla).
 const TABS = [
-  { href: "/inicio", label: "Inicio", icon: "ti-layout-dashboard", built: true },
-  { href: "/ingreso", label: "Ingreso", icon: "ti-login-2", built: false },
-  { href: "/egreso", label: "Egreso", icon: "ti-logout-2", built: false },
-  { href: "/contenedores", label: "Contenedores", icon: "ti-list-details", built: false },
-  { href: "/alertas", label: "Alertas", icon: "ti-bell", built: false },
-  { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle", built: false },
-  { href: "/admin", label: "Admin", icon: "ti-settings", built: true },
-  { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle", built: false },
+  { href: "/inicio", label: "Inicio", icon: "ti-layout-dashboard" },
+  { href: "/ingreso", label: "Ingreso", icon: "ti-login-2" },
+  { href: "/egreso", label: "Egreso", icon: "ti-logout-2" },
+  { href: "/contenedores", label: "Contenedores", icon: "ti-list-details" },
+  { href: "/alertas", label: "Alertas", icon: "ti-bell" },
+  { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
+  { href: "/admin", label: "Admin", icon: "ti-settings" },
+  { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle" },
 ];
 
 const SOON_TIP = "Próximamente (M3)";
@@ -128,9 +129,13 @@ export function FdShell({ children }: { children: React.ReactNode }) {
         onClose={() => setHelpOpen(false)}
         title={title}
         footer={
-          <Link href="/ayuda" onClick={() => setHelpOpen(false)}>
-            Ver el banco completo de consultas →
-          </Link>
+          isRouteBuilt("/ayuda") ? (
+            <Link href="/ayuda" onClick={() => setHelpOpen(false)}>
+              Ver el banco completo de consultas →
+            </Link>
+          ) : (
+            <span style={{ color: "var(--color-text-faint)" }}>Banco de consultas — {SOON_TIP}</span>
+          )
         }
       >
         <Markdown source={HELP_PLACEHOLDER} />
@@ -142,7 +147,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
           S
         </span>
         {tabs.map((t) =>
-          t.built ? (
+          isRouteBuilt(t.href) ? (
             <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""} aria-label={t.label}>
               <i className={`ti ${t.icon}`} aria-hidden />
               <span className="fd-tip">{t.label}</span>
@@ -260,7 +265,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
       {/* bottom-nav móvil: una línea con scroll horizontal, touch ≥44px */}
       <nav className="fd-bottombar">
         {tabs.map((t) =>
-          t.built ? (
+          isRouteBuilt(t.href) ? (
             <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""}>
               <i className={`ti ${t.icon}`} aria-hidden />
               {t.label}
