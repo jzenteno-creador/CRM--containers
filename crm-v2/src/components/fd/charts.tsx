@@ -130,6 +130,12 @@ export function TrendLine({
   const points = data.map((d, i) => `${px(i)},${py(d.value)}`).join(" ");
   const area = n > 0 ? `${px(0)},${padTop + plotH} ${points} ${px(n - 1)},${padTop + plotH}` : "";
   const lastPoint = n > 0 ? data[n - 1] : null;
+  // Label del último punto: con n>1 el punto cae pegado al borde derecho (x = W-padX) y
+  // el anclaje "middle" recortaba la mitad del texto fuera del viewBox (auditoría visual
+  // M8: "USD 1,1 k" perdía ~7px). Se ancla "end" para que crezca hacia adentro; con un
+  // solo punto (centrado) conserva el "middle" histórico.
+  const lastX = n > 0 ? px(n - 1) : 0;
+  const lastAnchorEnd = n > 1 && lastX > W - 60;
 
   return (
     <svg
@@ -180,9 +186,9 @@ export function TrendLine({
       ))}
       {lastPoint && (
         <text
-          x={px(n - 1)}
+          x={lastAnchorEnd ? Math.min(lastX + 6, W - 2) : lastX}
           y={py(lastPoint.value) - 10}
-          textAnchor="middle"
+          textAnchor={lastAnchorEnd ? "end" : "middle"}
           style={{
             fill: "var(--color-text-primary)",
             fontFamily: "var(--font-mono)",

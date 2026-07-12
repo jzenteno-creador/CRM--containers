@@ -66,6 +66,17 @@ export function fmtUSD(n: number | null | undefined): string {
   return "USD " + Math.round(n).toLocaleString("es-AR");
 }
 
+/** USD compacto para labels de charts: 875 → "USD 875" · 7350 → "USD 7,4 k" · 2.1M → "USD 2,1 M". */
+export function fmtUSDCompact(n: number | null | undefined): string {
+  if (n == null) return "USD —";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000)
+    return "USD " + (n / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " M";
+  if (abs >= 1_000)
+    return "USD " + (n / 1_000).toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " k";
+  return fmtUSD(n);
+}
+
 // Estados del ciclo v2 (§5/§18.1: sin estado "cargado" — asignación plegada en el egreso)
 export const ESTADO_LABELS: Record<string, string> = {
   en_transito_a_planta: "en tránsito a planta",
