@@ -25,7 +25,7 @@ import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { Timeline, type TimelineItem, type TimelineStatus } from "@/components/fd/timeline";
-import { EVENTO_LABELS, TIPO_CIERRE_LABELS, fmtFecha, fmtFechaHora, fmtHora } from "@/lib/format";
+import { EVENTO_LABELS, TIPO_CIERRE_LABELS, TIPO_INCIDENCIA_LABELS, fmtFecha, fmtFechaHora, fmtHora } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { EstadoOperacionBadge } from "../estado-operacion";
@@ -177,8 +177,11 @@ function detalleTexto(
       return null;
     case "anulacion":
       return s("motivo") ? `motivo: ${s("motivo")}` : null;
-    case "incidencia":
-      return joinParts([s("tipo"), s("descripcion")]);
+    case "incidencia": {
+      // humanizar el enum con el mapa único de M7 (mismo label que el badge de /incidencias)
+      const tipoInc = s("tipo");
+      return joinParts([tipoInc ? (TIPO_INCIDENCIA_LABELS[tipoInc] ?? tipoInc) : null, s("descripcion")]);
+    }
     case "correccion":
       return `${s("campo") ?? "campo"}: ${fmtDetalleValor(detalle.anterior)} → ${fmtDetalleValor(detalle.nuevo)}`;
     default:

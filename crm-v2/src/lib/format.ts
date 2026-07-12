@@ -93,3 +93,11 @@ export const EVENTO_LABELS: Record<string, string> = {
   reapertura: "Reapertura (reversa de cierre)",
   correccion: "Corrección de datos",
 };
+
+// Tipos de incidencia (espeja el CHECK de crm.incidencias.tipo — M7). Fuente ÚNICA de
+// labels: la consumen el alta/historial de /incidencias y el timeline de la ficha.
+export const TIPO_INCIDENCIA_LABELS: Record<string, string> = {
+  averia_sufrida: "Avería sufrida",
+  averia_recepcionada: "Avería recepcionada",
+  otro: "Otro",
+};

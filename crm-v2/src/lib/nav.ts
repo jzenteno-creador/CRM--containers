@@ -9,7 +9,7 @@ export const ROUTE_BUILT: Record<string, boolean> = {
   "/egreso": true,
   "/contenedores": true,
   "/alertas": true,
-  "/incidencias": false,
+  "/incidencias": true,
   "/admin": true,
   "/ayuda": false,
 };
