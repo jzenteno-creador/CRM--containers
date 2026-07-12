@@ -6,3 +6,9 @@ node_modules/
 .env
 .env.local
 .env*.local
+
+# estado de sesión de Claude (runtime, no versionar)
+.claude/state/
+
+# lockfile generado por tooling de skills (no es del CRM)
+skills-lock.json
