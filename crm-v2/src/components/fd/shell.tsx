@@ -17,17 +17,22 @@ import { Dropdown, Popover } from "./dropdown";
 import { HelpPanel } from "./help-panel";
 import { Markdown } from "./markdown";
 
-// Solapas §8 — Admin se filtra por rol (abajo, en FdShell)
+// Solapas §8 — Admin se filtra por rol (abajo, en FdShell).
+// `built`: la ruta existe hoy. Las no construidas (llegan con M3+) se renderizan
+// deshabilitadas — sin <Link>, así Next no las prefetchea (evita el 404 en red) ni
+// navega al click (evita el 404 en pantalla). Al construir cada módulo, poné true.
 const TABS = [
-  { href: "/inicio", label: "Inicio", icon: "ti-layout-dashboard" },
-  { href: "/ingreso", label: "Ingreso", icon: "ti-login-2" },
-  { href: "/egreso", label: "Egreso", icon: "ti-logout-2" },
-  { href: "/contenedores", label: "Contenedores", icon: "ti-list-details" },
-  { href: "/alertas", label: "Alertas", icon: "ti-bell" },
-  { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
-  { href: "/admin", label: "Admin", icon: "ti-settings" },
-  { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle" },
+  { href: "/inicio", label: "Inicio", icon: "ti-layout-dashboard", built: true },
+  { href: "/ingreso", label: "Ingreso", icon: "ti-login-2", built: false },
+  { href: "/egreso", label: "Egreso", icon: "ti-logout-2", built: false },
+  { href: "/contenedores", label: "Contenedores", icon: "ti-list-details", built: false },
+  { href: "/alertas", label: "Alertas", icon: "ti-bell", built: false },
+  { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle", built: false },
+  { href: "/admin", label: "Admin", icon: "ti-settings", built: true },
+  { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle", built: false },
 ];
+
+const SOON_TIP = "Próximamente (M3)";
 
 const HELP_PLACEHOLDER = `El contenido de ayuda de cada solapa se edita desde **Admin** sobre \`ayuda_contenido\` (llega con M10) y cubre:
 
@@ -136,12 +141,21 @@ export function FdShell({ children }: { children: React.ReactNode }) {
         <span className="dot-logo fd-rail-logo" title="SSB · DETENTION">
           S
         </span>
-        {tabs.map((t) => (
-          <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""} aria-label={t.label}>
-            <i className={`ti ${t.icon}`} aria-hidden />
-            <span className="fd-tip">{t.label}</span>
-          </Link>
-        ))}
+        {tabs.map((t) =>
+          t.built ? (
+            <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""} aria-label={t.label}>
+              <i className={`ti ${t.icon}`} aria-hidden />
+              <span className="fd-tip">{t.label}</span>
+            </Link>
+          ) : (
+            <span key={t.href} className="fd-soon" aria-disabled="true" aria-label={`${t.label} — ${SOON_TIP}`}>
+              <i className={`ti ${t.icon}`} aria-hidden />
+              <span className="fd-tip">
+                {t.label} · {SOON_TIP}
+              </span>
+            </span>
+          ),
+        )}
         <span className="fd-rail-spacer" />
       </aside>
 
@@ -245,12 +259,19 @@ export function FdShell({ children }: { children: React.ReactNode }) {
 
       {/* bottom-nav móvil: una línea con scroll horizontal, touch ≥44px */}
       <nav className="fd-bottombar">
-        {tabs.map((t) => (
-          <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""}>
-            <i className={`ti ${t.icon}`} aria-hidden />
-            {t.label}
-          </Link>
-        ))}
+        {tabs.map((t) =>
+          t.built ? (
+            <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""}>
+              <i className={`ti ${t.icon}`} aria-hidden />
+              {t.label}
+            </Link>
+          ) : (
+            <span key={t.href} className="fd-soon" aria-disabled="true" title={SOON_TIP}>
+              <i className={`ti ${t.icon}`} aria-hidden />
+              {t.label}
+            </span>
+          ),
+        )}
       </nav>
     </div>
   );
