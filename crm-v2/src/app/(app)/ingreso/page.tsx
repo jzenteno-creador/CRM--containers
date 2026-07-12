@@ -35,6 +35,8 @@ type PendienteRow = {
     tipo: string;
     naviera: { nombre: string } | null;
   } | null;
+  // one-to-many; en en_transito_a_planta hay un solo movimiento (el retiro→planta).
+  movimientos_planta: { planta_destino: { nombre: string } | null }[];
 };
 
 const MEDIOS: { value: "camion" | "tren"; label: string }[] = [
@@ -110,7 +112,10 @@ export default function IngresoPage() {
     const { data, error } = await getSupabase()
       .from("operaciones")
       .select(
-        "id, fecha_retiro, booking_retiro, retiro_de, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre))",
+        // planta destino sale del movimiento retiro→planta; movimientos_planta tiene DOS
+        // FK a plantas (origen/destino) → desambiguar por el nombre de constraint o
+        // PostgREST rechaza el embed por ambigüedad.
+        "id, fecha_retiro, booking_retiro, retiro_de, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre)), movimientos_planta(planta_destino:plantas!movimientos_planta_planta_destino_id_fkey(nombre))",
       )
       .eq("estado", "en_transito_a_planta")
       .order("fecha_retiro", { ascending: true });
@@ -213,6 +218,13 @@ export default function IngresoPage() {
       header: "tipo",
       render: (r) => r.contenedor?.tipo ?? "—",
       sortValue: (r) => r.contenedor?.tipo ?? null,
+      hideOnMobile: true,
+    },
+    {
+      key: "planta_destino",
+      header: "planta destino",
+      render: (r) => r.movimientos_planta?.[0]?.planta_destino?.nombre ?? "—",
+      sortValue: (r) => r.movimientos_planta?.[0]?.planta_destino?.nombre ?? null,
       hideOnMobile: true,
     },
     {
