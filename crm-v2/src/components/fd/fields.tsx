@@ -13,6 +13,7 @@ export function Field({
   error,
   hint,
   htmlFor,
+  help,
   children,
   className = "",
 }: {
@@ -20,15 +21,22 @@ export function Field({
   error?: string | null;
   hint?: string;
   htmlFor?: string;
+  /** Slot junto al label — típicamente un <FieldHelp> (tooltip on-hover del campo, M4). */
+  help?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={className} style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-      {label && (
-        <label className="fd-label" htmlFor={htmlFor}>
-          {label}
-        </label>
+      {(label || help) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          {label && (
+            <label className="fd-label" htmlFor={htmlFor}>
+              {label}
+            </label>
+          )}
+          {help}
+        </div>
       )}
       {children}
       {error ? (
