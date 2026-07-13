@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLAN M4 · CRM Detention v2</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1420; --surface: #171e2e; --surface2: #1e2740; --border: #2a3550;
+    --text: #e6ebf5; --muted: #8a96b0; --accent: #4da3ff; --green: #3ddc84;
+    --amber: #ffc24d; --red: #ff6b6b; --violet: #b08cff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 32px 20px 80px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; margin-bottom: 4px; }
+  h2 { font-size: 20px; margin: 44px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 20px 0 8px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); font-size: 13.5px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; margin: 14px 0; }
+  .card h3 { margin-top: 0; }
+  .badge { display: inline-block; font-size: 11.5px; font-weight: 700; letter-spacing: .4px; padding: 3px 10px; border-radius: 20px; margin-right: 6px; vertical-align: middle; }
+  .b-go     { background: #3d1f24; color: var(--red);   border: 1px solid var(--red); }
+  .b-auto   { background: #16301f; color: var(--green); border: 1px solid var(--green); }
+  .b-done   { background: #14263d; color: var(--accent); border: 1px solid var(--accent); }
+  .b-wait   { background: #33270f; color: var(--amber); border: 1px solid var(--amber); }
+  .b-model  { background: #241c38; color: var(--violet); border: 1px solid var(--violet); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #212b42; vertical-align: top; }
+  code, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12.5px; background: var(--surface2); padding: 1px 6px; border-radius: 5px; color: #cfe3ff; }
+  .mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin: 14px 0; overflow-x: auto; }
+  .verdict { background: linear-gradient(135deg, #14263d, #16301f); border: 1px solid var(--accent); border-radius: 12px; padding: 22px 24px; margin: 18px 0; }
+  .verdict .big { font-size: 17px; font-weight: 700; }
+  .q { background: var(--surface2); border-left: 3px solid var(--amber); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 14px; }
+  .gl dt { font-weight: 700; color: var(--accent); margin-top: 10px; }
+  .gl dd { margin-left: 0; color: var(--muted); font-size: 13.5px; }
+  ul { margin: 8px 0 8px 22px; }
+  li { margin: 4px 0; }
+  .kpi-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 16px 0; }
+  .kpi { flex: 1 1 150px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi .n { font-size: 24px; font-weight: 800; }
+  .kpi .l { font-size: 12px; color: var(--muted); }
+  .foot { margin-top: 50px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>PLAN M4 — CRM Detention v2</h1>
+<p class="sub">EXPLORE + PLAN · 2026-07-12 · Documento hermano: <code>docs/EXPLORE-M4.md</code> (toda la evidencia técnica vive ahí).<br>
+<b>Nada de lo que sigue está implementado.</b> Este plan espera tu GO. Todo lo marcado <span class="badge b-go">GO HUMANO</span> toca la base de datos (DDL = cambios de estructura) y no se ejecuta sin tu aprobación explícita; lo marcado <span class="badge b-auto">AUTÓNOMO</span> es código de la aplicación que puede avanzar solo tras el GO general del plan.</p>
+
+<div class="verdict">
+  <div class="big">El veredicto que ordena todo lo demás (F0 · regla de días)</div>
+  <p>El motor de cálculo <b>cuenta bien</b>: el día del retiro cuenta como día 1 (conteo "inclusivo"). Se validó contra tu Excel histórico completo — <b>2.804 de 2.804 filas (100%)</b> calculan la estadía exactamente así, y 0 filas usan la alternativa. La ayuda que ven los usuarios en producción dice lo mismo. <b>Los únicos desalineados son el spec (línea 234: "retiro = día 0") y el modelo mental que teníamos</b> — el spec se corrige, el motor no se toca en sus números.</p>
+  <p class="sub">Lo que SÍ falta: que esa convención deje de estar fundida en el código y pase a ser <b>configurable y versionada por naviera</b> (si mañana una naviera cuenta distinto, lo cambia el admin sin dev, y el pasado jamás se recalcula). Además el Excel reveló algo que el CRM no modela: 43 operaciones (1,5%) con <b>vencimiento extendido caso por caso</b> por la naviera — hoy el equivalente sería "sin cargo", que borra TODO el costo en vez de correr la fecha. Decisión tuya si lo modelamos.</p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="n">2.804/2.804</div><div class="l">filas del Excel validan el conteo inclusivo (100%)</div></div>
+  <div class="kpi"><div class="n">30/30</div><div class="l">muestra aleatoria reproducible (seed 42)</div></div>
+  <div class="kpi"><div class="n">8</div><div class="l">migraciones DDL nuevas propuestas (019–026)</div></div>
+  <div class="kpi"><div class="n">7</div><div class="l">decisiones que solo vos podés tomar</div></div>
+</div>
+
+<h2>1 · Mapa de fases y dependencias</h2>
+<p class="sub">F0 ya está resuelto (era investigación, no código). Las flechas indican "necesita que lo anterior esté decidido/hecho".</p>
+<div class="mermaid">
+flowchart LR
+  F0["F0 · Regla de días<br/>✅ RESUELTO<br/>(veredicto + diseño versionado)"]
+  W1["Wave 1 · Motor versionado<br/>convención por naviera +<br/>dias_facturables() + views<br/>🔴 GO · Opus"]
+  W2["Wave 2 · Fixes operativos<br/>H1 tanda parcial · plantas<br/>editables · campana<br/>🔴 GO · Opus"]
+  W3["Wave 3 · Ayuda M10<br/>/ayuda + tooltips + editor<br/>admin + seeds 019/020<br/>🔴 GO (solo DDL) · Sonnet"]
+  W4["Wave 4 · UX operativa<br/>combobox · sidebar ·<br/>búsqueda global · Excel<br/>🟢 front-only · Sonnet"]
+  W5["Wave 5 · ERD + CP3<br/>diagrama admin + auditoría<br/>RLS + GATE DE CÁLCULO<br/>🔴 GO parcial · Sonnet"]
+  GATE["🧮 Gate de cálculo<br/>goldens del Excel<br/>(ya producidos por F0)"]
+  F0 --> W1
+  F0 --> W3
+  W1 --> GATE
+  GATE --> W5
+  W2 --> W5
+  W3 --> W5
+  W4 --> W5
+</div>
+
+<h2>2 · Qué se hace en cada wave</h2>
+
+<div class="card">
+  <h3><span class="badge b-done">RESUELTO</span> F0 · Regla de días — investigación cerrada con evidencia</h3>
+  <table>
+    <tr><th>Qué se decidió</th><td>El conteo inclusivo (+1) queda. La convención pasa a columna versionada <code>convencion_conteo</code> en <code>freetime_origin</code> (la tabla de tarifas versionadas) + función nueva <code>crm.dias_facturables()</code> que la resuelve según la tarifa vigente a la fecha del retiro.</td></tr>
+    <tr><th>Por qué versionado</th><td>Regla dura: nada que recalcule plata del pasado puede ser un switch editable. Cambiar la convención = crear una versión nueva con fecha de vigencia; lo histórico sigue calculando con la versión vieja. Imposible reescribir la historia con un click.</td></tr>
+    <tr><th>Bonus del análisis</th><td>Los "goldens" (casos de prueba fijos sacados del Excel: 30 filas + 7 sin-cargo + 3 extensiones) ya quedaron producidos — son el insumo del Gate de Cálculo de CP3.</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="badge b-go">GO HUMANO</span><span class="badge b-model">OPUS</span> Wave 1 · Motor versionado (money path — lo más delicado del plan)</h3>
+  <table>
+    <tr><th>Toca</th><td>Migración <code>021</code>: columna <code>convencion_conteo</code> + función <code>dias_facturables()</code> + mover <code>cobra_detention_origen</code> de navieras a la tarifa versionada (hoy es un switch que <b>recalcula el pasado</b> si alguien lo toca — hallazgo F2-1) + reescritura de las 2 vistas de costos y sus 4 derivadas.</td></tr>
+    <tr><th>Archivos</th><td><code>crm-v2/supabase/migrations/021_*.sql</code> · modal de tarifas en <code>admin/tarifas/page.tsx</code> (campo nuevo)</td></tr>
+    <tr><th>Red de seguridad</th><td>El Gate de Cálculo corre <b>ANTES y DESPUÉS</b> de esta migración: los mismos casos del Excel tienen que dar exactamente el mismo resultado. Un solo desvío = se frena todo.</td></tr>
+    <tr><th>Esfuerzo</th><td>1 sesión de trabajo (diseño ya hecho; es implementar + verificar en rollback + gate)</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="badge b-go">GO HUMANO</span><span class="badge b-model">OPUS</span> Wave 2 · Fixes operativos (H1 · plantas · campana)</h3>
+  <table>
+    <tr><th>H1 — tandas</th><td>Hoy: un contenedor con ciclo abierto en OTRA planta (invisible para el operador) tira abajo la tanda ENTERA y el error nombra un solo contenedor. Nuevo diseño (migración <code>022</code>): cada contenedor se procesa individualmente — los limpios entran, los que chocan se rechazan uno por uno con motivo legible, y la pantalla muestra el detalle fila por fila. Recomendación técnica: <b>Opción B</b> (sin pre-verificación aparte; el índice único de la base es el árbitro — también resuelve el caso de dos supervisores cargando lo mismo a la vez). <b>Pregunta 5 abajo.</b></td></tr>
+    <tr><th>Plantas — doble candado</th><td>Hoy ni el admin puede crear una planta: falta el permiso de escritura Y hay una regla en la estructura que solo acepta los nombres "BAHIA" y "ABBOTT". Migración <code>023</code>: se quita esa regla (⚠️ es de una sola vía), se agrega baja lógica (desactivar, no borrar — el historial tiene referencias) y permisos de escritura solo-admin. <b>Pregunta 3 abajo.</b></td></tr>
+    <tr><th>Campana</th><td>Se conecta al contador real de pendientes. Requiere UN cambio de base (migración <code>024</code>): hoy el operador NO cuenta las alertas de contenedores que vienen en camino a su planta (el compromiso que quedó de CP1). Refresco: al abrir, al volver a la ventana y cada 60s con la pestaña visible.</td></tr>
+    <tr><th>Esfuerzo</th><td>1 sesión (DDL primero, pantallas después)</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="badge b-go">GO HUMANO</span><span class="badge b-model">SONNET</span> Wave 3 · Ayuda completa (el M10 del spec) + tooltips por campo</h3>
+  <table>
+    <tr><th>Migraciones</th><td><code>019</code> (contenido de ayuda de las 7 solapas — ya escrito, solo se aplica) · <code>020</code> (estructura para tooltips por campo: columnas <code>nivel</code> + <code>clave</code>)</td></tr>
+    <tr><th>Pantallas</th><td>Página <code>/ayuda</code> nueva (la navegación ya la espera: es construirla y prender un booleano) · botón "?" del header pasa de placeholder a contenido real de la solapa activa · <b>editor de ayuda en Admin</b> (el spec §15.4 lo exige y no existe: hoy cambiar UNA palabra de la ayuda requiere un dev con SQL)</td></tr>
+    <tr><th>Tooltips</th><td>Componente único <code>FieldHelp</code> al lado de cada campo (prioridad: los 7 campos de FECHA que mueven el cálculo — ej. "esta fecha arranca el reloj del free time"). Los números (días libres, tarifa, umbral) se leen EN VIVO de la base — prohibido escribirlos en el texto (hoy el "default 3" del umbral está pegado en 3 textos distintos).</td></tr>
+    <tr><th>Esfuerzo</th><td>1–1,5 sesiones</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="badge b-auto">AUTÓNOMO (front-only)</span><span class="badge b-model">SONNET</span> Wave 4 · UX operativa</h3>
+  <table>
+    <tr><th>Combobox tipeable</th><td>Solo los 2 selects de <b>naviera</b> lo necesitan (tipeás "MSC" y no lo encuentra porque el nombre legal va primero). Se construye propio (~80 líneas) — sin librerías nuevas, el design system ya tiene el patrón.</td></tr>
+    <tr><th>Sidebar</th><td>Expandir/colapsar con memoria en cookie (el servidor la lee: la página ya nace con el ancho correcto, sin parpadeo). La variante expandida hay que dibujarla — hoy no existe.</td></tr>
+    <tr><th>Búsqueda global</th><td>La ventana de búsqueda (⌘K) YA está construida y los índices de base ya existen — falta solo conectarle los datos (contenedor / orden / booking, spec §11). El scope por rol lo da la RLS sola.</td></tr>
+    <tr><th>Exportar a Excel</th><td>Botón en Contenedores y Alertas: exporta EXACTAMENTE lo que está filtrado en pantalla. Única dependencia nueva del plan: <code>xlsx</code> (SheetJS), 100% en el navegador.</td></tr>
+    <tr><th>Esfuerzo</th><td>1 sesión</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3><span class="badge b-go">GO PARCIAL</span><span class="badge b-model">SONNET</span> Wave 5 · Diagrama del schema (ERD) + cierre CP3</h3>
+  <table>
+    <tr><th>ERD admin-only</th><td>Solapa nueva en Admin con el mapa de tablas y relaciones, clickeable. Sin librerías pesadas (React Flow descartado con números: ~59KB + 5 dependencias para 12 nodos fijos) — SVG propio como los charts del dashboard. El mapa se genera con un script local contra la base y se commitea como JSON: <b>el navegador jamás consulta el catálogo</b> (la anon key no puede ni debe). ⚠️ Falta tu referencia visual del layout (<b>pregunta 1</b>) y decidir si el JSON se sirve con validación de rol en el servidor (<b>pregunta 2</b> — recomendado).</td></tr>
+    <tr><th>CP3</th><td>Cierre formal del rebuild: build limpio + smoke por rol y solapa (con agent-browser) + <b>auditoría RLS de los 18 objetos</b> en un solo reporte commiteado + <b>GATE DE CÁLCULO</b>: los casos fijos del Excel contra la base real — G1–G7 probaron que el sistema funciona; esto prueba que <b>calcula bien</b>. Un desvío = CP3 no cierra.</td></tr>
+    <tr><th>Drift de docs</th><td>Corregir <code>docs/v2/CONTEXT.md</code> (dice que el dominio de prod "es de v1 — no deployar ahí" y que falta exponer la Data API: ambas cosas ya cambiaron; un agente que lo lea hoy se desvía). Diff exacto listo en el EXPLORE.</td></tr>
+    <tr><th>Esfuerzo</th><td>1 sesión</td></tr>
+  </table>
+</div>
+
+<h2>3 · Migraciones propuestas (todas requieren tu GO — ninguna está aplicada)</h2>
+<table>
+  <tr><th>#</th><th>Contenido</th><th>Wave</th><th>Tipo</th></tr>
+  <tr><td><code>019</code></td><td>Seeds de ayuda de las solapas M3–M9 (ya escritos; el bloque admin de m9 reemplaza al de la 013)</td><td>3</td><td>Solo datos (DML)</td></tr>
+  <tr><td><code>020</code></td><td><code>ayuda_contenido</code>: columnas <code>nivel</code> + <code>clave</code> para tooltips por campo</td><td>3</td><td>Estructura (DDL)</td></tr>
+  <tr><td><code>021</code></td><td>Motor versionado: <code>convencion_conteo</code> + <code>dias_facturables()</code> + <code>cobra_detention_origen</code> versionado + reescritura de views de costos</td><td>1</td><td>DDL · <b>money path</b></td></tr>
+  <tr><td><code>022</code></td><td>H1: reescritura de <code>crm_crear_tanda_retiro</code> (resultado por contenedor, inserción parcial)</td><td>2</td><td>DDL · money path</td></tr>
+  <tr><td><code>023</code></td><td>Plantas: quitar CHECK de nombres (⚠️ una sola vía) + columna <code>activa</code> + policies de escritura admin</td><td>2</td><td>DDL</td></tr>
+  <tr><td><code>024</code></td><td>Campana: <code>get_pendientes()</code> cuenta alertas de contenedores en camino a la planta del operador (compromiso CP1)</td><td>2</td><td>DDL</td></tr>
+  <tr><td><code>025</code></td><td>Catálogos configurables: tipos de contenedor (hoy CHECK fijo), depósitos de retiro (hoy texto libre), medios</td><td>3–4</td><td>DDL</td></tr>
+  <tr><td><code>026</code></td><td>Reset demo: RPC con triple guard (rol admin + <code>modo_demo</code> + confirmación tipeada, botón gated por env var) — borra SOLO datos operativos de <code>crm.*</code>, preserva semillas y usuarios (cero huérfanos por diseño: la única FK a auth es CASCADE en la otra dirección) + policy de borrado de fotos para admin</td><td>3</td><td>DDL</td></tr>
+</table>
+
+<h2>4 · ERD del schema <code>crm</code> hoy (12 tablas, relevado en vivo 2026-07-12)</h2>
+<p class="sub">Esto es además la prueba de concepto de la solapa ERD de la Wave 5. Flechas = "apunta a" (clave foránea). Las 6 vistas de cálculo no se dibujan (derivan de estas tablas).</p>
+<div class="mermaid">
+erDiagram
+  NAVIERAS ||--o{ CONTENEDORES : "naviera del contenedor"
+  NAVIERAS ||--o{ FREETIME_ORIGIN : "tarifas versionadas"
+  CONTENEDORES ||--o{ OPERACIONES : "ciclo del contenedor"
+  PLANTAS ||--o{ OPERACIONES : "planta actual"
+  OPERACIONES ||--o{ MOVIMIENTOS_PLANTA : "traslados"
+  PLANTAS ||--o{ MOVIMIENTOS_PLANTA : "origen y destino"
+  OPERACIONES ||--o{ OPERACION_EVENTOS : "timeline auditable"
+  OPERACIONES ||--o{ INCIDENCIAS : "averías del ciclo"
+  INCIDENCIAS ||--o{ INCIDENCIA_FOTOS : "fotos (storage privado)"
+  USUARIOS ||--o{ OPERACION_EVENTOS : "quién hizo qué"
+  USUARIOS ||--o{ INCIDENCIAS : "quién reportó"
+  USUARIOS ||--o{ MOVIMIENTOS_PLANTA : "quién confirmó"
+  USUARIOS ||--o{ CONTENEDORES : "quién validó reforzado"
+  USUARIOS ||--o{ CONFIGURACION : "última edición"
+  PLANTAS ||--o{ USUARIOS : "planta asignada (operadores)"
+
+  NAVIERAS {
+    uuid id PK
+    text nombre
+    bool cobra_detention_origen "⚠️ pasa a versionado en 021"
+  }
+  FREETIME_ORIGIN {
+    uuid id PK
+    uuid naviera_id FK
+    text regimen "vacios·cargados·sin_uso"
+    int dias_libres
+    numeric tarifa_usd_dia
+    date vigente_desde
+    date vigente_hasta "NULL = vigente"
+    text convencion_conteo "🆕 021"
+  }
+  CONTENEDORES {
+    uuid id PK
+    text numero_contenedor "ISO 6346, único"
+    text tipo "20DC·40DC·40HC → configurable en 025"
+    text reforzado_estado
+  }
+  OPERACIONES {
+    uuid id PK
+    uuid contenedor_id FK
+    text retiro_de "texto libre → catálogo en 025"
+    timestamptz fecha_retiro "arranca el reloj (día 1)"
+    timestamptz fecha_devolucion "corta el free time"
+    text estado "5 estados; único ciclo abierto por contenedor"
+    bool sin_cargo
+  }
+  MOVIMIENTOS_PLANTA {
+    uuid id PK
+    uuid operacion_id FK
+    text estado "en_transito·confirmado"
+    text medio "camion·tren"
+  }
+  OPERACION_EVENTOS {
+    uuid id PK
+    uuid operacion_id FK
+    text tipo_evento "10 tipos"
+  }
+  INCIDENCIAS {
+    uuid id PK
+    uuid operacion_id FK
+    text tipo "3 tipos"
+  }
+  INCIDENCIA_FOTOS {
+    uuid id PK
+    uuid incidencia_id FK
+  }
+  USUARIOS {
+    uuid id PK
+    uuid auth_user_id FK "→ auth.users (CASCADE)"
+    text rol "operador·supervisor·administrador"
+    text estado_cuenta
+    uuid planta_asignada_id FK
+  }
+  PLANTAS {
+    uuid id PK
+    text nombre "hoy CHECK fijo → libre en 023"
+    bool activa "🆕 023 (baja lógica)"
+  }
+  CONFIGURACION {
+    text clave PK
+    jsonb valor "umbral · catálogos 025 · modo_demo 026"
+  }
+  AYUDA_CONTENIDO {
+    uuid id PK
+    text seccion "8 secciones"
+    text nivel "🆕 020: seccion·campo"
+    text clave "🆕 020: ej ingreso.fecha_retiro"
+    text contenido_md "números interpolados {{...}}"
+  }
+</div>
+
+<h2>5 · Las 7 decisiones que son tuyas</h2>
+<div class="q"><b>1 · ERD, layout:</b> ¿tenés una referencia visual de cómo querés ver el diagrama? Sin eso, arranco con agrupación por dominio (Identidad / Maestros / Operación / Historial) curada a mano.</div>
+<div class="q"><b>2 · ERD, gate:</b> el mapa del schema iría en el bundle del navegador — un operador curioso podría leerlo aunque la pantalla sea solo-admin. ¿Aceptás ese riesgo residual (es metadata, no datos) o lo servimos desde el servidor validando rol? <b>Recomiendo servidor.</b></div>
+<div class="q"><b>3 · Plantas:</b> quitar el candado de nombres es de una sola vía (creada la tercera planta, no se puede volver a poner). ¿Confirmás plantas realmente libres, o el universo es fijo y solo faltaba editar código/nombre?</div>
+<div class="q"><b>4 · Extensiones de vencimiento (hallazgo del Excel):</b> 43 operaciones reales tuvieron vencimiento extendido por la naviera, caso por caso. ¿Lo modelamos (días extra + motivo + quién lo otorgó)? Hoy la única herramienta es "sin cargo", que borra todo el costo.</div>
+<div class="q"><b>5 · H1:</b> ¿confirmás la Opción B (sin pre-verificación aparte; el índice único es el árbitro)? Es la recomendación del arquitecto y la mía. Y: ¿el mensaje de rechazo "ya tiene un ciclo abierto en el sistema" alcanza, o el operador necesita saber dónde? (decirle dónde relaja la privacidad entre plantas que hoy impone la RLS).</div>
+<div class="q"><b>6 · Campana:</b> ¿el número del badge cuenta solo lo accionable (pendientes + rojos, mi propuesta) o también los amarillos (preaviso)?</div>
+<div class="q"><b>7 · Tooltips de tarifa:</b> cuando un campo muestra números de la naviera ({{días libres}}, {{tarifa}}), necesita una naviera en contexto. ¿OK que en pantallas sin naviera seleccionada el texto sea genérico ("los días libres de tu naviera") en vez de un número?</div>
+
+<h2>6 · Glosario (cero jerga sin traducir)</h2>
+<dl class="gl">
+  <dt>H1</dt><dd>Hallazgo #1 del handoff de la sesión 13: la carga de tandas rechaza TODO ante una sola colisión y no dice cuáles chocan. Se corrige en Wave 2.</dd>
+  <dt>CP3</dt><dd>Checkpoint 3 — el gate humano final del rebuild v2 según el spec: verificación completa + auditoría de seguridad + (nuevo) gate de cálculo. Cierra el proyecto.</dd>
+  <dt>DDL</dt><dd>Cambios de ESTRUCTURA de la base de datos (tablas, funciones, permisos). En este proyecto, todo DDL requiere tu GO explícito.</dd>
+  <dt>DML</dt><dd>Cambios de DATOS (insertar/borrar filas) sin tocar la estructura. La migración 019 es solo DML.</dd>
+  <dt>RLS</dt><dd>Row Level Security: la base de datos decide qué filas ve cada usuario según su rol y planta. Es la seguridad REAL del sistema (esconder botones nunca lo es).</dd>
+  <dt>RPC</dt><dd>Función que vive en la base de datos y ejecuta una operación de negocio completa (ej. crear una tanda). El front la llama; la lógica y las reglas viven en la DB.</dd>
+  <dt>SECURITY DEFINER</dt><dd>Función que corre con permisos del dueño de la base (ve todo, ignora RLS). Poderosa y peligrosa: cada una se diseña con lupa.</dd>
+  <dt>Money path</dt><dd>Todo código que participa del cálculo de plata (días de estadía, tarifas, costos). Cambios acá llevan verificador independiente + gate de cálculo.</dd>
+  <dt>Goldens</dt><dd>Casos de prueba con resultado conocido de antemano (sacados del Excel histórico real, no del propio sistema). Si el sistema no los reproduce exacto, algo se rompió.</dd>
+  <dt>Gate de cálculo</dt><dd>Requisito nuevo de CP3: correr los goldens contra la base real. G1–G7 verificaron que el sistema FUNCIONA; esto verifica que CALCULA BIEN.</dd>
+  <dt>anon key</dt><dd>La clave pública que va en el navegador de cualquier usuario. Todo lo que ella pueda leer, lo puede leer cualquiera — por eso el catálogo de la base jamás se le expone.</dd>
+  <dt>Seeds</dt><dd>Datos iniciales que una migración inserta (ej. el contenido de la ayuda, las 14 navieras).</dd>
+</dl>
+
+<div class="foot">
+  Generado por la sesión M4 EXPLORE+PLAN · 2026-07-12 · Evidencia completa: <code>docs/EXPLORE-M4.md</code> · Estado durable: <code>.claude/state/progress-m4.md</code><br>
+  Regla de oro respetada: cero DDL ejecutado, cero deploy, DB consultada solo en lectura. <b>Nada avanza sin tu GO.</b>
+</div>
+
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "dark", themeVariables: { fontSize: "13px" } });
+</script>
+</body>
+</html>
