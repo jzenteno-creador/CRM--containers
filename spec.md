@@ -231,7 +231,10 @@ KPIs de plata: costo detention mes / YTD, contenedores en riesgo (semáforo), st
 ```sql
 vista_alertas (VIEW, security_invoker = true)
   operacion_id, contenedor_id, numero_contenedor, planta_actual, naviera,
-  dias_transcurridos,                 -- America/Argentina/Buenos_Aires, fecha_retiro = día 0
+  dias_transcurridos,                 -- America/Argentina/Buenos_Aires, fecha_retiro = día 1
+                                      -- (conteo INCLUSIVO, validado 2.804/2.804 vs Excel
+                                      --  histórico — docs/EXPLORE-M4.md F0; corregido en M4:
+                                      --  este comentario decía "día 0" y estaba MAL)
   dias_libres,                        -- join naviera→freetime_origin (versión vigente a fecha_retiro)
   dias_restantes,
   costo_proyectado = GREATEST(0, dias_transcurridos - dias_libres) * tarifa_usd_dia,
