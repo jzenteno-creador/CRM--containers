@@ -31,6 +31,7 @@ const TABS = [
   { href: "/contenedores", label: "Contenedores", icon: "ti-list-details" },
   { href: "/alertas", label: "Alertas", icon: "ti-bell" },
   { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
+  { href: "/reportes", label: "Reportes", icon: "ti-report-analytics" },
   { href: "/admin", label: "Admin", icon: "ti-settings" },
   { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle" },
 ];
@@ -399,12 +400,34 @@ function initialsOf(name: string | null, email: string | null): string {
   return source.slice(0, 2).toUpperCase() || "—";
 }
 
-export function FdShell({ children }: { children: React.ReactNode }) {
+export type SidebarState = "expanded" | "collapsed";
+
+export function FdShell({
+  children,
+  initialSidebar = "collapsed",
+}: {
+  children: React.ReactNode;
+  /** Estado inicial del rail, leído de la cookie fd_sidebar en el server (layout) para
+   * nacer en el ancho correcto sin flash. Default 'collapsed' = el look histórico. */
+  initialSidebar?: SidebarState;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { displayName, email, perfil, signOut } = useSession();
   const [helpOpen, setHelpOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  // Rail colapsable (SOLO desktop): estado en la cookie fd_sidebar, sembrado desde el
+  // server. El toggle escribe la cookie (para el próximo SSR) y actualiza el estado local
+  // (para esta sesión). <900px manda el breakpoint responsive (bottombar), no esto.
+  const [sidebar, setSidebar] = useState<SidebarState>(initialSidebar);
+  const toggleSidebar = () => {
+    setSidebar((prev) => {
+      const next = prev === "expanded" ? "collapsed" : "expanded";
+      document.cookie = `fd_sidebar=${next}; path=/; max-age=31536000; samesite=lax`;
+      return next;
+    });
+  };
 
   // §8: Admin solo para administradores (el rol viene de perfil(), no de metadata)
   const tabs = TABS.filter((t) => t.href !== "/admin" || perfil?.rol === "administrador");
@@ -423,7 +446,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="fd-shell">
+    <div className="fd-shell" data-sidebar={sidebar}>
       <CommandPalette />
       <HelpPanel
         open={helpOpen}
@@ -466,6 +489,21 @@ export function FdShell({ children }: { children: React.ReactNode }) {
           ),
         )}
         <span className="fd-rail-spacer" />
+        {/* toggle expandir/colapsar — al fondo del rail (solo desktop; el CSS lo oculta
+            del bottombar móvil). El label aparece inline en la variante expandida. */}
+        <button
+          type="button"
+          className="fd-rail-toggle"
+          onClick={toggleSidebar}
+          aria-label={sidebar === "expanded" ? "Colapsar menú lateral" : "Expandir menú lateral"}
+          aria-pressed={sidebar === "expanded"}
+        >
+          <i
+            className={`ti ${sidebar === "expanded" ? "ti-layout-sidebar-left-collapse" : "ti-layout-sidebar-left-expand"}`}
+            aria-hidden
+          />
+          <span className="fd-tip">{sidebar === "expanded" ? "Colapsar" : "Expandir"}</span>
+        </button>
       </aside>
 
       <div className="fd-main">

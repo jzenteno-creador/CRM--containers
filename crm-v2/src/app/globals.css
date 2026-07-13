@@ -273,6 +273,25 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
 }
 .fd-rail .fd-soon:hover .fd-tip { opacity: 1; }
 .fd-rail-spacer { flex: 1; }
+/* toggle expandir/colapsar del rail (B4) — mismo look que un ítem colapsado */
+.fd-rail-toggle {
+  position: relative; width: 44px; height: 42px; min-height: 0; margin-top: 4px; padding: 0;
+  border: none; border-radius: 9px; background: transparent; cursor: pointer;
+  display: grid; place-items: center; color: var(--color-text-muted); font-size: 17px;
+  transition: color 150ms var(--ease-out-expo), background 150ms var(--ease-out-expo);
+}
+.fd-rail-toggle:hover { background: var(--color-surface-2); color: var(--color-text-primary); }
+.fd-rail-toggle .fd-tip {
+  position: absolute; left: 52px; top: 50%; transform: translateY(-50%);
+  background: var(--color-surface-2); border: 1px solid var(--color-border-strong);
+  border-radius: 6px; padding: 4px 9px; font-size: 11.5px; color: var(--color-text-primary);
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 150ms var(--ease-out-expo); z-index: 50;
+}
+.fd-rail-toggle:hover .fd-tip { opacity: 1; }
+/* transición suave del ancho al togglear (en móvil el rail está oculto, no aplica) */
+.fd-rail { transition: width 160ms var(--ease-out-expo); }
+.fd-main { transition: margin-left 160ms var(--ease-out-expo); }
 .fd-avatar {
   width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
   background: var(--color-surface-2); border: 1px solid var(--color-border-strong);
@@ -317,6 +336,28 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
 }
 .fd-content { flex: 1; padding: 16px 20px 20px; }
 .fd-bottombar { display: none; }
+
+/* ── rail expandido (B4) — SOLO desktop; el breakpoint <900px sigue mandando ─── */
+@media (min-width: 901px) {
+  .fd-shell[data-sidebar="expanded"] .fd-rail { width: 200px; padding: 12px 10px; }
+  .fd-shell[data-sidebar="expanded"] .fd-main { margin-left: 200px; }
+  .fd-shell[data-sidebar="expanded"] .fd-rail a,
+  .fd-shell[data-sidebar="expanded"] .fd-rail .fd-soon,
+  .fd-shell[data-sidebar="expanded"] .fd-rail-toggle {
+    width: 100%; height: 40px;
+    display: flex; align-items: center; justify-content: flex-start;
+    gap: 12px; padding: 0 12px;
+  }
+  /* el .fd-tip deja de ser tooltip flotante y pasa a label inline junto al ícono */
+  .fd-shell[data-sidebar="expanded"] .fd-rail a .fd-tip,
+  .fd-shell[data-sidebar="expanded"] .fd-rail .fd-soon .fd-tip,
+  .fd-shell[data-sidebar="expanded"] .fd-rail-toggle .fd-tip {
+    position: static; transform: none; opacity: 1; pointer-events: auto;
+    background: transparent; border: none; border-radius: 0; padding: 0;
+    font-size: 12.5px; color: inherit; z-index: auto;
+  }
+  .fd-shell[data-sidebar="expanded"] .fd-rail a.active::before { left: 0; }
+}
 
 /* rail → bottom-bar entre 640 y 900 también (tablet chico) */
 @media (max-width: 900px) {
