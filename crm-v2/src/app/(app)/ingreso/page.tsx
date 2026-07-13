@@ -23,7 +23,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
-import { TandaForm, type Naviera, type Planta } from "./tanda-form";
+import { TandaForm, type Deposito, type Naviera, type Planta } from "./tanda-form";
 
 type PendienteRow = {
   id: string;
@@ -63,27 +63,49 @@ export default function IngresoPage() {
   const toast = useToast();
   const { perfil } = useSession();
 
-  /* ---------- maestros para el formulario (navieras + plantas) ---------- */
+  /* ---------- maestros para el formulario (navieras + plantas + depósitos) ---------- */
   // nullable = "todavía sin cargar" → loading; así ningún setState corre síncrono en el
   // efecto (regla set-state-in-effect: los setState viven detrás del await del IIFE).
-  const [maestros, setMaestros] = useState<{ navieras: Naviera[]; plantas: Planta[] } | null>(null);
+  const [maestros, setMaestros] = useState<{
+    navieras: Naviera[];
+    plantas: Planta[];
+    depositos: Deposito[];
+    /** false = la migración 023 todavía no está desplegada en este entorno (relation
+     * "crm.depositos" no existe) — TandaForm degrada al Input de texto de antes. */
+    depositosDisponible: boolean;
+  } | null>(null);
   const [maestrosError, setMaestrosError] = useState<string | null>(null);
 
   const loadMaestros = useCallback(async () => {
     const supabase = getSupabase();
-    const [nv, pl] = await Promise.all([
+    const [nv, pl, dp] = await Promise.all([
       supabase.from("navieras").select("id, nombre").order("nombre"),
       // activa=true: una planta dada de baja (Admin → Plantas) deja de ofrecerse para
       // tandas nuevas, sin afectar las operaciones que ya la tienen como destino.
       supabase.from("plantas").select("id, nombre, codigo").eq("activa", true).order("nombre"),
+      // activo=true (023): mismo criterio que plantas. Si la tabla todavía no existe
+      // (42P01 — migración pendiente de GO) degradamos en vez de bloquear el módulo.
+      supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
     ]);
     if (nv.error || pl.error) {
       setMaestros(null);
       setMaestrosError((nv.error ?? pl.error)!.message);
       return;
     }
+    if (dp.error && dp.error.code !== "42P01") {
+      // error real de depósitos (no "no existe la tabla") — no degradamos en silencio
+      // un fallo de RLS/policy; se reporta igual que navieras/plantas.
+      setMaestros(null);
+      setMaestrosError(dp.error.message);
+      return;
+    }
     setMaestrosError(null);
-    setMaestros({ navieras: nv.data as Naviera[], plantas: pl.data as Planta[] });
+    setMaestros({
+      navieras: nv.data as Naviera[],
+      plantas: pl.data as Planta[],
+      depositos: dp.error ? [] : (dp.data as Deposito[]),
+      depositosDisponible: !dp.error,
+    });
   }, []);
 
   useEffect(() => {
@@ -283,6 +305,9 @@ export default function IngresoPage() {
           perfil={perfil}
           navieras={maestros?.navieras ?? []}
           plantas={maestros?.plantas ?? []}
+          depositos={maestros?.depositos ?? []}
+          depositosDisponible={maestros?.depositosDisponible ?? false}
+          onRefreshDepositos={loadMaestros}
           maestrosLoading={maestrosLoading}
           maestrosError={maestrosError}
           onRetryMaestros={retryMaestros}

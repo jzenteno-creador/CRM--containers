@@ -8,15 +8,21 @@
 // - El error de la RPC (cuenta no activa, header incompleto, "ciclo abierto: X,Y",
 //   "ya tiene un ciclo abierto") se muestra LITERAL en un FormAlert (no toast, no crash).
 // - planta_destino: bloqueada a la planta del operador (RLS-aware §18.3); libre para sup/admin.
+// - retiro de (depósito, 023): ComboboxCreatable sobre crm.depositos activos → manda
+//   retiro_de_id (uuid) en el header. Si la migración 023 todavía no está desplegada
+//   (depositosDisponible=false, ver page.tsx) degrada al Input de texto libre de antes,
+//   mandando retiro_de texto — la RPC es retrocompatible con ambos casos.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ContainerNumber } from "@/components/container-number";
 import { Button } from "@/components/fd/button";
+import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DataTable, type Column, type RowValidation } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { Checkbox, DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
 import { FormAlert } from "@/components/fd/form-alert";
+import { Modal } from "@/components/fd/modal";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useToast } from "@/components/fd/toast";
 import { parsearListaContenedores } from "@/lib/iso6346";
@@ -25,6 +31,126 @@ import type { Perfil } from "@/lib/session";
 
 export type Naviera = { id: string; nombre: string };
 export type Planta = { id: string; nombre: string; codigo: string | null };
+export type Deposito = { id: string; nombre: string };
+
+type SimilarDeposito = { id: string; nombre: string; activo: boolean; similitud: number };
+
+/** Pre-check fuzzy + alta inline de depósito (023) — abierto desde el "Crear «X»" del
+ * combobox. NUNCA crea en silencio: primero muestra similares (crm_depositos_similares)
+ * con opción de usar uno existente; solo con click explícito en "Crear" llama
+ * crm_crear_deposito. El front no calcula similitud — eso vive en la RPC. */
+function NuevoDepositoModal({
+  texto,
+  onClose,
+  onUsarExistente,
+  onCreado,
+}: {
+  texto: string;
+  onClose: () => void;
+  onUsarExistente: (id: string) => void;
+  onCreado: (id: string) => void;
+}) {
+  const [similares, setSimilares] = useState<SimilarDeposito[] | null>(null);
+  const [similaresError, setSimilaresError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // fetch al montar (una sola vez por texto — el modal se remonta si cambia el texto).
+  // setState siempre después del await (regla set-state-in-effect).
+  useEffect(() => {
+    void (async () => {
+      const { data, error } = await getSupabase().rpc("crm_depositos_similares", { p_nombre: texto });
+      if (error) {
+        setSimilaresError(error.message);
+        setSimilares([]);
+        return;
+      }
+      setSimilaresError(null);
+      setSimilares(data as SimilarDeposito[]);
+    })();
+  }, [texto]);
+
+  const crear = async () => {
+    if (sending) return;
+    setSending(true);
+    setSubmitError(null);
+    const { data, error } = await getSupabase().rpc("crm_crear_deposito", { p_nombre: texto });
+    setSending(false);
+    if (error) {
+      // literal: "ya existe un depósito con el nombre..." (carrera con otro operador)
+      setSubmitError(error.message);
+      return;
+    }
+    onCreado(data as string);
+  };
+
+  const cargandoSimilares = similares === null;
+
+  return (
+    <Modal open onClose={sending ? () => {} : onClose} title={`Crear depósito «${texto}»`} width={460} closeOnBackdrop={!sending}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {cargandoSimilares && (
+          <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-text-muted)" }}>
+            Buscando depósitos parecidos…
+          </p>
+        )}
+        {similaresError && <FormAlert tone="warning">No se pudo chequear parecidos: {similaresError}</FormAlert>}
+        {!cargandoSimilares && similares.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span className="fd-label">¿Quisiste decir…?</span>
+            {similares.map((s) => (
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: "var(--radius-input)",
+                  border: "1px solid var(--color-border-strong)",
+                  background: "var(--color-surface-2)",
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "var(--color-text-primary)" }}>
+                  {s.nombre}
+                  {!s.activo && (
+                    <span style={{ color: "var(--color-text-faint)", marginLeft: 6 }}>(inactivo)</span>
+                  )}
+                </span>
+                <span className="mono" style={{ fontSize: 11, color: "var(--color-text-faint)" }}>
+                  {Math.round(s.similitud * 100)}%
+                </span>
+                <Button
+                  variant="ghost"
+                  style={{ minHeight: 0, padding: "4px 10px", fontSize: 12 }}
+                  disabled={!s.activo}
+                  onClick={() => onUsarExistente(s.id)}
+                >
+                  Usar este
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        {submitError && <FormAlert>{submitError}</FormAlert>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+          <Button variant="ghost" onClick={onClose} disabled={sending}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            icon="ti-plus"
+            loading={sending}
+            disabled={cargandoSimilares}
+            onClick={() => void crear()}
+          >
+            Crear «{texto}» de todos modos
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 // tipo de contenedor: es un catálogo cerrado en la DB (contenedores.tipo CHECK) —
 // por eso va como Select y no como texto libre (texto libre rompería el INSERT).
@@ -72,6 +198,9 @@ export function TandaForm({
   perfil,
   navieras,
   plantas,
+  depositos,
+  depositosDisponible,
+  onRefreshDepositos,
   maestrosLoading,
   maestrosError,
   onRetryMaestros,
@@ -80,6 +209,13 @@ export function TandaForm({
   perfil: Perfil;
   navieras: Naviera[];
   plantas: Planta[];
+  /** Depósitos activos (023). Vacío + depositosDisponible=false si la migración todavía
+   * no está desplegada en este entorno — ahí el formulario degrada al Input de texto. */
+  depositos: Deposito[];
+  depositosDisponible: boolean;
+  /** Refetch silencioso de maestros (navieras+plantas+depositos) tras crear un depósito
+   * inline — NO resetea a loading (eso es onRetryMaestros, para el botón de error). */
+  onRefreshDepositos: () => Promise<void>;
   maestrosLoading: boolean;
   maestrosError: string | null;
   onRetryMaestros: () => void;
@@ -94,7 +230,11 @@ export function TandaForm({
 
   const [navieraId, setNavieraId] = useState("");
   const [tipo, setTipo] = useState("");
+  // retiro de (depósito, 023): retiroDeId cuando depositosDisponible; retiroDe (texto
+  // libre) como fallback si la migración todavía no está desplegada (ver page.tsx).
   const [retiroDe, setRetiroDe] = useState("");
+  const [retiroDeId, setRetiroDeId] = useState("");
+  const [modalDepositoTexto, setModalDepositoTexto] = useState<string | null>(null);
   const [plantaSel, setPlantaSel] = useState("");
   const [bookingRetiro, setBookingRetiro] = useState("");
   const [fechaRetiro, setFechaRetiro] = useState("");
@@ -146,7 +286,13 @@ export function TandaForm({
   const headerErrors = {
     naviera: navieraId === "" ? "elegí la naviera" : null,
     tipo: tipo === "" ? "elegí el tipo de contenedor" : null,
-    retiroDe: retiroDe.trim() === "" ? "indicá el depósito de retiro" : null,
+    retiroDe: depositosDisponible
+      ? retiroDeId === ""
+        ? "elegí el depósito de retiro"
+        : null
+      : retiroDe.trim() === ""
+        ? "indicá el depósito de retiro"
+        : null,
     plantaDestino: plantaDestino === "" ? "elegí la planta destino" : null,
     fechaRetiro: fechaRetiro === "" ? "indicá la fecha de retiro" : null,
   };
@@ -172,7 +318,9 @@ export function TandaForm({
       header: {
         naviera_id: navieraId,
         tipo,
-        retiro_de: retiroDe.trim(),
+        // 023: si el catálogo está disponible mandamos el uuid (fuente de verdad, la
+        // RPC deriva el texto); si no, degradamos al texto libre de antes.
+        ...(depositosDisponible ? { retiro_de_id: retiroDeId } : { retiro_de: retiroDe.trim() }),
         planta_destino_id: plantaDestino,
         // timestamptz AR fijo (UTC-3, sin DST). El día del retiro cuenta como
         // día 1 del freetime (conteo inclusivo, validado 2.804/2.804 vs Excel).
@@ -339,14 +487,32 @@ export function TandaForm({
           </Select>
         </Field>
 
-        <Field label="retiro de (depósito)" htmlFor="tanda-retiro-de" error={attempted ? headerErrors.retiroDe : null}>
-          <Input
-            id="tanda-retiro-de"
-            value={retiroDe}
-            error={attempted ? headerErrors.retiroDe : null}
-            placeholder="depósito / terminal de origen"
-            onChange={(e) => setRetiroDe(e.target.value)}
-          />
+        <Field
+          label="retiro de (depósito)"
+          htmlFor="tanda-retiro-de"
+          error={attempted ? headerErrors.retiroDe : null}
+          hint={!depositosDisponible ? "catálogo de depósitos no disponible en este entorno — texto libre" : undefined}
+        >
+          {depositosDisponible ? (
+            <ComboboxCreatable
+              id="tanda-retiro-de"
+              options={depositos.map((d) => ({ id: d.id, label: d.nombre }))}
+              value={retiroDeId}
+              onChange={setRetiroDeId}
+              onCreate={(texto) => setModalDepositoTexto(texto)}
+              placeholder="buscá o creá un depósito…"
+              error={attempted ? headerErrors.retiroDe : null}
+              emptyMessage="sin depósitos que matcheen — tipeá para crear uno nuevo"
+            />
+          ) : (
+            <Input
+              id="tanda-retiro-de"
+              value={retiroDe}
+              error={attempted ? headerErrors.retiroDe : null}
+              placeholder="depósito / terminal de origen"
+              onChange={(e) => setRetiroDe(e.target.value)}
+            />
+          )}
         </Field>
 
         {/* planta destino: bloqueada para operador (§18.3), libre para sup/admin */}
@@ -543,6 +709,27 @@ export function TandaForm({
           Crear tanda de retiro
         </Button>
       </div>
+
+      {modalDepositoTexto !== null && (
+        <NuevoDepositoModal
+          texto={modalDepositoTexto}
+          onClose={() => setModalDepositoTexto(null)}
+          onUsarExistente={(id) => {
+            setRetiroDeId(id);
+            setModalDepositoTexto(null);
+          }}
+          onCreado={async (id) => {
+            const textoCreado = modalDepositoTexto;
+            // esperamos el refetch ANTES de seleccionar: así `depositos` ya trae la
+            // opción nueva cuando el combobox vuelve a renderizar (React 18+ batchea
+            // las dos actualizaciones — sin esto el combobox mostraría vacío un instante).
+            await onRefreshDepositos();
+            setRetiroDeId(id);
+            setModalDepositoTexto(null);
+            toast({ type: "exito", title: "Depósito creado", detail: `«${textoCreado}» ya está disponible.` });
+          }}
+        />
+      )}
     </div>
   );
 }
