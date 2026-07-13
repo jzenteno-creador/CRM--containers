@@ -16,7 +16,22 @@ y NUNCA escribe directo sobre tablas de plata.
 - **SANCIONADO explícitamente** (única lista permitida de escritura directa, siempre
   detrás de las policies de rol): `navieras`, `plantas` (maestros sin impacto en costo —
   `cobra_detention_origen` del maestro es solo default de UI desde la 019),
-  `configuracion` (operativa, no toca costo), `incidencias` + `incidencia_fotos`
-  (alta de M7; deuda conocida BE-03: no atómico, candidato a RPC futura).
+  `depositos` (maestro sin impacto en costo — catálogo de retiro, 023; el alta inline
+  desde /ingreso pasa por `crm_crear_deposito`, pero el CRUD de Admin inserta/actualiza
+  directo, mismo patrón que navieras/plantas), `configuracion` (operativa, no toca
+  costo), `incidencias` + `incidencia_fotos` (alta de M7; deuda conocida BE-03: no
+  atómico, candidato a RPC futura).
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
+
+# Constantes que QUEDAN EN CÓDIGO (decisión de John, 2026-07-13)
+
+`contenedores.tipo` (20DC/40DC/40HC) y `movimientos_planta.medio` (camion/tren)
+son CHECKs de integridad sobre tablas de plata, NO configurables por Admin. Razón:
+el histórico usa 3 tipos y 2 medios, estables hace un año; cambiar una garantía
+permanente por flexibilidad que se usa una vez cada tres años es mal negocio. Un tipo
+nuevo = migración de 5 minutos. NO dropear estos CHECKs para hacerlos "configurables".
+
+Sí es configurable: `depositos` (retiro_de) — catálogo con alta inline del operador
+(023), porque es texto libre de alta frecuencia y su valor es evitar la fragmentación
+(Exolgan/EXOLGAN/...), no una barrera de integridad.
