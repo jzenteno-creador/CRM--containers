@@ -1,7 +1,19 @@
 # HANDOFF · M4 Bloque 3-B (Ayuda + tooltips / M10 · F3) · 2026-07-13
 
-> **Todo escrito, gateado y commiteado. Migración 024 esperando GO. Front sin deploy
-> (espera GO). Un solo ítem, como se pidió.**
+> **✅ APLICADO Y DEPLOYADO (GO de John). 024 en prod, front en producción. Smoke = John.**
+
+## APLICACIÓN (GO de John 2026-07-13)
+- **024 aplicada a prod** (`m4_024_ayuda_tooltips`). Post-verificación 3/3 PASS:
+  - `crm_ayuda_valores()` sin naviera → **NO explota**, degrada a genérico (el bug del gate,
+    confirmado resuelto en prod).
+  - `crm_ayuda_valores(MAERSK)` → `14 días libres` / `35.00 USD/día` / "día 1" (reales).
+  - ayuda_contenido: 7 solapas operativas + faq (nivel seccion) + **13 campos** (tooltips).
+- **Front deployado** → crm-detention.vercel.app, `/ayuda` responde 200. Migraciones prod: 001-024.
+- **Smoke visual pendiente (John):** tooltip de umbral en /admin/configuracion, fecha de
+  retiro con naviera en /ingreso, layout del editor de Ayuda en Admin.
+
+---
+
 
 ## HECHO
 
