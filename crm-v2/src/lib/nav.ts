@@ -11,7 +11,7 @@ export const ROUTE_BUILT: Record<string, boolean> = {
   "/alertas": true,
   "/incidencias": true,
   "/admin": true,
-  "/ayuda": false,
+  "/ayuda": true,
 };
 
 /**

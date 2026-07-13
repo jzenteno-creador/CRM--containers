@@ -70,6 +70,9 @@ export default function AdminHubPage() {
         <QuickLink href="/admin/configuracion" icon="ti-settings" title="Configuración">
           Umbral del semáforo amarillo de freetime.
         </QuickLink>
+        <QuickLink href="/admin/ayuda" icon="ti-book-2" title="Ayuda">
+          Editor del instructivo de cada solapa y los tooltips de los campos.
+        </QuickLink>
       </nav>
     </>
   );

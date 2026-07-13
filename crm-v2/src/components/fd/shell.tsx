@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { interpolarAyuda, type AyudaValores } from "@/lib/ayuda";
 import { isRouteBuilt } from "@/lib/nav";
 import { ROL_LABELS, useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
@@ -36,13 +37,122 @@ const TABS = [
 
 const SOON_TIP = "Próximamente (M3)";
 
-const HELP_PLACEHOLDER = `El contenido de ayuda de cada solapa se edita desde **Admin** sobre \`ayuda_contenido\` (llega con M10) y cubre:
+// Fallback del panel "?" cuando la solapa no tiene sección mapeada, o cuando la ayuda no
+// está disponible (024 sin aplicar / sin contenido publicado). Nunca deja el panel vacío.
+const HELP_FALLBACK = `La ayuda de esta solapa todavía no está disponible.
 
-- qué es esta solapa,
-- qué completa cada campo,
-- el flujo de trabajo en 3-5 pasos.
+Abrí el **banco completo de consultas** desde el enlace de abajo. El contenido se edita desde **Admin → Ayuda**.`;
 
-> Mientras tanto: el banco completo de consultas va a vivir en la solapa **Ayuda**.`;
+// Solapa → sección de crm.ayuda_contenido (inicio→dashboard; el resto coincide con el
+// nombre de la solapa). /ayuda no se mapea: su "?" cae al fallback + link al banco.
+const TAB_SECCION: Record<string, string> = {
+  "/inicio": "dashboard",
+  "/ingreso": "ingreso",
+  "/egreso": "egreso",
+  "/contenedores": "contenedores",
+  "/alertas": "alertas",
+  "/incidencias": "incidencias",
+  "/admin": "admin",
+};
+
+type SeccionRow = { titulo: string; contenido_md: string; orden: number };
+
+// Caches a nivel módulo: el copy por sección + los valores (naviera null) se leen una vez
+// por sesión, sin importar cuántas veces se abra el panel.
+const seccionCache = new Map<string, Promise<SeccionRow[] | null>>();
+let valoresPromise: Promise<AyudaValores | null> | null = null;
+
+function fetchSeccion(seccion: string): Promise<SeccionRow[] | null> {
+  let p = seccionCache.get(seccion);
+  if (!p) {
+    p = (async () => {
+      try {
+        const { data, error } = await getSupabase()
+          .from("ayuda_contenido")
+          .select("titulo, contenido_md, orden")
+          .eq("nivel", "seccion")
+          .eq("seccion", seccion)
+          .eq("publicado", true)
+          .order("orden", { ascending: true });
+        if (error) return null;
+        return (data as SeccionRow[]) ?? [];
+      } catch {
+        return null; // 024 sin aplicar / red → fallback, nunca crashea
+      }
+    })();
+    seccionCache.set(seccion, p);
+  }
+  return p;
+}
+
+function fetchValoresNull(): Promise<AyudaValores | null> {
+  if (!valoresPromise) {
+    valoresPromise = (async () => {
+      try {
+        const { data, error } = await getSupabase().rpc("crm_ayuda_valores", {});
+        if (error) return null;
+        return (data as AyudaValores | null) ?? null;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return valoresPromise;
+}
+
+/** Contenido del panel "?" para la sección de la solapa activa. Solo monta cuando el
+ * panel está abierto (HelpPanel devuelve null si !open), así lee recién al abrirse. */
+function HelpPanelContent({ seccion }: { seccion: string | null }) {
+  // undefined = cargando · null = sin sección / sin contenido · array = poblado
+  const [rows, setRows] = useState<SeccionRow[] | null | undefined>(seccion ? undefined : null);
+  const [valores, setValores] = useState<AyudaValores | null>(null);
+
+  // Reset al cambiar de solapa: ajuste DURANTE el render (patrón "adjusting state on prop
+  // change"), no un efecto — evita el setState síncrono en efecto (regla set-state-in-effect).
+  const [lastSeccion, setLastSeccion] = useState(seccion);
+  if (seccion !== lastSeccion) {
+    setLastSeccion(seccion);
+    setRows(seccion ? undefined : null);
+  }
+
+  useEffect(() => {
+    if (!seccion) return;
+    let alive = true;
+    void (async () => {
+      const [r, v] = await Promise.all([fetchSeccion(seccion), fetchValoresNull()]);
+      if (!alive) return;
+      setRows(r);
+      setValores(v);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [seccion]);
+
+  if (rows === undefined) {
+    return (
+      <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-text-muted)" }}>Cargando…</p>
+    );
+  }
+  if (rows === null || rows.length === 0) {
+    return <Markdown source={HELP_FALLBACK} />;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {rows.map((r, i) => (
+        <section key={i}>
+          <div
+            className="fd-display fd-display-sm"
+            style={{ color: "var(--color-text-secondary)", marginBottom: 6 }}
+          >
+            {r.titulo}
+          </div>
+          <Markdown source={interpolarAyuda(r.contenido_md, valores)} />
+        </section>
+      ))}
+    </div>
+  );
+}
 
 /** Reloj en hora AR (mono). Client-only: renderiza placeholder hasta el mount. */
 function ClockAR() {
@@ -301,6 +411,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
 
   const activeTab = tabs.find((t) => pathname.startsWith(t.href));
   const title = activeTab?.label ?? "SSB·DETENTION";
+  const activeSeccion = activeTab ? (TAB_SECCION[activeTab.href] ?? null) : null;
 
   const openSearch = () => window.dispatchEvent(new CustomEvent("fd-palette"));
 
@@ -320,7 +431,10 @@ export function FdShell({ children }: { children: React.ReactNode }) {
         title={title}
         footer={
           isRouteBuilt("/ayuda") ? (
-            <Link href="/ayuda" onClick={() => setHelpOpen(false)}>
+            <Link
+              href={activeSeccion ? `/ayuda?seccion=${activeSeccion}` : "/ayuda"}
+              onClick={() => setHelpOpen(false)}
+            >
               Ver el banco completo de consultas →
             </Link>
           ) : (
@@ -328,7 +442,7 @@ export function FdShell({ children }: { children: React.ReactNode }) {
           )
         }
       >
-        <Markdown source={HELP_PLACEHOLDER} />
+        <HelpPanelContent seccion={activeSeccion} />
       </HelpPanel>
 
       {/* rail desktop */}
