@@ -14,6 +14,7 @@
 import { useState } from "react";
 import { Button } from "@/components/fd/button";
 import { DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { Modal } from "@/components/fd/modal";
 import { useToast } from "@/components/fd/toast";
@@ -188,7 +189,12 @@ export function MoverPlantasModal({
               ))}
             </Select>
           </Field>
-          <Field label="fecha de salida" htmlFor="mover-salida" error={fechaSalidaError}>
+          <Field
+            label="fecha de salida"
+            htmlFor="mover-salida"
+            error={fechaSalidaError}
+            help={<FieldHelp fieldKey="contenedores.fecha_salida_mov" />}
+          >
             <DateField
               id="mover-salida"
               value={fechaSalida}
@@ -554,7 +560,12 @@ export function RegistrarWaiverModal({
           </strong>
           ). El total no puede superar los días excedidos.
         </FormAlert>
-        <Field label="días condonados" htmlFor="waiver-dias" error={diasError}>
+        <Field
+          label="días condonados"
+          htmlFor="waiver-dias"
+          error={diasError}
+          help={<FieldHelp fieldKey="contenedores.waiver_dias" />}
+        >
           <Input
             id="waiver-dias"
             type="number"
@@ -767,7 +778,12 @@ export function CorregirDatoModal({
           Corrección sobre la operación <strong>cerrada</strong> de <span className="mono">{numeroContenedor}</span>.
           Queda un evento de corrección en el historial con el valor anterior, el nuevo y tu usuario.
         </div>
-        <Field label="campo a corregir" htmlFor="correccion-campo" error={campoError}>
+        <Field
+          label="campo a corregir"
+          htmlFor="correccion-campo"
+          error={campoError}
+          help={<FieldHelp fieldKey="contenedores.correccion_fecha" />}
+        >
           <Select id="correccion-campo" value={campo} error={campoError} onChange={(e) => selectCampo(e.target.value)}>
             <option value="">— elegí el campo —</option>
             {CAMPOS_CORRECCION.map((c) => (

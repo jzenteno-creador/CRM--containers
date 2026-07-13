@@ -22,6 +22,7 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { DateField, Field, Input, Select, Textarea } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { useToast } from "@/components/fd/toast";
@@ -540,7 +541,12 @@ export default function EgresoPage() {
                 ))}
               </Select>
             </Field>
-            <Field label="fecha de salida" htmlFor="egreso-fecha-salida" error={fechaSalidaError}>
+            <Field
+              label="fecha de salida"
+              htmlFor="egreso-fecha-salida"
+              error={fechaSalidaError}
+              help={<FieldHelp fieldKey="egreso.fecha_salida" />}
+            >
               <DateField
                 id="egreso-fecha-salida"
                 value={fechaSalida}
@@ -667,7 +673,12 @@ export default function EgresoPage() {
               <strong className="mono">{selectedDevolucion.size}</strong> contenedor
               {selectedDevolucion.size === 1 ? "" : "es"} — <strong>corta el freetime</strong> y cierra la operación:
             </span>
-            <Field label="fecha de devolución" htmlFor="egreso-fecha-devolucion" error={fechaDevolucionError}>
+            <Field
+              label="fecha de devolución"
+              htmlFor="egreso-fecha-devolucion"
+              error={fechaDevolucionError}
+              help={<FieldHelp fieldKey="egreso.fecha_devolucion" />}
+            >
               <DateField
                 id="egreso-fecha-devolucion"
                 value={fechaDevolucion}

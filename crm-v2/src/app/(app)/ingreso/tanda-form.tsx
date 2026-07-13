@@ -21,6 +21,7 @@ import { DataTable, type Column, type RowValidation } from "@/components/fd/data
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { Checkbox, DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { Modal } from "@/components/fd/modal";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
@@ -455,7 +456,12 @@ export function TandaForm({
         Encabezado de la tanda
       </SectionLabel>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
-        <Field label="naviera" htmlFor="tanda-naviera" error={attempted ? headerErrors.naviera : null}>
+        <Field
+          label="naviera"
+          htmlFor="tanda-naviera"
+          error={attempted ? headerErrors.naviera : null}
+          help={<FieldHelp fieldKey="ingreso.naviera" naviera={navieraId || undefined} />}
+        >
           <Select
             id="tanda-naviera"
             value={navieraId}
@@ -492,6 +498,7 @@ export function TandaForm({
           htmlFor="tanda-retiro-de"
           error={attempted ? headerErrors.retiroDe : null}
           hint={!depositosDisponible ? "catálogo de depósitos no disponible en este entorno — texto libre" : undefined}
+          help={<FieldHelp fieldKey="ingreso.retiro_de" />}
         >
           {depositosDisponible ? (
             <ComboboxCreatable
@@ -560,7 +567,12 @@ export function TandaForm({
           </Field>
         )}
 
-        <Field label="fecha de retiro" htmlFor="tanda-fecha" error={attempted ? headerErrors.fechaRetiro : null}>
+        <Field
+          label="fecha de retiro"
+          htmlFor="tanda-fecha"
+          error={attempted ? headerErrors.fechaRetiro : null}
+          help={<FieldHelp fieldKey="ingreso.fecha_retiro" naviera={navieraId || undefined} />}
+        >
           <DateField
             id="tanda-fecha"
             value={fechaRetiro}

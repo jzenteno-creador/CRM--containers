@@ -18,6 +18,7 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { DateField, Field, Input, Select, Toggle } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { Modal } from "@/components/fd/modal";
 import { PageHeader } from "@/components/fd/page-header";
@@ -329,6 +330,7 @@ function NuevaVersionModal({
           label="conteo del freetime"
           htmlFor="tarifa-convencion"
           hint="cómo cuenta esta naviera el primer día — cambia los días transcurridos de todas las operaciones que tomen esta versión"
+          help={<FieldHelp fieldKey="admin.tarifa.convencion" />}
         >
           <Select id="tarifa-convencion" value={convencion} onChange={(e) => setConvencion(e.target.value)}>
             {Object.entries(CONVENCION_LABELS).map(([value, label]) => (
@@ -362,6 +364,7 @@ function NuevaVersionModal({
               ? `la versión vigente arranca el ${fmtFechaDia(vigente.vigente_desde)} — la nueva debe ser posterior`
               : undefined
           }
+          help={<FieldHelp fieldKey="admin.tarifa.vigente_desde" />}
         >
           <DateField
             id="tarifa-desde"

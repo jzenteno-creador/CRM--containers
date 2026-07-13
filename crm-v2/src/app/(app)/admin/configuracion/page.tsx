@@ -15,6 +15,7 @@ import { Button } from "@/components/fd/button";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { Field, Input } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
@@ -206,6 +207,7 @@ export default function ConfiguracionPage() {
                 htmlFor="config-umbral"
                 error={inputError}
                 hint="entero entre 1 y 30"
+                help={<FieldHelp fieldKey="admin.config.umbral" />}
               >
                 <Input
                   id="config-umbral"

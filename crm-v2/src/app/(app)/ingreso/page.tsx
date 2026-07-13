@@ -17,6 +17,7 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { DateField, Field, Select } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { useToast } from "@/components/fd/toast";
@@ -338,7 +339,12 @@ export default function IngresoPage() {
             Confirmar ingreso de <strong className="mono">{selected.size}</strong> contenedor
             {selected.size === 1 ? "" : "es"}:
           </span>
-          <Field label="fecha de llegada" htmlFor="ingreso-fecha" error={fechaLlegadaError}>
+          <Field
+            label="fecha de llegada"
+            htmlFor="ingreso-fecha"
+            error={fechaLlegadaError}
+            help={<FieldHelp fieldKey="ingreso.fecha_llegada" />}
+          >
             <DateField
               id="ingreso-fecha"
               value={fechaLlegada}
