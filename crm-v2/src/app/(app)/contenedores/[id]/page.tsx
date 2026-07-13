@@ -11,6 +11,11 @@
 // - Historial: operacion_eventos de TODOS los ciclos en el Timeline del design system;
 //   los uuid de plantas y usuarios del jsonb `detalle` se resuelven con los maestros
 //   cargados (map id→nombre, join mecánico — no cálculo).
+// - Waivers (021 — waiver acumulativo): historial de crm.operacion_waivers de la
+//   operación mostrada (SELECT directo — READ permitido, RLS scopea); cada registro es
+//   anulable individualmente (sup+, modal en ./acciones.tsx). El total vigente sale de
+//   waiver_dias de la view (misma fuente que bruto/absorbido/neto) con fallback a sumar
+//   los `dias` del historial si no hay fila de view.
 // 4 estados: skeleton / error con retry / "no encontrado" (uuid inválido o inexistente,
 // sin crash) / poblado. CERO cálculo de negocio: días/costos llegan con las views de M6.
 
@@ -31,12 +36,14 @@ import { useSession } from "@/lib/session";
 import { EstadoOperacionBadge } from "../estado-operacion";
 import {
   AnularOperacionModal,
+  AnularWaiverModal,
   ConfirmarLlegadaModal,
   CorregirDatoModal,
   MoverPlantasModal,
   REFORZADO_OPTIONS,
   RegistrarWaiverModal,
   ValidarReforzadoModal,
+  type OperacionWaiverRow,
   type PlantaOption,
 } from "./acciones";
 
@@ -67,11 +74,11 @@ type OperacionFicha = {
   tipo_cierre: string | null;
   fecha_devolucion: string | null;
   anulada_motivo: string | null;
-  waiver_dias: number | null;
-  waiver_motivo: string | null;
-  waiver_referencia: string | null;
   planta_actual_id: string | null;
   planta_actual: { nombre: string } | null;
+  // NB: operaciones.waiver_dias/waiver_motivo/waiver_referencia quedaron CONGELADAS
+  // por la 021 (snapshot pre-021) — NO se leen más para el detalle. La verdad vive en
+  // crm.operacion_waivers (WaiverFicha, más abajo) y en waiver_dias de las views.
 };
 
 // Números de detention de la operación mostrada — vienen CALCULADOS por las views 019
@@ -119,6 +126,8 @@ type FichaData = {
   usuarios: UsuarioPublico[];
   /** null = sin fila en la view (op anulada, cerrada sin devolución, o fetch tolerante que falló). */
   costos: CostosFicha | null;
+  /** Historial de crm.operacion_waivers (021) de la operación mostrada — orden created_at desc. */
+  waivers: OperacionWaiverRow[];
 };
 
 /* ---------- display helpers (solo formato — cero negocio) ---------- */
@@ -299,6 +308,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
   const [reforzadoOpen, setReforzadoOpen] = useState(false);
   const [waiverOpen, setWaiverOpen] = useState(false);
   const [corregirOpen, setCorregirOpen] = useState(false);
+  const [anularWaiver, setAnularWaiver] = useState<{ id: string; dias: number } | null>(null);
 
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
@@ -321,7 +331,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       supabase
         .from("operaciones")
         .select(
-          "id, estado, fecha_retiro, retiro_de, booking_retiro, orden, shp, booking_asignado, buque, destino, fecha_egreso_planta, tipo_cierre, fecha_devolucion, anulada_motivo, waiver_dias, waiver_motivo, waiver_referencia, planta_actual_id, planta_actual:plantas(nombre)",
+          "id, estado, fecha_retiro, retiro_de, booking_retiro, orden, shp, booking_asignado, buque, destino, fecha_egreso_planta, tipo_cierre, fecha_devolucion, anulada_motivo, planta_actual_id, planta_actual:plantas(nombre)",
         )
         .eq("contenedor_id", id)
         .order("fecha_retiro", { ascending: false }),
@@ -411,6 +421,26 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       if (!co.error && co.data) costos = co.data as CostosFicha;
     }
 
+    // historial de waivers (021) de la MISMA operación mostrada — READ directo
+    // permitido (RLS scopea por visibilidad de la operación); se pide siempre que haya
+    // targetOp (incluso anulada: es historial, no una acción nueva).
+    let waivers: OperacionWaiverRow[] = [];
+    if (targetOp) {
+      const wv = await supabase
+        .from("operacion_waivers")
+        .select("id, dias, motivo, referencia, registrado_por, created_at, estado, anulado_motivo, anulado_por, anulado_fecha")
+        .eq("operacion_id", targetOp.id)
+        .order("created_at", { ascending: false });
+      if (rid !== reqIdRef.current) return;
+      if (wv.error) {
+        setData(null);
+        setNotFound(false);
+        setLoadError(wv.error.message);
+        return;
+      }
+      waivers = wv.data as unknown as OperacionWaiverRow[];
+    }
+
     setLoadError(null);
     setNotFound(false);
     setData({
@@ -421,6 +451,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       plantas: pl.data as PlantaOption[],
       usuarios: us.data as UsuarioPublico[],
       costos,
+      waivers,
     });
   }, [id]);
 
@@ -457,6 +488,16 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
     () => (data?.movimientos ?? []).filter((m) => m.estado === "en_transito" && m.planta_origen_id !== null),
     [data],
   );
+
+  // Total vigente (021): fuente PRIMARIA es waiver_dias de la view (costos) — mismo
+  // número que ya rige bruto/absorbido/neto. Si no hay fila de view (op anulada, sin
+  // tarifa vigente, o fetch tolerante que falló), fallback a sumar los `dias` YA
+  // devueltos por el historial — es tally de un campo dado, no cálculo de costo.
+  const waiverTotalVigente = useMemo(() => {
+    if (!data) return 0;
+    if (data.costos?.waiver_dias != null) return data.costos.waiver_dias;
+    return data.waivers.filter((w) => w.estado === "vigente").reduce((sum, w) => sum + w.dias, 0);
+  }, [data]);
 
   const timelineItems: TimelineItem[] = useMemo(() => {
     if (!data) return [];
@@ -754,19 +795,109 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
                   </DataItem>
                 </div>
               )}
-              {shownOp.waiver_dias != null && (
+              {waiverTotalVigente > 0 && (
                 <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.55 }}>
-                  <i className="ti ti-discount" aria-hidden style={{ color: "var(--color-status-green)" }} /> Waiver de{" "}
+                  <i className="ti ti-discount" aria-hidden style={{ color: "var(--color-status-green)" }} /> Waiver
+                  acumulado vigente:{" "}
                   <strong>
-                    {shownOp.waiver_dias} día{shownOp.waiver_dias === 1 ? "" : "s"}
-                  </strong>
-                  {shownOp.waiver_motivo ? <> — {shownOp.waiver_motivo}</> : null}
-                  {shownOp.waiver_referencia ? (
-                    <>
-                      {" "}
-                      · ref: <span className="mono">{shownOp.waiver_referencia}</span>
-                    </>
-                  ) : null}
+                    {waiverTotalVigente} día{waiverTotalVigente === 1 ? "" : "s"}
+                  </strong>{" "}
+                  — detalle por registro en <strong>Waivers</strong>, más abajo.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ---------- historial de waivers (021): registros individuales, anulables sup+ ---------- */}
+          {shownOp && (
+            <div style={{ ...CARD, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div
+                className="fd-label"
+                style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--color-text-secondary)" }}
+              >
+                <i className="ti ti-discount" aria-hidden />
+                Waivers
+                {data.waivers.length > 0 && (
+                  <span className="mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                    {data.waivers.length}
+                  </span>
+                )}
+              </div>
+              {data.waivers.length === 0 ? (
+                <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                  Sin waivers registrados en esta operación.
+                </span>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {data.waivers.map((w, i) => {
+                    const anulado = w.estado === "anulado";
+                    const quien = usuariosById.get(w.registrado_por) ?? "—";
+                    return (
+                      <div
+                        key={w.id}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4,
+                          padding: "10px 0",
+                          borderTop: i === 0 ? undefined : "1px solid var(--color-border-subtle)",
+                          opacity: anulado ? 0.6 : 1,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              textDecoration: anulado ? "line-through" : "none",
+                              color: "var(--color-text-primary)",
+                            }}
+                          >
+                            {w.dias} día{w.dias === 1 ? "" : "s"}
+                          </span>
+                          <Badge tone={anulado ? "neutro" : "verde"}>{anulado ? "anulado" : "vigente"}</Badge>
+                          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--color-text-muted)" }}>
+                            {fmtFecha(w.created_at)} · por {quien}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--color-text-secondary)",
+                            textDecoration: anulado ? "line-through" : "none",
+                          }}
+                        >
+                          {w.motivo}
+                          {w.referencia ? (
+                            <>
+                              {" "}
+                              · ref: <span className="mono">{w.referencia}</span>
+                            </>
+                          ) : null}
+                        </div>
+                        {anulado && (
+                          <div style={{ fontSize: 11.5, color: "var(--color-text-muted)" }}>
+                            Anulado por {w.anulado_por ? (usuariosById.get(w.anulado_por) ?? "—") : "—"}
+                            {w.anulado_fecha ? <> el {fmtFecha(w.anulado_fecha)}</> : null}
+                            {w.anulado_motivo ? <> — motivo: {w.anulado_motivo}</> : null}
+                          </div>
+                        )}
+                        {!anulado && canSupAdmin && (
+                          <div>
+                            <Button
+                              variant="ghost"
+                              icon="ti-ban"
+                              style={{ minHeight: 0, padding: "4px 10px", fontSize: 11.5 }}
+                              onClick={() => setAnularWaiver({ id: w.id, dias: w.dias })}
+                            >
+                              Anular
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -830,10 +961,22 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
         <RegistrarWaiverModal
           operacionId={shownOp.id}
           numeroContenedor={cont.numero_contenedor}
-          waiverActual={shownOp.waiver_dias}
+          totalVigente={waiverTotalVigente}
           onClose={() => setWaiverOpen(false)}
           onDone={() => {
             setWaiverOpen(false);
+            void load();
+          }}
+        />
+      )}
+      {anularWaiver && (
+        <AnularWaiverModal
+          waiverId={anularWaiver.id}
+          numeroContenedor={cont.numero_contenedor}
+          dias={anularWaiver.dias}
+          onClose={() => setAnularWaiver(null)}
+          onDone={() => {
+            setAnularWaiver(null);
             void load();
           }}
         />

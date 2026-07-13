@@ -1,10 +1,11 @@
 "use client";
 
-// Acciones de la ficha de contenedor (M5 + M4 Bloque 2): mover entre plantas, confirmar
-// llegada de un movimiento inter-planta pendiente, anular operación, validar reforzado,
-// registrar waiver (019) y corregir dato de operación cerrada (020 — F-02).
+// Acciones de la ficha de contenedor (M5 + M4 Bloque 2 + M4 021): mover entre plantas,
+// confirmar llegada de un movimiento inter-planta pendiente, anular operación, validar
+// reforzado, registrar waiver acumulativo (021 — SUMA, ya no reemplaza), anular un
+// waiver individual (021) y corregir dato de operación cerrada (020 — F-02).
 // Toda la lógica vive en las RPCs (crm_mover_entre_plantas, crm_confirmar_ingreso_planta,
-// crm_anular_operacion, crm_validar_reforzado, crm_registrar_waiver,
+// crm_anular_operacion, crm_validar_reforzado, crm_registrar_waiver, crm_anular_waiver,
 // crm_corregir_operacion_cerrada) — acá solo se arman payloads, se muestran
 // errores literales en FormAlert y se dispara el reload de la ficha en éxito.
 // El gating por rol de los botones que abren estos modales es UX: el enforcement real
@@ -20,6 +21,21 @@ import { fmtFecha, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 
 export type PlantaOption = { id: string; nombre: string };
+
+// Fila de crm.operacion_waivers (021). READ directo (permitido — la RLS scopea por
+// visibilidad de la operación); escritura SOLO por crm_registrar_waiver/crm_anular_waiver.
+export type OperacionWaiverRow = {
+  id: string;
+  dias: number;
+  motivo: string;
+  referencia: string | null;
+  registrado_por: string;
+  created_at: string;
+  estado: "vigente" | "anulado";
+  anulado_motivo: string | null;
+  anulado_por: string | null;
+  anulado_fecha: string | null;
+};
 
 export type MovimientoPendiente = {
   id: string;
@@ -463,19 +479,20 @@ export function ValidarReforzadoModal({
   );
 }
 
-/* ================= Registrar waiver (019 — sup+) ================= */
+/* ================= Registrar waiver (021 — sup+, ACUMULATIVO) ================= */
 
 export function RegistrarWaiverModal({
   operacionId,
   numeroContenedor,
-  waiverActual,
+  totalVigente,
   onClose,
   onDone,
 }: {
   operacionId: string;
   numeroContenedor: string;
-  /** Días del waiver ya registrado (si hay): la RPC lo REEMPLAZA, no lo suma. */
-  waiverActual: number | null;
+  /** Suma de días vigentes YA registrados en la operación (021 — el nuevo valor SE SUMA,
+   * no reemplaza; ver crm.operacion_waivers / crm_registrar_waiver). */
+  totalVigente: number;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -530,12 +547,13 @@ export function RegistrarWaiverModal({
           La naviera condona días de detention de <span className="mono">{numeroContenedor}</span>. El waiver es plata:
           queda auditado con tu usuario, la fecha y el motivo.
         </div>
-        {waiverActual != null && (
-          <FormAlert tone="warning">
-            Esta operación ya tiene un waiver de <strong>{waiverActual} día{waiverActual === 1 ? "" : "s"}</strong> — el
-            nuevo valor lo <strong>reemplaza</strong> (no se suma).
-          </FormAlert>
-        )}
+        <FormAlert tone="info">
+          Se suma al waiver acumulado de la operación (hoy:{" "}
+          <strong>
+            {totalVigente} día{totalVigente === 1 ? "" : "s"} vigente{totalVigente === 1 ? "" : "s"}
+          </strong>
+          ). El total no puede superar los días excedidos.
+        </FormAlert>
         <Field label="días condonados" htmlFor="waiver-dias" error={diasError}>
           <Input
             id="waiver-dias"
@@ -571,6 +589,87 @@ export function RegistrarWaiverModal({
         <ModalFooter onCancel={onClose} sending={sending}>
           <Button variant="primary" icon="ti-discount" loading={sending} disabled={!valid} onClick={() => void submit()}>
             Registrar waiver
+          </Button>
+        </ModalFooter>
+      </div>
+    </Modal>
+  );
+}
+
+/* ================= Anular waiver individual (021 — sup+) ================= */
+
+export function AnularWaiverModal({
+  waiverId,
+  numeroContenedor,
+  dias,
+  onClose,
+  onDone,
+}: {
+  waiverId: string;
+  numeroContenedor: string;
+  /** Días del waiver puntual que se anula (solo para el mensaje — no se recalcula acá). */
+  dias: number;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const [motivo, setMotivo] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const motivoError = touched && motivo.trim() === "" ? "el motivo es obligatorio" : null;
+  const valid = motivo.trim() !== "";
+
+  const submit = async () => {
+    setTouched(true);
+    setSubmitError(null);
+    if (!valid || sending) return;
+    setSending(true);
+    const { error } = await getSupabase().rpc("crm_anular_waiver", {
+      p_waiver: waiverId,
+      p_motivo: motivo.trim(),
+    });
+    setSending(false);
+    if (error) {
+      // errores P0001 LITERALES (rol, ya anulado…)
+      setSubmitError(error.message);
+      return;
+    }
+    toast({
+      type: "exito",
+      title: "Waiver anulado",
+      detail: `${numeroContenedor}: se anularon ${dias} día${dias === 1 ? "" : "s"} — el costo neto se recalcula solo.`,
+    });
+    onDone();
+  };
+
+  return (
+    <Modal open onClose={sending ? () => {} : onClose} title="Anular waiver" width={460} closeOnBackdrop={!sending}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <FormAlert tone="warning">
+          Se anulan <strong>{dias} día{dias === 1 ? "" : "s"}</strong> de waiver de{" "}
+          <span className="mono">{numeroContenedor}</span>. Los demás waivers vigentes de la operación no se tocan.
+        </FormAlert>
+        <Field
+          label="motivo de la anulación"
+          htmlFor="anular-waiver-motivo"
+          error={motivoError}
+          hint="queda en el historial del waiver"
+        >
+          <Textarea
+            id="anular-waiver-motivo"
+            rows={3}
+            value={motivo}
+            error={motivoError}
+            onChange={(e) => setMotivo(e.target.value)}
+            onBlur={() => setTouched(true)}
+          />
+        </Field>
+        {submitError && <FormAlert>{submitError}</FormAlert>}
+        <ModalFooter onCancel={onClose} sending={sending}>
+          <Button variant="danger" icon="ti-ban" loading={sending} disabled={!valid} onClick={() => void submit()}>
+            Anular waiver
           </Button>
         </ModalFooter>
       </div>
