@@ -17,8 +17,9 @@
 -- Borra (orden FK-seguro — todas las FK son NO ACTION):
 --   incidencia_fotos → incidencias → operacion_waivers → operacion_eventos →
 --   movimientos_planta → operaciones → contenedores
--- PRESERVA semillas: navieras, freetime_origin, plantas, configuracion,
---   ayuda_contenido, Y usuarios.
+-- PRESERVA semillas: navieras, freetime_origin, plantas, depositos (023),
+--   configuracion, ayuda_contenido, Y usuarios. (El reset nunca las toca: solo
+--   borra las tablas operativas listadas abajo.)
 --
 -- auth.users: usuarios NO se borra → CERO huérfanos por construcción. La única
 --   FK hacia auth es usuarios.auth_user_id → auth.users ON DELETE CASCADE, que
