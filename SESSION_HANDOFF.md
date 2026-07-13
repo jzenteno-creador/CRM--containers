@@ -1,81 +1,82 @@
-=== CRM v2 · Sesión 13 · 2026-07-12 · CERRADA ===
+# Handoff de sesión — 2026-07-13 · CRM Detention v2 · rama v2-rebuild
 
-ESTADO: CRM v2 COMPLETO Y EN PRODUCCIÓN — crm-detention.vercel.app
-7 solapas operativas (Inicio, Ingreso, Egreso, Contenedores, Alertas, Incidencias, Admin).
-G1–G7 en PASS. 7 commits en v2-rebuild (d205108 → eb7d1b1) + 018 (m8_018_kpi_views).
-DB en cero de data de test (verificado al cierre con body: ops/conts/movs/evts/incs/fotos = 0,
-auth.users = 1 = jzenteno@ssbint.com, test-crmv2-* = 0, detention = 13 tablas intocado).
-Consola de prod limpia (0 · 406 / 401 / 404).
+## Resumen
 
-LO QUE JOHN NO PROBÓ TODAVÍA (es su próximo paso)
-- Cargar la PRIMERA TANDA REAL desde /ingreso. El CRM está vacío a propósito.
-- El click-path de Admin (crear naviera, versionar tarifa, cambiar umbral desde la pantalla).
-  El enforcement está verificado por REST y DB; el camino por UI NO. CC no pudo probarlo:
-  el guardrail prohíbe cuentas de test con rol administrador, así que no hay sesión con la
-  que ejercerlo. NO ESTÁ VERIFICADO — no lo des por bueno.
+Sesión larga de M4 sobre el CRM v2 (schema `crm` en Supabase `cctuowthpnstvdgjuomq`).
+Arrancó con EXPLORE+PLAN (docs/EXPLORE-M4.md + PLAN-M4.html) y ejecutó cuatro bloques de
+IMPLEMENT con gate humano entre cada uno: B1 (motor versionado + waiver + H1 + plantas +
+campana), B2 (front F1 + corrección de cerradas F-02), B3 (waiver acumulativo + reset demo
++ depósitos + ayuda/tooltips M10) y B4 (reporting Excel + combobox global + sidebar).
+**Todo aplicado y deployado**: migraciones 019-024 en prod, front en crm-detention.vercel.app,
+DB operativamente en cero. Cada cambio de plata pasó gate en harness/branch + verifier
+independiente (evaluador ≠ optimizador).
 
-DECIDIDO ESTA SESIÓN
-- §14.1 CERRADO: la asignación se pliega en el egreso. `orden` y `shp` OBLIGATORIOS;
-  booking_asignado / buque / destino OPCIONALES. NO hay estado `cargado`.
-- Toda view nueva en crm: security_invoker=true + GRANT SELECT TO authenticated. NUNCA a anon.
-  Las 4 views KPI de la 018 cumplen (verificado: anon_sel=false en las 4, por catálogo y
-  por REST — 401 permission denied con body).
+## Cambios realizados
 
-⚠️ BLOQUEANTE DE INFRAESTRUCTURA — DECISIÓN DE JOHN, NO SE TOCA SIN SU GO
-El proyecto Supabase cctuowthpnstvdgjuomq aloja DOS workstreams:
-  - crm (este CRM, con front público en Vercel)
-  - public (bookings_301 / shipments_304 / inbound_events / inbound_log — datos con PII)
-Comparten la MISMA anon key, y la anon key del CRM está publicada en su bundle JS por diseño.
-El 12/07 se detectó y cerró (migración lockdown_anon_public) que la anon key devolvía
-HTTP 200 con 1.745+ raws con PII desde public.inbound_events.
-Las tablas están cerradas AHORA, pero el pg_default_acl de supabase_admin sobre `public`
-sigue dando grants a anon → la PRÓXIMA tabla que se cree en public nace abierta otra vez.
-NO EJECUTAR NINGÚN FIX SOBRE ESTO. John decide en la próxima sesión:
-  (a) separar en dos proyectos Supabase, o
-  (b) cerrar los defaults + evaluar sacar `public` del GUC de PostgREST.
-La opción (b) depende de si n8n le pega a public por REST o por conexión directa a Postgres
-— ese dato NO se verificó todavía.
+- **Migración 019** (prod): convención de conteo + cobra_detention_origen VERSIONADOS en
+  freetime_origin · dias_facturables() · modelo waiver (bruto/absorbido/neto) · H1
+  (crm_crear_tanda_retiro con inserción parcial + resultado por contenedor) · plantas
+  CRUD-ready (DROP CHECK + activa + policies) · get_pendientes con CP1.
+- **Migración 020** (prod): crm_corregir_operacion_cerrada (F-02, sup+, whitelist, auditado).
+- **Migración 021** (prod): waiver ACUMULATIVO — tabla operacion_waivers, cada waiver
+  registro propio anulable individual, guard total ≤ exceso; sin_cargo/waiver_* congelados.
+- **Migración 022** (prod): crm_reset_demo triple guard (admin + modo_demo + confirmación
+  tipeada), solo crm.*, preserva semillas+usuarios. CORRIDO una vez para dejar DB en cero.
+- **Migración 023** (prod): catálogo crm.depositos (10 canónicos del Excel) + FK retiro_de_id
+  + RPCs crear/similares(fuzzy)/fusionar + tanda retrocompatible.
+- **Migración 024** (prod): ayuda_contenido nivel/clave + crm_ayuda_valores + seeds m3-m9
+  reescritos + 13 tooltips de campo con números interpolados desde la DB.
+- **Front** (deployado, HEAD 80b3c78): UI de waivers en ficha, combobox de depósitos con
+  creación inline, /ayuda + editor Admin + FieldHelp, reporting /reportes con export xlsx,
+  combobox tipeable en 7 selects, sidebar colapsable en cookie.
+- **crm-v2/AGENTS.md**: regla de escritura sancionada (RPC-only en tablas de plata; lista de
+  maestros con write directo: navieras/plantas/depositos/configuracion/incidencias/ayuda);
+  tipos_contenedor y medios QUEDAN EN CÓDIGO (decisión de John).
 
-DEUDA ABIERTA (ordenada por impacto)
-1. H1 · crm_crear_tanda_retiro revierte la tanda ENTERA ante una sola colisión, y nombra
-   un solo contenedor. Combinado con el punto ciego cross-planta del operador (el pre-check
-   corre bajo RLS), un operador puede necesitar N rechazos completos para descubrir N
-   colisiones. Es el anti-patrón del "menos clics" del spec.
-   FIX: helper SECURITY DEFINER (DDL de backend). Conviene ANTES de cargar en volumen.
-2. `plantas` no tiene write policy — ni el admin puede crear plantas vía API.
-   La sección de Admin quedó read-only con aviso. Fix = DDL.
-3. Bucket público `incidencias` (residuo de v1, policy demo abierta a todos, 0 objetos).
-   Borrar en el cutover.
-4. 2 blobs de test huérfanos en crm-incidencias (carpeta 54959820-…). storage.protect_delete()
-   bloquea el borrado por SQL. Se borran desde el Dashboard de Supabase en 10 segundos.
-   Inaccesibles mientras tanto (la policy de SELECT exige la incidencia, ya borrada).
-5. M10 · Ayuda/FAQ: los seeds están escritos y versionados en seeds-ayuda/ (m3…m9_admin.sql).
-   Falta aplicarlos y construir la solapa.
-6. Campana del header: Popover placeholder, no navega.
-7. vista_kpi_costo_naviera agrupa por nombre de naviera (acoplamiento por texto). Cosmético
-   — el nombre viene del maestro vía FK, no es el bug del §10. Pulido de M10.
-8. 3 untracked de negocio en la raíz esperando decisión de John.
+## Decisiones tomadas
 
-PRÓXIMO PASO
-1. John carga la primera tanda REAL en /ingreso. TIER: humano.
-2. Decisión de infraestructura (el bloqueante de arriba). TIER: humano + Opus para el plan.
-3. Fix de H1 (DDL de backend). TIER: Opus (grants/lógica transaccional = error silencioso).
-4. M10 (Ayuda) + pulido. TIER: Sonnet.
+- **Regla de días CONFIRMADA**: día 1 inclusivo (2.804/2.804 vs Excel). El spec.md:234 y un
+  comentario en tanda-form.tsx decían "día 0" — CORREGIDOS. La convención pasó a versionada.
+- **Waiver = SUMA (opción b de John)**: no reemplaza; el operario no hace aritmética mental.
+- **Reset demo triple guard** + kill-switch modo_demo apagado por defecto.
+- **REGLA DURA reforzada**: cero UPDATE crudo sobre tablas de plata; si falta la RPC, el
+  output es "falta la RPC" (persistida en memoria regla-cero-update-crudo).
+- **tipos/medios quedan en código** (CHECKs de integridad, no configurables).
+- **Presupuesto**: los techos por-agente son inexigibles (los agentes erran 3-4x su
+  auto-estimación); la contención real es 1 ítem grande = 1 run. Se sostuvo en B3/B4.
 
----
+## Estado actual
 
-## Contexto no obvio (persiste entre sesiones)
+- Migraciones 001-024 en prod. Front en producción (todas las solapas + /reportes + /ayuda).
+- DB operativamente en CERO (reset corrido) — lista para la primera tanda REAL de John.
+- Motor de plata validado contra el Excel (43/43 goldens + no-regresión 0 diffs + gate de
+  cálculo en cada cambio). Waiver acumulativo verificado 3+2=5 contra Excel.
+- Ayuda M10 completa: instructivos de las 7 solapas + tooltips por campo con números
+  interpolados (nunca hardcodeados).
 
-- Deploy v2 = `cd crm-v2 && npx vercel deploy --prod --yes` (proyecto Vercel `crm-detention`).
-  Deploy final del run: crm-detention-qhqv5a37x. Cadena de deploys/rollbacks por módulo en
-  `.claude/state/progress.md` (local, gitignored — evidencia cruda de todos los E2E).
-- Regla §21 intacta: v2 escribe SOLO en schema `crm` + bucket `crm-incidencias`.
-- Usuarios de test: patrón test-crmv2-*@crmv2.invalid, hash bcrypt generado local (el
-  password nunca entra a un transcript), token-cols en '', rol supervisor máximo, borrados
-  en el mismo turno. 6 creados y 6 borrados en este run.
-- DATEs (vigente_desde/hasta) se formatean con fmtFechaDia — nunca new Date("YYYY-MM-DD"),
-  que corre −1 día en AR. fmtFecha es solo para timestamptz.
-- Charts del dashboard: BarChart/TrendLine SVG propios del design system (sin Recharts).
-- Higiene verificada al cierre: bajo .claude/ solo están trackeadas las definiciones de
-  agentes (.claude/agents/*.md, sin credenciales); .claude/state/ está gitignored; los
-  transcripts de agentes viven fuera del repo (/tmp). Cero transcripts/logs en git.
+## Próximos pasos
+
+1. **Smoke visual de John** (B4): export xlsx real desde /reportes, esquinas de modales tras
+   el cambio de overflow en modal.tsx (ConfirmDialog), rail expandido y su persistencia.
+2. **Cargar la primera tanda REAL** en /ingreso (la DB está en cero a propósito).
+3. **ERD** (Bloque restante): FALTA la referencia visual de John para arrancar.
+4. Reporting: si se quiere, `vista_reporte` dedicada (DDL, GO futuro) uniría open+closed en
+   una sola fuente — hoy el reporte mergea base + views por operacion_id (sin DDL).
+
+## Contexto no obvio
+
+- **⚠️ MOTOR↔NAVIERA sigue ABIERTO**: el motor está validado contra el Excel, pero el Excel
+  se valida contra sí mismo. Falta cruzar UNA liquidación real de detention de una naviera
+  contra una operación cerrada del histórico — el insumo (la factura) es de John. Un
+  off-by-one heredado del Excel sería invisible (sobreestimar → factura más barata → nadie
+  reclama).
+- **⚠️ Sandbox `gate-019-sandbox` (ref `gnygffoynwtxpkehmxal`)**: quedó de un intento de gate
+  fallido, factura ~USD 10/mes, el MCP no puede borrarlo → John lo borra del Dashboard.
+- **Branching de Supabase ROTO** en el proyecto compartido (drift de public.inbound_events,
+  workstream ssb-export-dashboard) → los gates de DDL se corren en Postgres LOCAL embebido
+  (scratchpad/pgrun/) o proyecto sandbox temporal, nunca branch. Ver memoria
+  infra-drift-branching-roto + HANDOFF-cross-ssb-workspace-20260712-drift.md.
+- Handoffs por bloque: docs/HANDOFF-M4-{B1,B2,CIERRE,B3A,B3B,B4}.md. Estado durable en
+  .claude/state/progress-m4.md.
+- pg_trgm vive en el schema `extensions` en Supabase (no public) — calificar
+  extensions.similarity() en funciones con search_path=''.
