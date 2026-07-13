@@ -10,9 +10,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { isRouteBuilt } from "@/lib/nav";
 import { ROL_LABELS, useSession } from "@/lib/session";
+import { getSupabase } from "@/lib/supabase";
 import { CommandPalette } from "./command-palette";
 import { Dropdown, Popover } from "./dropdown";
 import { HelpPanel } from "./help-panel";
@@ -66,27 +67,216 @@ function ClockAR() {
   );
 }
 
-/** Campana de notificaciones — placeholder M0; get_pendientes() la conecta en M6. */
+/** Espejo de crm.get_pendientes() — jsonb de CONTADORES, ya scopeado por rol en la DB
+ * (reforzados_pendientes solo sup+, solicitudes_acceso solo admin: si la clave no
+ * viene, esa línea no se muestra — no hace falta repetir el gate acá). */
+type Pendientes = {
+  pendientes_ingreso: number;
+  pendientes_devolucion: number;
+  alertas: { amarillo: number; rojo: number };
+  reforzados_pendientes?: number;
+  solicitudes_acceso?: number;
+};
+
+const BELL_LINE: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 9,
+  width: "100%",
+  minHeight: 0,
+  textAlign: "left",
+  padding: "8px 14px",
+  border: "none",
+  borderRadius: 0,
+  background: "transparent",
+  fontSize: 12.5,
+  color: "var(--color-text-secondary)",
+};
+
+/** Una categoría de pendientes: ícono + label + contador + navegación al click. */
+function BellLine({
+  icon,
+  label,
+  count,
+  tone = "neutro",
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  count: number;
+  tone?: "rojo" | "amarillo" | "neutro";
+  onClick: () => void;
+}) {
+  const dotColor =
+    tone === "rojo" ? "var(--color-status-red)" : tone === "amarillo" ? "var(--color-status-amber)" : "var(--color-text-muted)";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="hover:[background:var(--color-surface-2)!important]"
+      style={{ ...BELL_LINE, cursor: "pointer", opacity: count === 0 ? 0.6 : 1 }}
+    >
+      <i className={`ti ${icon}`} aria-hidden style={{ fontSize: 15, color: dotColor, flexShrink: 0 }} />
+      <span style={{ flex: 1 }}>{label}</span>
+      <span className="mono" style={{ fontWeight: 600, color: "var(--color-text-primary)" }}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+/** Campana de notificaciones (M6): get_pendientes() refresca al montar, al recuperar
+ * foco/visibilidad y cada 60s SOLO si la pestaña está visible. El badge del ícono
+ * es SOLO alertas.rojo (decisión de producto — los amarillos son línea informativa
+ * dentro del popover, sin badge). Si la RPC falla: sin badge, en silencio (ningún
+ * toast ni error visible; el popover cerrado no muestra nada raro). */
 function NotificationBell() {
+  const router = useRouter();
+  const { perfil } = useSession();
+  const [data, setData] = useState<Pendientes | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data: d, error } = await getSupabase().rpc("get_pendientes");
+    if (error) {
+      // en silencio: sin toast, sin FormAlert — solo se cae a "sin datos"
+      setData(null);
+      setLoaded(true);
+      return;
+    }
+    setData(d as Pendientes);
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    // IIFE async: los setState de load() quedan detrás del await (set-state-in-effect)
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
+
+  // refresh: foco de ventana + visibilitychange→visible (cubre volver de otra pestaña
+  // sin pasar por focus, ej. atajo de teclado del OS)
+  useEffect(() => {
+    const onFocus = () => void load();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [load]);
+
+  // intervalo 60s SOLO con la pestaña visible (se limpia siempre al desmontar)
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  const rojo = data?.alertas.rojo ?? 0;
+  const badgeLabel = rojo > 9 ? "9+" : String(rojo);
+  const canSupAdmin = perfil?.rol === "supervisor" || perfil?.rol === "administrador";
+  const isAdmin = perfil?.rol === "administrador";
+
   return (
     <Popover
       align="right"
-      width={280}
+      width={300}
       trigger={(p) => (
-        <button type="button" className="fd-iconbtn" title="Notificaciones" aria-label="notificaciones" onClick={p.toggle} aria-expanded={p["aria-expanded"]} aria-controls={p["aria-controls"]}>
+        <button
+          type="button"
+          className="fd-iconbtn"
+          title="Notificaciones"
+          aria-label={rojo > 0 ? `notificaciones — ${rojo} alerta${rojo === 1 ? "" : "s"} vencida${rojo === 1 ? "" : "s"}` : "notificaciones"}
+          onClick={p.toggle}
+          aria-expanded={p["aria-expanded"]}
+          aria-controls={p["aria-controls"]}
+        >
           <i className="ti ti-bell" aria-hidden />
+          {rojo > 0 && <span className="fd-badge-count">{badgeLabel}</span>}
         </button>
       )}
     >
-      <div style={{ padding: "14px 16px" }}>
-        <div className="fd-label" style={{ marginBottom: 8 }}>
-          Notificaciones
+      {(close) => (
+        <div style={{ padding: "6px 0" }}>
+          <div className="fd-label" style={{ padding: "8px 14px 6px" }}>
+            Notificaciones
+          </div>
+          {!loaded ? (
+            <p style={{ margin: 0, padding: "6px 14px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>
+              Cargando…
+            </p>
+          ) : data === null ? (
+            <p style={{ margin: 0, padding: "6px 14px 12px", fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
+              No se pudieron cargar los pendientes por ahora.
+            </p>
+          ) : (
+            <>
+              <BellLine
+                icon="ti-login-2"
+                label="pendientes de ingreso"
+                count={data.pendientes_ingreso}
+                onClick={() => {
+                  close();
+                  router.push("/ingreso");
+                }}
+              />
+              <BellLine
+                icon="ti-logout-2"
+                label="pendientes de devolución"
+                count={data.pendientes_devolucion}
+                onClick={() => {
+                  close();
+                  router.push("/egreso");
+                }}
+              />
+              <BellLine
+                icon="ti-bell"
+                label="alertas vencidas"
+                count={data.alertas.rojo}
+                tone="rojo"
+                onClick={() => {
+                  close();
+                  router.push("/alertas?semaforo=rojo");
+                }}
+              />
+              {data.alertas.amarillo > 0 && (
+                <div style={{ padding: "2px 14px 8px", fontSize: 11, color: "var(--color-status-amber)" }}>
+                  <i className="ti ti-alert-triangle" aria-hidden /> {data.alertas.amarillo} por vencer (amarillo) — ver
+                  en la solapa Alertas
+                </div>
+              )}
+              {canSupAdmin && data.reforzados_pendientes !== undefined && (
+                <BellLine
+                  icon="ti-shield-check"
+                  label="reforzados por validar"
+                  count={data.reforzados_pendientes}
+                  onClick={() => {
+                    close();
+                    router.push("/contenedores");
+                  }}
+                />
+              )}
+              {isAdmin && data.solicitudes_acceso !== undefined && (
+                <BellLine
+                  icon="ti-user-question"
+                  label="solicitudes de acceso"
+                  count={data.solicitudes_acceso}
+                  onClick={() => {
+                    close();
+                    router.push("/admin/solicitudes");
+                  }}
+                />
+              )}
+            </>
+          )}
         </div>
-        <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.55 }}>
-          Los pendientes por rol (ingresos, terminal, alertas, solicitudes de acceso) se conectan con{" "}
-          <span className="mono">get_pendientes()</span> en M6.
-        </p>
-      </div>
+      )}
     </Popover>
   );
 }

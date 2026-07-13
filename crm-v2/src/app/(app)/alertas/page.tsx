@@ -14,8 +14,8 @@
 // Patrón de página del repo (espejo de /contenedores): load() callback, refetch al
 // recuperar foco, 4 estados en la tabla, paginación client-side con cap de fetch.
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
 import { ContainerNumber } from "@/components/container-number";
@@ -107,10 +107,29 @@ function CostoProyectado({ row }: { row: AlertaRow }) {
   return <span style={{ color: "var(--color-text-faint)" }}>{fmtUSD(row.costo_proyectado)}</span>;
 }
 
-export default function AlertasPage() {
-  const router = useRouter();
+const SEMAFORO_QUERY_VALUES: SemaforoFilter[] = ["rojo", "amarillo", "verde", "neutro"];
 
-  const [filtro, setFiltro] = useState<SemaforoFilter>("todos");
+function parseSemaforoParam(v: string | null): SemaforoFilter | null {
+  return v !== null && (SEMAFORO_QUERY_VALUES as string[]).includes(v) ? (v as SemaforoFilter) : null;
+}
+
+function AlertasPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ?semaforo= inicializa el filtro (llega de la campana §13: alertas→/alertas?semaforo=rojo)
+  const semaforoParam = parseSemaforoParam(searchParams.get("semaforo"));
+  const [filtro, setFiltro] = useState<SemaforoFilter>(semaforoParam ?? "todos");
+
+  // si el param CAMBIA con la página ya montada (click en la campana estando en
+  // /alertas), se re-aplica al filtro. Ajuste DURANTE el render (patrón React
+  // "adjusting state when props change") — no un efecto (regla set-state-in-effect).
+  const [lastParam, setLastParam] = useState(semaforoParam);
+  if (semaforoParam !== lastParam) {
+    setLastParam(semaforoParam);
+    if (semaforoParam) setFiltro(semaforoParam);
+  }
+
   const [rows, setRows] = useState<AlertaRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   // umbral amarillo (solo para la leyenda): null = no disponible → leyenda oculta
@@ -351,5 +370,22 @@ export default function AlertasPage() {
         }
       />
     </>
+  );
+}
+
+// useSearchParams exige un límite de Suspense en build estático (Next 16 — ver AGENTS.md);
+// el fallback repite el esqueleto de la propia tabla, nunca un spinner de página.
+export default function AlertasPage() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="Alertas" />
+          <DataTable columns={[]} rows={[]} rowKey={() => ""} loading skeletonRows={8} maxHeight={560} />
+        </>
+      }
+    >
+      <AlertasPageContent />
+    </Suspense>
   );
 }
