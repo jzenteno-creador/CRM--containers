@@ -462,19 +462,14 @@ export function TandaForm({
           error={attempted ? headerErrors.naviera : null}
           help={<FieldHelp fieldKey="ingreso.naviera" naviera={navieraId || undefined} />}
         >
-          <Select
+          <ComboboxCreatable
             id="tanda-naviera"
+            options={navieras.map((n) => ({ id: n.id, label: n.nombre }))}
             value={navieraId}
+            onChange={setNavieraId}
             error={attempted ? headerErrors.naviera : null}
-            onChange={(e) => setNavieraId(e.target.value)}
-          >
-            <option value="">— elegí la naviera —</option>
-            {navieras.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.nombre}
-              </option>
-            ))}
-          </Select>
+            placeholder="— elegí la naviera —"
+          />
         </Field>
 
         <Field label="tipo de contenedor" htmlFor="tanda-tipo" error={attempted ? headerErrors.tipo : null}>
@@ -550,20 +545,14 @@ export function TandaForm({
             htmlFor="tanda-planta"
             error={attempted ? headerErrors.plantaDestino : null}
           >
-            <Select
+            <ComboboxCreatable
               id="tanda-planta"
+              options={plantas.map((p) => ({ id: p.id, label: `${p.nombre}${p.codigo ? ` (${p.codigo})` : ""}` }))}
               value={plantaSel}
+              onChange={setPlantaSel}
               error={attempted ? headerErrors.plantaDestino : null}
-              onChange={(e) => setPlantaSel(e.target.value)}
-            >
-              <option value="">— elegí la planta —</option>
-              {plantas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                  {p.codigo ? ` (${p.codigo})` : ""}
-                </option>
-              ))}
-            </Select>
+              placeholder="— elegí la planta —"
+            />
           </Field>
         )}
 

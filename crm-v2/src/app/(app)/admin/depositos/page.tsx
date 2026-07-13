@@ -17,10 +17,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
+import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
-import { Field, Input, Select } from "@/components/fd/fields";
+import { Field, Input } from "@/components/fd/fields";
 import { FormAlert } from "@/components/fd/form-alert";
 import { ConfirmDialog, Modal } from "@/components/fd/modal";
 import { PageHeader } from "@/components/fd/page-header";
@@ -200,27 +201,22 @@ function FusionModal({
             desactivado.
           </p>
           <Field label="origen — se fusiona y se desactiva" htmlFor="fusion-origen">
-            <Select id="fusion-origen" value={origenId} onChange={(e) => setOrigenId(e.target.value)}>
-              <option value="">— elegí el depósito de origen —</option>
-              {depositos.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nombre}
-                  {d.activo ? "" : " (inactivo)"}
-                </option>
-              ))}
-            </Select>
+            <ComboboxCreatable
+              id="fusion-origen"
+              options={depositos.map((d) => ({ id: d.id, label: `${d.nombre}${d.activo ? "" : " (inactivo)"}` }))}
+              value={origenId}
+              onChange={setOrigenId}
+              placeholder="— elegí el depósito de origen —"
+            />
           </Field>
           <Field label="destino — se conserva y recibe las operaciones" htmlFor="fusion-destino">
-            <Select id="fusion-destino" value={destinoId} onChange={(e) => setDestinoId(e.target.value)}>
-              <option value="">— elegí el depósito destino —</option>
-              {depositos
-                .filter((d) => d.activo)
-                .map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.nombre}
-                  </option>
-                ))}
-            </Select>
+            <ComboboxCreatable
+              id="fusion-destino"
+              options={depositos.filter((d) => d.activo).map((d) => ({ id: d.id, label: d.nombre }))}
+              value={destinoId}
+              onChange={setDestinoId}
+              placeholder="— elegí el depósito destino —"
+            />
           </Field>
           {mismoDeposito && <FormAlert tone="warning">Origen y destino no pueden ser el mismo depósito.</FormAlert>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>

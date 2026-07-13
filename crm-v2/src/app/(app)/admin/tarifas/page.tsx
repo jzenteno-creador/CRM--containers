@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
+import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
@@ -631,14 +632,13 @@ export default function TarifasPage() {
         <>
           <div style={{ maxWidth: 340, marginBottom: 14 }}>
             <Field label="naviera" htmlFor="tarifas-naviera">
-              <Select id="tarifas-naviera" value={selectedId} onChange={(e) => selectNaviera(e.target.value)}>
-                <option value="">— elegí una naviera —</option>
-                {(navieras ?? []).map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.nombre}
-                  </option>
-                ))}
-              </Select>
+              <ComboboxCreatable
+                id="tarifas-naviera"
+                options={(navieras ?? []).map((n) => ({ id: n.id, label: n.nombre }))}
+                value={selectedId}
+                onChange={selectNaviera}
+                placeholder="— elegí una naviera —"
+              />
             </Field>
           </div>
 

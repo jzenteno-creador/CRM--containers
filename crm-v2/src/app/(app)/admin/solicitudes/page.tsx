@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, type BadgeTone } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
+import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DataTable, type Column, type RowValidation } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
@@ -169,15 +170,16 @@ function AprobarModal({
           error={plantaError}
           hint={rol === "operador" ? undefined : "opcional para supervisor / administrador"}
         >
-          <Select id="aprobar-planta" value={plantaId} error={plantaError} onChange={(e) => setPlantaId(e.target.value)}>
-            <option value="">— sin planta —</option>
-            {plantas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-                {p.codigo ? ` (${p.codigo})` : ""}
-              </option>
-            ))}
-          </Select>
+          <ComboboxCreatable
+            id="aprobar-planta"
+            options={[
+              { id: "", label: "— sin planta —" },
+              ...plantas.map((p) => ({ id: p.id, label: `${p.nombre}${p.codigo ? ` (${p.codigo})` : ""}` })),
+            ]}
+            value={plantaId}
+            onChange={setPlantaId}
+            error={plantaError}
+          />
         </Field>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
           <Button variant="ghost" onClick={onClose} disabled={sending}>

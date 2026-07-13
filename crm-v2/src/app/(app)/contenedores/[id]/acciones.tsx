@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/fd/button";
+import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
 import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
@@ -160,19 +161,14 @@ export function MoverPlantasModal({
           Planta actual: <strong>{plantaActualNombre}</strong>
         </div>
         <Field label="planta destino" htmlFor="mover-destino" error={destinoError}>
-          <Select
+          <ComboboxCreatable
             id="mover-destino"
+            options={destinos.map((p) => ({ id: p.id, label: p.nombre }))}
             value={destinoId}
+            onChange={setDestinoId}
             error={destinoError}
-            onChange={(e) => setDestinoId(e.target.value)}
-          >
-            <option value="">— elegí la planta —</option>
-            {destinos.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </Select>
+            placeholder="— elegí la planta —"
+          />
         </Field>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           <Field label="medio" htmlFor="mover-medio">

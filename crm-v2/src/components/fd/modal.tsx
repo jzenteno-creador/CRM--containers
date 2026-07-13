@@ -98,7 +98,12 @@ export function Modal({
           border: "1px solid var(--color-border-strong)",
           borderRadius: "var(--radius-palette)",
           boxShadow: "var(--shadow-palette)",
-          overflow: "hidden",
+          // visible (no hidden): deja escapar el dropdown de un ComboboxCreatable dentro
+          // del modal (B4) — el <select> nativo se popuppeaba fuera del clip, el combo es
+          // DOM y quedaba recortado. Las esquinas redondeadas se preservan: header sin fondo
+          // y el footer lleva su propio radius inferior (abajo). box-sizing:border-box ⇒ los
+          // hijos van dentro del borde, no lo tapan.
+          overflow: "visible",
           animation: "fd-palette-in 200ms var(--ease-out-expo)",
           outline: "none",
         }}
@@ -149,6 +154,10 @@ export function Modal({
               padding: "12px 18px",
               borderTop: "1px solid var(--color-border-subtle)",
               background: "var(--color-surface-2)",
+              // esquinas inferiores redondeadas: con overflow:visible el footer ya no lo
+              // hereda del clip del panel, así que las lleva propias (matchea el panel).
+              borderBottomLeftRadius: "var(--radius-palette)",
+              borderBottomRightRadius: "var(--radius-palette)",
             }}
           >
             {footer}
