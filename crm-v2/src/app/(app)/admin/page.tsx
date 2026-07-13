@@ -36,7 +36,7 @@ export default function AdminHubPage() {
       <>
         <PageHeader title="Administración" />
         <div style={GRID} aria-hidden>
-          {[0, 1, 2, 3, 4].map((i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <SkeletonBlock key={i} height={74} delay={i * 150} style={{ borderRadius: "var(--radius-input)" }} />
           ))}
         </div>
@@ -63,6 +63,9 @@ export default function AdminHubPage() {
         </QuickLink>
         <QuickLink href="/admin/plantas" icon="ti-building-factory-2" title="Plantas">
           Alta, edición y baja lógica de plantas operativas.
+        </QuickLink>
+        <QuickLink href="/admin/depositos" icon="ti-building-warehouse" title="Depósitos">
+          Catálogo de retiro: alta, edición, baja lógica y fusión de duplicados.
         </QuickLink>
         <QuickLink href="/admin/configuracion" icon="ti-settings" title="Configuración">
           Umbral del semáforo amarillo de freetime.
