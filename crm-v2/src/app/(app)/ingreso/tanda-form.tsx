@@ -36,6 +36,17 @@ const MEDIOS: { value: "camion" | "tren"; label: string }[] = [
 
 type Row = { numero: string; error: string | null; reforzado: boolean };
 
+// Fila del jsonb `resultados` de crm_crear_tanda_retiro (migración 019). Si el
+// deploy está desfasado y la RPC solo devuelve `creadas` (sin `resultados`),
+// se degrada al comportamiento anterior (ver submit()).
+type ResultadoFila = {
+  numero: string;
+  estado: "aceptado" | "rechazado";
+  operacion_id: string | null;
+  motivo: string | null;
+  motivo_texto: string | null;
+};
+
 const CARD: React.CSSProperties = {
   background: "var(--color-surface-1)",
   border: "1px solid var(--color-border-subtle)",
@@ -101,6 +112,9 @@ export function TandaForm({
   const [attempted, setAttempted] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // resultado fila-por-fila del último envío (null = todavía no se envió nada
+  // en esta sesión, o el envío anterior no trajo `resultados` — ver submit()).
+  const [ultimoResultado, setUltimoResultado] = useState<ResultadoFila[] | null>(null);
 
   // re-parsear al cambiar el textarea, preservando el reforzado ya tocado
   const onPasteChange = (text: string) => {
@@ -150,6 +164,7 @@ export function TandaForm({
     if (sending) return;
     setAttempted(true);
     setSubmitError(null);
+    setUltimoResultado(null); // el resultado del envío anterior se reemplaza por el nuevo
     if (!headerComplete || rows.length === 0 || invalidCount > 0 || operadorSinPlanta) return;
 
     setSending(true);
@@ -159,7 +174,8 @@ export function TandaForm({
         tipo,
         retiro_de: retiroDe.trim(),
         planta_destino_id: plantaDestino,
-        // timestamptz AR fijo (UTC-3, sin DST): fecha_retiro = día 0 del freetime
+        // timestamptz AR fijo (UTC-3, sin DST). El día del retiro cuenta como
+        // día 1 del freetime (conteo inclusivo, validado 2.804/2.804 vs Excel).
         fecha_retiro: `${fechaRetiro}T00:00:00-03:00`,
         confirma_ingreso: confirmaIngreso,
         ...(bookingRetiro.trim() ? { booking_retiro: bookingRetiro.trim() } : {}),
@@ -175,18 +191,44 @@ export function TandaForm({
       setSubmitError(error.message);
       return;
     }
-    const creadas = (data as { creadas?: number } | null)?.creadas ?? rows.length;
-    toast({
-      type: "exito",
-      title: `${creadas} operación${creadas === 1 ? "" : "es"} creada${creadas === 1 ? "" : "s"}`,
-      detail: confirmaIngreso ? "Ingreso a planta confirmado en la misma tanda." : "Quedan pendientes de ingreso a planta.",
-    });
-    // limpiar textarea + tabla; conservar el encabezado para la próxima tanda
-    setPasteText("");
-    setRows([]);
+    const respuesta = data as { creadas?: number; rechazadas?: number; resultados?: ResultadoFila[] } | null;
+    const creadas = respuesta?.creadas ?? rows.length;
+    const rechazadas = respuesta?.rechazadas ?? 0;
+
+    if (Array.isArray(respuesta?.resultados)) {
+      // fila-por-fila (019): el textarea/tabla quedan SOLO con los rechazados, listos
+      // para corregir (booking abierto, número mal tipeado) y reintentar de una.
+      setUltimoResultado(respuesta.resultados);
+      const pendientes = respuesta.resultados
+        .filter((r) => r.estado === "rechazado")
+        .map((r) => ({ numero: r.numero, error: null, reforzado: reforzadoOverrides[r.numero] ?? true }) satisfies Row);
+      setRows(pendientes);
+      setPasteText(pendientes.map((r) => r.numero).join("\n"));
+    } else {
+      // null-guard: deploy desfasado sin `resultados` → comportamiento anterior (todo éxito)
+      setUltimoResultado(null);
+      setRows([]);
+      setPasteText("");
+    }
     setReforzadoOverrides({});
     setAttempted(false);
-    onCreated();
+
+    toast(
+      rechazadas > 0
+        ? {
+            type: "info",
+            title: `${creadas} creada${creadas === 1 ? "" : "s"} · ${rechazadas} rechazada${rechazadas === 1 ? "" : "s"}`,
+            detail: "Revisá el detalle fila por fila debajo de la tabla.",
+          }
+        : {
+            type: "exito",
+            title: `${creadas} operación${creadas === 1 ? "" : "es"} creada${creadas === 1 ? "" : "s"}`,
+            detail: confirmaIngreso
+              ? "Ingreso a planta confirmado en la misma tanda."
+              : "Quedan pendientes de ingreso a planta.",
+          },
+    );
+    if (creadas > 0) onCreated();
   };
 
   const cols: Column<Row>[] = [
@@ -440,6 +482,41 @@ export function TandaForm({
         <span style={{ fontSize: 11.5, color: "var(--color-text-faint)", marginTop: -8 }}>
           Cada contenedor nace directamente <strong>en planta</strong> (sin pasar por pendientes de ingreso).
         </span>
+      )}
+
+      {/* ---- resultado fila-por-fila del último envío (019) ---- */}
+      {ultimoResultado && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <SectionLabel>
+            <i className="ti ti-list-check" aria-hidden />
+            Resultado del último envío
+          </SectionLabel>
+          {ultimoResultado.map((r) => (
+            <div
+              key={r.numero}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 12,
+                padding: "6px 10px",
+                borderRadius: "var(--radius-input)",
+                background: r.estado === "aceptado" ? "var(--color-green-tint)" : "var(--color-red-tint)",
+                border: `1px solid ${r.estado === "aceptado" ? "var(--color-green-line)" : "var(--color-red-line)"}`,
+              }}
+            >
+              <i
+                className={`ti ${r.estado === "aceptado" ? "ti-circle-check" : "ti-x"}`}
+                aria-hidden
+                style={{ color: r.estado === "aceptado" ? "var(--color-status-green)" : "var(--color-status-red)" }}
+              />
+              <ContainerNumber value={r.numero} />
+              <span style={{ color: "var(--color-text-secondary)" }}>
+                {r.estado === "aceptado" ? "operación creada" : (r.motivo_texto ?? "rechazado")}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ---- errores de validación agregada + envío ---- */}
