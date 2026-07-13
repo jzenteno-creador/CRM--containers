@@ -20,7 +20,9 @@ y NUNCA escribe directo sobre tablas de plata.
   desde /ingreso pasa por `crm_crear_deposito`, pero el CRUD de Admin inserta/actualiza
   directo, mismo patrón que navieras/plantas), `configuracion` (operativa, no toca
   costo), `incidencias` + `incidencia_fotos` (alta de M7; deuda conocida BE-03: no
-  atómico, candidato a RPC futura).
+  atómico, candidato a RPC futura), `ayuda_contenido` (contenido de ayuda/tooltips;
+  editor de Admin §15.4, sancionado en el brief M4 B3-B; los números del copy se
+  interpolan vía `crm_ayuda_valores`, nunca se escriben a mano).
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
 
