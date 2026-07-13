@@ -1,0 +1,873 @@
+{
+  "_meta": {
+    "fuente": "DETENTION HISTORIAL DE CONTENEDORES AÑO-DE AGOSTO 2025-2026.xlsx · hoja DETENTION DE AGOSTO 2025 A 2026",
+    "generado": "2026-07-12 · M4 Bloque 1 · seed 42 reproducible",
+    "regla_validada": "estadia = (devolucion - retiro) + 1 [dia del retiro = dia 1] · 2804/2804 filas",
+    "modelo_costos": "bruto = max(0, estadia - dias_libres) * tarifa · absorbido = min(waiver_dias, exceso) * tarifa · neto = bruto - absorbido",
+    "nota_waivers": "categoria waiver-total = las filas reales del Excel con demora>0 y costo 0 (la naviera absorbio); waiver_dias sembrado = demora completa",
+    "nota_navieras": "el harness siembra navieras/tarifas PROPIAS de test con los valores historicos de cada caso (no toca las semillas reales); nombres del Excel difieren del maestro v2",
+    "advertencia": "VALIDA MOTOR<->EXCEL, no MOTOR<->NAVIERA — ver deuda abierta en el handoff"
+  },
+  "casos": [
+    {
+      "caso_id": "muestra-MRSU5124675",
+      "categoria": "muestra",
+      "fila_excel": 2622,
+      "contenedor": "MRSU5124675",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-13",
+      "fecha_devolucion": "2026-05-28",
+      "estadia_esperada": 77,
+      "exceso_esperado": 63,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 2205.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 2205.0,
+      "costo_excel": 2205.0
+    },
+    {
+      "caso_id": "muestra-MRKU5866521",
+      "categoria": "muestra",
+      "fila_excel": 458,
+      "contenedor": "MRKU5866521",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-09-12",
+      "fecha_devolucion": "2025-09-18",
+      "estadia_esperada": 7,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-GESU6232970",
+      "categoria": "muestra",
+      "fila_excel": 104,
+      "contenedor": "GESU6232970",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-08-11",
+      "fecha_devolucion": "2025-08-15",
+      "estadia_esperada": 5,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-BEAU5196172",
+      "categoria": "muestra",
+      "fila_excel": 1128,
+      "contenedor": "BEAU5196172",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-10-28",
+      "fecha_devolucion": "2025-11-19",
+      "estadia_esperada": 23,
+      "exceso_esperado": 9,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 315.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 315.0,
+      "costo_excel": 315.0
+    },
+    {
+      "caso_id": "muestra-TCKU6510846",
+      "categoria": "muestra",
+      "fila_excel": 1005,
+      "contenedor": "TCKU6510846",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-10-08",
+      "fecha_devolucion": "2025-10-30",
+      "estadia_esperada": 23,
+      "exceso_esperado": 9,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 315.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 315.0,
+      "costo_excel": 315.0
+    },
+    {
+      "caso_id": "muestra-ECMU7537257",
+      "categoria": "muestra",
+      "fila_excel": 916,
+      "contenedor": "ECMU7537257",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-10-15",
+      "fecha_devolucion": "2025-10-23",
+      "estadia_esperada": 9,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-CMAU4929056",
+      "categoria": "muestra",
+      "fila_excel": 573,
+      "contenedor": "CMAU4929056",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-09-26",
+      "fecha_devolucion": "2025-09-29",
+      "estadia_esperada": 4,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRKU3430842",
+      "categoria": "muestra",
+      "fila_excel": 421,
+      "contenedor": "MRKU3430842",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-09-05",
+      "fecha_devolucion": "2025-09-16",
+      "estadia_esperada": 12,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRKU3937246",
+      "categoria": "muestra",
+      "fila_excel": 2774,
+      "contenedor": "MRKU3937246",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-06-06",
+      "fecha_devolucion": "2026-06-23",
+      "estadia_esperada": 18,
+      "exceso_esperado": 4,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 140.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 140.0,
+      "costo_excel": 140.0
+    },
+    {
+      "caso_id": "muestra-SUDU8603930",
+      "categoria": "muestra",
+      "fila_excel": 2236,
+      "contenedor": "SUDU8603930",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-06",
+      "fecha_devolucion": "2026-03-31",
+      "estadia_esperada": 26,
+      "exceso_esperado": 12,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 420.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 420.0,
+      "costo_excel": 420.0
+    },
+    {
+      "caso_id": "muestra-TGHU6603478",
+      "categoria": "muestra",
+      "fila_excel": 358,
+      "contenedor": "TGHU6603478",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-09-05",
+      "fecha_devolucion": "2025-09-09",
+      "estadia_esperada": 5,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-TRHU4536691",
+      "categoria": "muestra",
+      "fila_excel": 2421,
+      "contenedor": "TRHU4536691",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-30",
+      "fecha_devolucion": "2026-04-28",
+      "estadia_esperada": 30,
+      "exceso_esperado": 16,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 560.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 560.0,
+      "costo_excel": 560.0
+    },
+    {
+      "caso_id": "muestra-SUDU6658868",
+      "categoria": "muestra",
+      "fila_excel": 1731,
+      "contenedor": "SUDU6658868",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-12-20",
+      "fecha_devolucion": "2026-01-29",
+      "estadia_esperada": 41,
+      "exceso_esperado": 27,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 945.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 945.0,
+      "costo_excel": 945.0
+    },
+    {
+      "caso_id": "muestra-CMAU5732971",
+      "categoria": "muestra",
+      "fila_excel": 132,
+      "contenedor": "CMAU5732971",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-08-13",
+      "fecha_devolucion": "2025-08-19",
+      "estadia_esperada": 7,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-CAAU6779854",
+      "categoria": "muestra",
+      "fila_excel": 124,
+      "contenedor": "CAAU6779854",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-07-28",
+      "fecha_devolucion": "2025-08-18",
+      "estadia_esperada": 22,
+      "exceso_esperado": 8,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 280.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 280.0,
+      "costo_excel": 280.0
+    },
+    {
+      "caso_id": "muestra-CMAU7973849",
+      "categoria": "muestra",
+      "fila_excel": 385,
+      "contenedor": "CMAU7973849",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-09-04",
+      "fecha_devolucion": "2025-09-12",
+      "estadia_esperada": 9,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-TCKU6946146",
+      "categoria": "muestra",
+      "fila_excel": 897,
+      "contenedor": "TCKU6946146",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-10-17",
+      "fecha_devolucion": "2025-10-21",
+      "estadia_esperada": 5,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRSU3479697",
+      "categoria": "muestra",
+      "fila_excel": 954,
+      "contenedor": "MRSU3479697",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-10-17",
+      "fecha_devolucion": "2025-10-28",
+      "estadia_esperada": 12,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRSU3637832",
+      "categoria": "muestra",
+      "fila_excel": 2072,
+      "contenedor": "MRSU3637832",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-02-19",
+      "fecha_devolucion": "2026-03-17",
+      "estadia_esperada": 27,
+      "exceso_esperado": 13,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 455.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 455.0,
+      "costo_excel": 455.0
+    },
+    {
+      "caso_id": "muestra-MRSU4231621",
+      "categoria": "muestra",
+      "fila_excel": 2468,
+      "contenedor": "MRSU4231621",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-31",
+      "fecha_devolucion": "2026-05-05",
+      "estadia_esperada": 36,
+      "exceso_esperado": 22,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 770.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 770.0,
+      "costo_excel": 770.0
+    },
+    {
+      "caso_id": "muestra-CMAU3598842",
+      "categoria": "muestra",
+      "fila_excel": 110,
+      "contenedor": "CMAU3598842",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-08-12",
+      "fecha_devolucion": "2025-08-18",
+      "estadia_esperada": 7,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRSU6805647",
+      "categoria": "muestra",
+      "fila_excel": 2301,
+      "contenedor": "MRSU6805647",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-25",
+      "fecha_devolucion": "2026-04-07",
+      "estadia_esperada": 14,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-TGCU5439042",
+      "categoria": "muestra",
+      "fila_excel": 816,
+      "contenedor": "TGCU5439042",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-10-13",
+      "fecha_devolucion": "2025-10-15",
+      "estadia_esperada": 3,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-TCKU7405104",
+      "categoria": "muestra",
+      "fila_excel": 2664,
+      "contenedor": "TCKU7405104",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-05-27",
+      "fecha_devolucion": "2026-06-02",
+      "estadia_esperada": 7,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRSU8128925",
+      "categoria": "muestra",
+      "fila_excel": 2235,
+      "contenedor": "MRSU8128925",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-06",
+      "fecha_devolucion": "2026-03-31",
+      "estadia_esperada": 26,
+      "exceso_esperado": 12,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 420.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 420.0,
+      "costo_excel": 420.0
+    },
+    {
+      "caso_id": "muestra-TRHU6325337",
+      "categoria": "muestra",
+      "fila_excel": 1721,
+      "contenedor": "TRHU6325337",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-01-02",
+      "fecha_devolucion": "2026-01-29",
+      "estadia_esperada": 28,
+      "exceso_esperado": 14,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 490.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 490.0,
+      "costo_excel": 490.0
+    },
+    {
+      "caso_id": "muestra-FANU3683334",
+      "categoria": "muestra",
+      "fila_excel": 904,
+      "contenedor": "FANU3683334",
+      "naviera_excel": "HAPAG",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-09-25",
+      "fecha_devolucion": "2025-10-23",
+      "estadia_esperada": 29,
+      "exceso_esperado": 15,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 375.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 375.0,
+      "costo_excel": 375.0
+    },
+    {
+      "caso_id": "muestra-HASU4804430",
+      "categoria": "muestra",
+      "fila_excel": 1842,
+      "contenedor": "HASU4804430",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-02-09",
+      "fecha_devolucion": "2026-02-11",
+      "estadia_esperada": 3,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "muestra-MRKU3884906",
+      "categoria": "muestra",
+      "fila_excel": 2416,
+      "contenedor": "MRKU3884906",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-03-30",
+      "fecha_devolucion": "2026-04-28",
+      "estadia_esperada": 30,
+      "exceso_esperado": 16,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 560.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 560.0,
+      "costo_excel": 560.0
+    },
+    {
+      "caso_id": "muestra-WFHU5199152",
+      "categoria": "muestra",
+      "fila_excel": 1141,
+      "contenedor": "WFHU5199152",
+      "naviera_excel": "HAPAG",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-11-13",
+      "fecha_devolucion": "2025-11-20",
+      "estadia_esperada": 8,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-TCNU3517944",
+      "categoria": "waiver-total",
+      "fila_excel": 38,
+      "contenedor": "TCNU3517944",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-07-07",
+      "fecha_devolucion": "2025-08-06",
+      "estadia_esperada": 31,
+      "exceso_esperado": 13,
+      "waiver_dias": 13,
+      "costo_bruto_esperado": 325.0,
+      "costo_absorbido_esperado": 325.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-HASU4904147",
+      "categoria": "waiver-total",
+      "fila_excel": 401,
+      "contenedor": "HASU4904147",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-05-12",
+      "fecha_devolucion": "2025-09-11",
+      "estadia_esperada": 123,
+      "exceso_esperado": 109,
+      "waiver_dias": 109,
+      "costo_bruto_esperado": 3815.0,
+      "costo_absorbido_esperado": 3815.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-SUDU6729339",
+      "categoria": "waiver-total",
+      "fila_excel": 402,
+      "contenedor": "SUDU6729339",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-06-04",
+      "fecha_devolucion": "2025-09-11",
+      "estadia_esperada": 100,
+      "exceso_esperado": 86,
+      "waiver_dias": 86,
+      "costo_bruto_esperado": 3010.0,
+      "costo_absorbido_esperado": 3010.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-MSKU8696734",
+      "categoria": "waiver-total",
+      "fila_excel": 403,
+      "contenedor": "MSKU8696734",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-07-10",
+      "fecha_devolucion": "2025-09-11",
+      "estadia_esperada": 64,
+      "exceso_esperado": 50,
+      "waiver_dias": 50,
+      "costo_bruto_esperado": 1750.0,
+      "costo_absorbido_esperado": 1750.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-TCLU5892700",
+      "categoria": "waiver-total",
+      "fila_excel": 731,
+      "contenedor": "TCLU5892700",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-07-21",
+      "fecha_devolucion": "2025-10-08",
+      "estadia_esperada": 80,
+      "exceso_esperado": 66,
+      "waiver_dias": 66,
+      "costo_bruto_esperado": 2310.0,
+      "costo_absorbido_esperado": 2310.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-INKU6197809",
+      "categoria": "waiver-total",
+      "fila_excel": 1053,
+      "contenedor": "INKU6197809",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-09-12",
+      "fecha_devolucion": "2025-11-06",
+      "estadia_esperada": 56,
+      "exceso_esperado": 42,
+      "waiver_dias": 42,
+      "costo_bruto_esperado": 1470.0,
+      "costo_absorbido_esperado": 1470.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "waiver-total-TCLU8377540",
+      "categoria": "waiver-total",
+      "fila_excel": 1054,
+      "contenedor": "TCLU8377540",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-09-17",
+      "fecha_devolucion": "2025-11-06",
+      "estadia_esperada": 51,
+      "exceso_esperado": 37,
+      "waiver_dias": 37,
+      "costo_bruto_esperado": 1295.0,
+      "costo_absorbido_esperado": 1295.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "vto-extendido-costo-estandar-ZIMU1022976",
+      "categoria": "vto-extendido-costo-estandar",
+      "fila_excel": 1642,
+      "contenedor": "ZIMU1022976",
+      "naviera_excel": "ZIM",
+      "tarifa_historica": {
+        "dias_libres": 7,
+        "tarifa_usd_dia": 42.0
+      },
+      "fecha_retiro": "2026-01-06",
+      "fecha_devolucion": "2026-01-09",
+      "estadia_esperada": 4,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "vto-extendido-costo-estandar-TGHU5252722",
+      "categoria": "vto-extendido-costo-estandar",
+      "fila_excel": 1643,
+      "contenedor": "TGHU5252722",
+      "naviera_excel": "ZIM",
+      "tarifa_historica": {
+        "dias_libres": 7,
+        "tarifa_usd_dia": 84.0
+      },
+      "fecha_retiro": "2026-01-06",
+      "fecha_devolucion": "2026-01-09",
+      "estadia_esperada": 4,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "vto-extendido-costo-estandar-SUDU8973236",
+      "categoria": "vto-extendido-costo-estandar",
+      "fila_excel": 2765,
+      "contenedor": "SUDU8973236",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2026-06-03",
+      "fecha_devolucion": "2026-06-23",
+      "estadia_esperada": 21,
+      "exceso_esperado": 7,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 245.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 245.0,
+      "costo_excel": 245.0
+    },
+    {
+      "caso_id": "borde-TLLU4335170",
+      "categoria": "borde",
+      "fila_excel": 127,
+      "contenedor": "TLLU4335170",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-08-18",
+      "fecha_devolucion": "2025-08-18",
+      "estadia_esperada": 1,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    },
+    {
+      "caso_id": "borde-CAAU9968342",
+      "categoria": "borde",
+      "fila_excel": 2401,
+      "contenedor": "CAAU9968342",
+      "naviera_excel": "MAERSK",
+      "tarifa_historica": {
+        "dias_libres": 14,
+        "tarifa_usd_dia": 35.0
+      },
+      "fecha_retiro": "2025-12-11",
+      "fecha_devolucion": "2026-04-24",
+      "estadia_esperada": 135,
+      "exceso_esperado": 121,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 4235.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 4235.0,
+      "costo_excel": 4235.0
+    },
+    {
+      "caso_id": "dentro-freetime-CMAU9154911",
+      "categoria": "dentro-freetime",
+      "fila_excel": 2,
+      "contenedor": "CMAU9154911",
+      "naviera_excel": "CMA/MERCOSUL LINE",
+      "tarifa_historica": {
+        "dias_libres": 18,
+        "tarifa_usd_dia": 25.0
+      },
+      "fecha_retiro": "2025-07-30",
+      "fecha_devolucion": "2025-08-04",
+      "estadia_esperada": 6,
+      "exceso_esperado": 0,
+      "waiver_dias": null,
+      "costo_bruto_esperado": 0.0,
+      "costo_absorbido_esperado": 0.0,
+      "costo_neto_esperado": 0.0,
+      "costo_excel": 0.0
+    }
+  ]
+}
