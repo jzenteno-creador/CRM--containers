@@ -25,15 +25,17 @@ import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { Timeline, type TimelineItem, type TimelineStatus } from "@/components/fd/timeline";
-import { EVENTO_LABELS, TIPO_CIERRE_LABELS, TIPO_INCIDENCIA_LABELS, fmtFecha, fmtFechaHora, fmtHora } from "@/lib/format";
+import { EVENTO_LABELS, TIPO_CIERRE_LABELS, TIPO_INCIDENCIA_LABELS, fmtFecha, fmtFechaHora, fmtHora, fmtUSD } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { EstadoOperacionBadge } from "../estado-operacion";
 import {
   AnularOperacionModal,
   ConfirmarLlegadaModal,
+  CorregirDatoModal,
   MoverPlantasModal,
   REFORZADO_OPTIONS,
+  RegistrarWaiverModal,
   ValidarReforzadoModal,
   type PlantaOption,
 } from "./acciones";
@@ -65,8 +67,24 @@ type OperacionFicha = {
   tipo_cierre: string | null;
   fecha_devolucion: string | null;
   anulada_motivo: string | null;
+  waiver_dias: number | null;
+  waiver_motivo: string | null;
+  waiver_referencia: string | null;
   planta_actual_id: string | null;
   planta_actual: { nombre: string } | null;
+};
+
+// Números de detention de la operación mostrada — vienen CALCULADOS por las views 019
+// (vista_alertas si el ciclo está abierto, vista_kpi_costos_cerradas si está cerrado).
+// CERO recálculo client-side: acá solo se formatea lo que devuelve la DB.
+type CostosFicha = {
+  costo_bruto: number | null;
+  costo_absorbido: number | null;
+  costo_neto: number | null;
+  waiver_dias: number | null;
+  dias_libres: number | null;
+  tarifa_usd_dia: number | null;
+  sin_cargo: boolean;
 };
 
 type MovimientoFicha = {
@@ -99,6 +117,8 @@ type FichaData = {
   movimientos: MovimientoFicha[];
   plantas: PlantaOption[];
   usuarios: UsuarioPublico[];
+  /** null = sin fila en la view (op anulada, cerrada sin devolución, o fetch tolerante que falló). */
+  costos: CostosFicha | null;
 };
 
 /* ---------- display helpers (solo formato — cero negocio) ---------- */
@@ -177,6 +197,14 @@ function detalleTexto(
       return null;
     case "anulacion":
       return s("motivo") ? `motivo: ${s("motivo")}` : null;
+    case "waiver": {
+      const d = detalle.dias;
+      return joinParts([
+        typeof d === "number" ? `${d} día${d === 1 ? "" : "s"} condonado${d === 1 ? "" : "s"}` : null,
+        s("motivo") ? `motivo: ${s("motivo")}` : null,
+        s("referencia") ? `ref: ${s("referencia")}` : null,
+      ]);
+    }
     case "incidencia": {
       // humanizar el enum con el mapa único de M7 (mismo label que el badge de /incidencias)
       const tipoInc = s("tipo");
@@ -269,6 +297,8 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
   const [llegadaOpen, setLlegadaOpen] = useState(false);
   const [anularOpen, setAnularOpen] = useState(false);
   const [reforzadoOpen, setReforzadoOpen] = useState(false);
+  const [waiverOpen, setWaiverOpen] = useState(false);
+  const [corregirOpen, setCorregirOpen] = useState(false);
 
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
@@ -291,7 +321,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       supabase
         .from("operaciones")
         .select(
-          "id, estado, fecha_retiro, retiro_de, booking_retiro, orden, shp, booking_asignado, buque, destino, fecha_egreso_planta, tipo_cierre, fecha_devolucion, anulada_motivo, planta_actual_id, planta_actual:plantas(nombre)",
+          "id, estado, fecha_retiro, retiro_de, booking_retiro, orden, shp, booking_asignado, buque, destino, fecha_egreso_planta, tipo_cierre, fecha_devolucion, anulada_motivo, waiver_dias, waiver_motivo, waiver_referencia, planta_actual_id, planta_actual:plantas(nombre)",
         )
         .eq("contenedor_id", id)
         .order("fecha_retiro", { ascending: false }),
@@ -364,6 +394,23 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       movimientos = mv.data as unknown as MovimientoFicha[];
     }
 
+    // costos de la operación mostrada (la misma que elige el render: abierta, o la
+    // última). Abierta → vista_alertas; cerrada → vista_kpi_costos_cerradas (solo tiene
+    // filas con fecha_devolucion). Fetch TOLERANTE: los números son informativos — si
+    // falla o no hay fila, la ficha sale igual sin el bloque de costos.
+    let costos: CostosFicha | null = null;
+    const targetOp = openOp ?? operaciones[0] ?? null;
+    if (targetOp && targetOp.estado !== "anulada") {
+      const vista = targetOp.estado === "cerrado" ? "vista_kpi_costos_cerradas" : "vista_alertas";
+      const co = await supabase
+        .from(vista)
+        .select("costo_bruto, costo_absorbido, costo_neto, waiver_dias, dias_libres, tarifa_usd_dia, sin_cargo")
+        .eq("operacion_id", targetOp.id)
+        .maybeSingle();
+      if (rid !== reqIdRef.current) return;
+      if (!co.error && co.data) costos = co.data as CostosFicha;
+    }
+
     setLoadError(null);
     setNotFound(false);
     setData({
@@ -373,6 +420,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       movimientos,
       plantas: pl.data as PlantaOption[],
       usuarios: us.data as UsuarioPublico[],
+      costos,
     });
   }, [id]);
 
@@ -638,14 +686,27 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
                   Motivo de la anulación: <strong>{shownOp.anulada_motivo}</strong>
                 </FormAlert>
               )}
-              {openOp && (
+              {(openOp || (canSupAdmin && shownOp.estado !== "anulada")) && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {openOp.estado === "en_planta" && (
+                  {openOp?.estado === "en_planta" && (
                     <Button variant="ghost" icon="ti-transfer" onClick={() => setMoverOpen(true)}>
                       Mover entre plantas
                     </Button>
                   )}
-                  {canSupAdmin && (
+                  {/* waiver (019): sup+ sobre cualquier operación no anulada — la naviera
+                      suele condonar días DESPUÉS del cierre, por eso no se gatea a abierta */}
+                  {canSupAdmin && shownOp.estado !== "anulada" && (
+                    <Button variant="ghost" icon="ti-discount" onClick={() => setWaiverOpen(true)}>
+                      Registrar waiver
+                    </Button>
+                  )}
+                  {/* corrección F-02 (020): sup+, SOLO operación cerrada */}
+                  {canSupAdmin && shownOp.estado === "cerrado" && (
+                    <Button variant="ghost" icon="ti-pencil-check" onClick={() => setCorregirOpen(true)}>
+                      Corregir dato
+                    </Button>
+                  )}
+                  {openOp && canSupAdmin && (
                     <Button variant="danger" icon="ti-ban" onClick={() => setAnularOpen(true)}>
                       Anular operación
                     </Button>
@@ -659,6 +720,55 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
                 Este contenedor todavía no tiene ningún ciclo. Los ciclos se crean desde la solapa{" "}
                 <strong>Ingreso</strong> con una tanda de retiro; al cargar una, el ciclo aparece acá con su historial.
               </EmptyState>
+            </div>
+          )}
+
+          {/* ---------- detention: bruto / absorbido / neto (views 019 — cero cálculo acá) ---------- */}
+          {shownOp && shownOp.estado !== "anulada" && data.costos && (
+            <div style={{ ...CARD, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div
+                className="fd-label"
+                style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--color-text-secondary)" }}
+              >
+                <i className="ti ti-cash" aria-hidden />
+                Detention {shownOp.estado === "cerrado" ? "realizado" : "proyectado"}
+                {data.costos.sin_cargo && <Badge tone="neutro">sin cargo</Badge>}
+              </div>
+              {data.costos.costo_bruto == null && !data.costos.sin_cargo ? (
+                <span style={{ fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
+                  Sin tarifa vigente para la fecha de retiro (o la naviera no cobra detention en origen) — no hay costo
+                  calculado.
+                </span>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 12 }}>
+                  <DataItem label="costo bruto">
+                    <span className="mono">{fmtUSD(data.costos.costo_bruto)}</span>
+                  </DataItem>
+                  <DataItem label="absorbido (waiver / sin cargo)">
+                    <span className="mono">{fmtUSD(data.costos.costo_absorbido)}</span>
+                  </DataItem>
+                  <DataItem label="costo neto">
+                    <span className="mono" style={{ fontWeight: 700 }}>
+                      {fmtUSD(data.costos.costo_neto)}
+                    </span>
+                  </DataItem>
+                </div>
+              )}
+              {shownOp.waiver_dias != null && (
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.55 }}>
+                  <i className="ti ti-discount" aria-hidden style={{ color: "var(--color-status-green)" }} /> Waiver de{" "}
+                  <strong>
+                    {shownOp.waiver_dias} día{shownOp.waiver_dias === 1 ? "" : "s"}
+                  </strong>
+                  {shownOp.waiver_motivo ? <> — {shownOp.waiver_motivo}</> : null}
+                  {shownOp.waiver_referencia ? (
+                    <>
+                      {" "}
+                      · ref: <span className="mono">{shownOp.waiver_referencia}</span>
+                    </>
+                  ) : null}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -712,6 +822,29 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
           onClose={() => setAnularOpen(false)}
           onDone={() => {
             setAnularOpen(false);
+            void load();
+          }}
+        />
+      )}
+      {waiverOpen && shownOp && (
+        <RegistrarWaiverModal
+          operacionId={shownOp.id}
+          numeroContenedor={cont.numero_contenedor}
+          waiverActual={shownOp.waiver_dias}
+          onClose={() => setWaiverOpen(false)}
+          onDone={() => {
+            setWaiverOpen(false);
+            void load();
+          }}
+        />
+      )}
+      {corregirOpen && shownOp && (
+        <CorregirDatoModal
+          operacionId={shownOp.id}
+          numeroContenedor={cont.numero_contenedor}
+          onClose={() => setCorregirOpen(false)}
+          onDone={() => {
+            setCorregirOpen(false);
             void load();
           }}
         />

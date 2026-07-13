@@ -127,6 +127,7 @@ export const EVENTO_LABELS: Record<string, string> = {
   incidencia: "Incidencia",
   reapertura: "Reapertura (reversa de cierre)",
   correccion: "Corrección de datos",
+  waiver: "Waiver de detention",
 };
 
 // Tipos de incidencia (espeja el CHECK de crm.incidencias.tipo — M7). Fuente ÚNICA de
