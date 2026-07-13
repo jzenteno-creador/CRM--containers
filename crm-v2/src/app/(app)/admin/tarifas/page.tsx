@@ -38,6 +38,20 @@ type TarifaRow = {
   tarifa_usd_dia: number;
   vigente_desde: string;
   vigente_hasta: string | null;
+  convencion_conteo: string;
+  cobra_detention_origen: boolean;
+};
+
+// espeja el CHECK de la RPC (p_convencion ∈ {retiro_dia_1, retiro_dia_0}) — labels humanos
+const CONVENCION_LABELS: Record<string, string> = {
+  retiro_dia_1: "El día del retiro cuenta como día 1",
+  retiro_dia_0: "El conteo arranca al día siguiente",
+};
+
+// versión corta para celdas de tabla (la larga rompe el layout de columnas)
+const CONVENCION_SHORT: Record<string, string> = {
+  retiro_dia_1: "retiro = día 1",
+  retiro_dia_0: "día siguiente",
 };
 
 // espeja el CHECK de la RPC (regimen ∈ {vacios, cargados, sin_uso})
@@ -103,6 +117,22 @@ function VigenteCard({ tarifa }: { tarifa: TarifaRow }) {
             <Badge tone="neutro">no aplica</Badge>
           )}
         </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <span className="fd-label">conteo del freetime</span>
+          <span style={{ fontSize: 12.5, color: "var(--color-text-primary)" }}>
+            {CONVENCION_LABELS[tarifa.convencion_conteo] ?? tarifa.convencion_conteo}
+          </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <span className="fd-label">detention en origen</span>
+          {tarifa.cobra_detention_origen ? (
+            <Badge tone="verde" icon="ti-cash">
+              cobra
+            </Badge>
+          ) : (
+            <Badge tone="neutro">no cobra</Badge>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -130,6 +160,10 @@ function NuevaVersionModal({
   const [tarifa, setTarifa] = useState(initial ? String(initial.tarifa_usd_dia) : "");
   const [tipo, setTipo] = useState(initial?.tipo ?? "Detention");
   const [peligrosa, setPeligrosa] = useState(initial?.aplica_carga_peligrosa ?? false);
+  // convención + cobra (019): prefill desde la vigente (la RPC hereda con NULL, pero
+  // acá se manda SIEMPRE explícito — lo que el admin ve en el modal es lo que queda).
+  const [convencion, setConvencion] = useState(initial?.convencion_conteo ?? "retiro_dia_1");
+  const [cobra, setCobra] = useState(initial?.cobra_detention_origen ?? true);
   const [desde, setDesde] = useState(hoyAR());
   const [attempted, setAttempted] = useState(false);
   const [sending, setSending] = useState(false);
@@ -147,6 +181,8 @@ function NuevaVersionModal({
       setTarifa(String(vig.tarifa_usd_dia));
       setTipo(vig.tipo);
       setPeligrosa(vig.aplica_carga_peligrosa);
+      setConvencion(vig.convencion_conteo);
+      setCobra(vig.cobra_detention_origen);
     }
   };
 
@@ -189,6 +225,8 @@ function NuevaVersionModal({
       p_tarifa: tarifaNum,
       p_desde: desde,
       p_regimen: regimen,
+      p_convencion: convencion,
+      p_cobra: cobra,
     });
     setSending(false);
     if (error) {
@@ -288,6 +326,34 @@ function NuevaVersionModal({
         />
 
         <Field
+          label="conteo del freetime"
+          htmlFor="tarifa-convencion"
+          hint="cómo cuenta esta naviera el primer día — cambia los días transcurridos de todas las operaciones que tomen esta versión"
+        >
+          <Select id="tarifa-convencion" value={convencion} onChange={(e) => setConvencion(e.target.value)}>
+            {Object.entries(CONVENCION_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Toggle
+          id="tarifa-cobra"
+          checked={cobra}
+          onChange={setCobra}
+          label={
+            <span>
+              cobra detention en origen
+              <span style={{ display: "block", fontSize: 11, color: "var(--color-text-faint)" }}>
+                apagalo si esta versión no factura detention en Argentina (semáforo neutro, sin costo proyectado)
+              </span>
+            </span>
+          }
+        />
+
+        <Field
           label="vigente desde"
           htmlFor="tarifa-desde"
           error={desdeError}
@@ -369,7 +435,9 @@ export default function TarifasPage() {
     }
     const { data, error } = await getSupabase()
       .from("freetime_origin")
-      .select("id, regimen, dias_libres, aplica_carga_peligrosa, tipo, tarifa_usd_dia, vigente_desde, vigente_hasta")
+      .select(
+        "id, regimen, dias_libres, aplica_carga_peligrosa, tipo, tarifa_usd_dia, vigente_desde, vigente_hasta, convencion_conteo, cobra_detention_origen",
+      )
       .eq("naviera_id", navieraId)
       .order("vigente_desde", { ascending: false });
     if (selectedRef.current !== navieraId) return; // respuesta vieja: se descartó la selección
@@ -468,6 +536,29 @@ export default function TarifasPage() {
           <span style={{ color: "var(--color-text-faint)" }}>—</span>
         ),
       sortValue: (r) => (r.aplica_carga_peligrosa ? 0 : 1),
+      hideOnMobile: true,
+    },
+    {
+      key: "conteo",
+      header: "conteo",
+      render: (r) => (
+        <span title={CONVENCION_LABELS[r.convencion_conteo] ?? r.convencion_conteo}>
+          {CONVENCION_SHORT[r.convencion_conteo] ?? r.convencion_conteo}
+        </span>
+      ),
+      sortValue: (r) => r.convencion_conteo,
+      hideOnMobile: true,
+    },
+    {
+      key: "cobra",
+      header: "detention",
+      render: (r) =>
+        r.cobra_detention_origen ? (
+          <Badge tone="verde">cobra</Badge>
+        ) : (
+          <Badge tone="neutro">no cobra</Badge>
+        ),
+      sortValue: (r) => (r.cobra_detention_origen ? 0 : 1),
       hideOnMobile: true,
     },
   ];
