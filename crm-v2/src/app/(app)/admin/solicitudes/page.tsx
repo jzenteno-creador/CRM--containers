@@ -37,7 +37,7 @@ type UsuarioRow = {
   fecha_aprobacion: string | null;
 };
 
-type Planta = { id: string; nombre: string; codigo: string | null };
+type Planta = { id: string; nombre: string; codigo: string | null; activa: boolean };
 
 const ESTADO_TONE: Record<EstadoCuenta, BadgeTone> = {
   pendiente_aprobacion: "amarillo",
@@ -298,7 +298,7 @@ export default function SolicitudesPage() {
         .from("usuarios")
         .select("id, email, nombre, rol, planta_asignada_id, estado_cuenta, rechazo_motivo, created_at, fecha_aprobacion")
         .order("created_at", { ascending: true }),
-      supabase.from("plantas").select("id, nombre, codigo").order("nombre"),
+      supabase.from("plantas").select("id, nombre, codigo, activa").order("nombre"),
       supabase.from("configuracion").select("valor").eq("clave", "dominios_sugeridos").maybeSingle(),
     ]);
     if (u.error || p.error) {
@@ -333,7 +333,12 @@ export default function SolicitudesPage() {
   }, [isAdmin, load]);
 
   const loading = rows === null && !loadError;
+  // el lookup de nombre usa TODAS las plantas (incluidas inactivas: un usuario ya
+  // aprobado con una planta que después se dio de baja debe seguir mostrando su
+  // nombre); el picker de aprobación filtra activa=true — no se ofrece una planta
+  // dada de baja para una asignación NUEVA.
   const plantaNameById = useMemo(() => new Map(plantas.map((p) => [p.id, p.nombre])), [plantas]);
+  const plantasActivas = useMemo(() => plantas.filter((p) => p.activa), [plantas]);
   const pendientes = useMemo(() => (rows ?? []).filter((r) => r.estado_cuenta === "pendiente_aprobacion"), [rows]);
   const resueltos = useMemo(() => (rows ?? []).filter((r) => r.estado_cuenta !== "pendiente_aprobacion"), [rows]);
 
@@ -576,7 +581,7 @@ export default function SolicitudesPage() {
       {approveTarget && (
         <AprobarModal
           target={approveTarget}
-          plantas={plantas}
+          plantas={plantasActivas}
           domainWarning={isDomainOk(approveTarget.email) ? null : domainWarningText(approveTarget.email)}
           onClose={() => setApproveTarget(null)}
           onDone={() => {

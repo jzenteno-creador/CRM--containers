@@ -73,7 +73,9 @@ export default function IngresoPage() {
     const supabase = getSupabase();
     const [nv, pl] = await Promise.all([
       supabase.from("navieras").select("id, nombre").order("nombre"),
-      supabase.from("plantas").select("id, nombre, codigo").order("nombre"),
+      // activa=true: una planta dada de baja (Admin → Plantas) deja de ofrecerse para
+      // tandas nuevas, sin afectar las operaciones que ya la tienen como destino.
+      supabase.from("plantas").select("id, nombre, codigo").eq("activa", true).order("nombre"),
     ]);
     if (nv.error || pl.error) {
       setMaestros(null);

@@ -62,7 +62,7 @@ export default function AdminHubPage() {
           Días libres y USD/día por naviera, con historial versionado.
         </QuickLink>
         <QuickLink href="/admin/plantas" icon="ti-building-factory-2" title="Plantas">
-          Listado de plantas operativas (solo lectura).
+          Alta, edición y baja lógica de plantas operativas.
         </QuickLink>
         <QuickLink href="/admin/configuracion" icon="ti-settings" title="Configuración">
           Umbral del semáforo amarillo de freetime.
