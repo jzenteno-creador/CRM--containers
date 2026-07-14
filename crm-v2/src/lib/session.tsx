@@ -114,6 +114,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setStatus("signedOut");
         return;
       }
+      if (event === "PASSWORD_RECOVERY") {
+        // B8.1 (M5): el link de recovery generado desde el Dashboard redirige al Site URL
+        // raíz y la sesión temporal entraba como login normal — el usuario quedaba adentro
+        // sin cambiar la clave (bug del handoff 2026-07-13). Se fuerza SIEMPRE el form de
+        // cambio; replace() para no dejar la ruta intermedia en el historial. Los tokens del
+        // hash ya fueron consumidos por el SDK: la sesión temporal sobrevive a la navegación.
+        setStatus("signedIn");
+        userIdRef.current = nextSession.user.id;
+        if (window.location.pathname !== "/auth/actualizar-password") {
+          window.location.replace("/auth/actualizar-password");
+        }
+        return;
+      }
       setStatus("signedIn");
       const changedUser = userIdRef.current !== nextSession.user.id;
       userIdRef.current = nextSession.user.id;
