@@ -22,7 +22,11 @@ y NUNCA escribe directo sobre tablas de plata.
   costo), `incidencias` + `incidencia_fotos` (alta de M7; deuda conocida BE-03: no
   atómico, candidato a RPC futura), `ayuda_contenido` (contenido de ayuda/tooltips;
   editor de Admin §15.4, sancionado en el brief M4 B3-B; los números del copy se
-  interpolan vía `crm_ayuda_valores`, nunca se escriben a mano).
+  interpolan vía `crm_ayuda_valores`, nunca se escriben a mano), `paises` (maestro sin
+  impacto en costo — región LATAM/EMEAI/APAC/NAM, migración 026 M5, decisión explícita
+  de John 2026-07-14 D4 del plan M5; mismo patrón INSERT/UPDATE admin que
+  navieras/plantas/depositos — `freetime_origin`/`freetime_destino` siguen SIN policies
+  de escritura, exclusivo vía `crm_nueva_version_freetime`/`_destino`).
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
 - **Enforcement a nivel DB (fix P1 de CP3, migración 025 — APLICADA en prod 2026-07-13,
