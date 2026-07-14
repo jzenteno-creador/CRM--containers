@@ -135,6 +135,103 @@ function BookingsPorRolearSection() {
   );
 }
 
+// Fila de crm.vista_stock_prefijos_restringidos (B6, migración 031) — solo las columnas
+// que usa la sección "Prefijos restringidos en stock" de abajo.
+type PrefijoStockRow = {
+  operacion_id: string;
+  numero_contenedor: string;
+  prefijo: string;
+  naviera: string | null;
+  planta: string | null;
+  fecha_retiro: string;
+};
+
+/**
+ * Sección secundaria (B6): el barrido retroactivo del "Dow container screen" — stock ya
+ * cargado cuyo prefijo pasó a restringido DESPUÉS del retiro, sin que nadie lo note entre
+ * las actualizaciones de julio y diciembre. Mismo patrón tolerante que
+ * BookingsPorRolearSection: si la view falla o no hay filas, la sección se oculta entera
+ * (sin ruido) — el detalle completo con alta/edición del catálogo vive en /prefijos.
+ */
+function PrefijosRestringidosSection() {
+  const router = useRouter();
+  const [rows, setRows] = useState<PrefijoStockRow[] | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const { data, error } = await getSupabase()
+        .from("vista_stock_prefijos_restringidos")
+        .select("operacion_id, numero_contenedor, prefijo, naviera, planta, fecha_retiro")
+        .order("fecha_retiro", { ascending: false })
+        .limit(50);
+      setRows(error ? null : (data as unknown as PrefijoStockRow[]));
+      setLoaded(true);
+    })();
+  }, []);
+
+  if (!loaded) {
+    return (
+      <div className="fd-panel" style={{ marginBottom: 16 }} aria-busy="true" aria-label="cargando prefijos restringidos en stock">
+        <SkeletonBlock width={220} height={13} />
+        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+          <SkeletonBlock height={30} delay={80} />
+          <SkeletonBlock height={30} delay={160} />
+        </div>
+      </div>
+    );
+  }
+  if (!rows || rows.length === 0) return null;
+
+  const prefijoCols: Column<PrefijoStockRow>[] = [
+    {
+      key: "contenedor",
+      header: "contenedor",
+      render: (r) => <ContainerNumber value={r.numero_contenedor} />,
+      sortValue: (r) => r.numero_contenedor,
+    },
+    {
+      key: "prefijo",
+      header: "prefijo",
+      render: (r) => <span className="mono">{r.prefijo}</span>,
+      sortValue: (r) => r.prefijo,
+      width: "80px",
+    },
+    { key: "naviera", header: "naviera", render: (r) => r.naviera ?? "—", sortValue: (r) => r.naviera },
+    { key: "planta", header: "planta", render: (r) => r.planta ?? "—", sortValue: (r) => r.planta, hideOnMobile: true },
+    {
+      key: "fecha_retiro",
+      header: "fecha retiro",
+      numeric: true,
+      render: (r) => fmtFecha(r.fecha_retiro),
+      sortValue: (r) => r.fecha_retiro,
+      hideOnMobile: true,
+    },
+  ];
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+        <span className="fd-display fd-display-sm" style={{ color: "var(--color-text-secondary)" }}>
+          <i className="ti ti-forbid-2" aria-hidden style={{ marginRight: 6, color: "var(--color-accent-500)" }} />
+          Prefijos restringidos en stock
+        </span>
+        <span className="mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+          {rows.length}
+        </span>
+      </div>
+      <DataTable
+        columns={prefijoCols}
+        rows={rows}
+        rowKey={(r) => r.operacion_id}
+        semaforo={() => "rojo"}
+        maxHeight={220}
+        onRowClick={() => router.push("/prefijos")}
+      />
+    </div>
+  );
+}
+
 // Contrato real de crm.vista_alertas (pg_get_viewdef 2026-07-12, plan-m6):
 // nombres TEXT ya resueltos (planta_actual/naviera), números ya calculados en DB.
 type AlertaRow = {
@@ -422,6 +519,10 @@ function AlertasPageContent() {
       {/* Bookings por rolear (M5 B3) — se oculta entera si no hay ninguno o si la
           vista falla (widget secundario, tolerante — ver JSDoc del componente). */}
       <BookingsPorRolearSection />
+
+      {/* Prefijos restringidos en stock (B6) — mismo patrón tolerante, DESPUÉS de
+          bookings (ver JSDoc del componente). */}
+      <PrefijosRestringidosSection />
 
       {/* filtro de presentación por semáforo + leyenda del umbral (si está disponible) */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>

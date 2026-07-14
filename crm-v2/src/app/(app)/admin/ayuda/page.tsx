@@ -45,6 +45,11 @@ type AyudaRow = {
 // se aplique, elegir "Bookings" acá y guardar falla con un error de constraint de Postgres
 // (no crashea, pero no guarda) — se deja igual el valor en la lista para no bloquear el
 // editor una vez que la migración esté puesta.
+// 'prefijos' (B6, migración 031) YA está en el CHECK — la 031 lo agregó junto con
+// 'bookings' en el mismo ALTER (ver 031 §5). El seed de contenido vive en
+// supabase/seeds-ayuda/m5b6_prefijos.sql, pendiente de aplicar por la próxima migración —
+// hasta entonces el editor funciona (INSERT/UPDATE pasan el CHECK), solo no hay copy
+// publicado todavía.
 const SECCIONES: { value: string; label: string }[] = [
   { value: "dashboard", label: "Inicio (dashboard)" },
   { value: "ingreso", label: "Ingreso" },
@@ -52,6 +57,7 @@ const SECCIONES: { value: string; label: string }[] = [
   { value: "bookings", label: "Bookings" },
   { value: "contenedores", label: "Contenedores" },
   { value: "alertas", label: "Alertas" },
+  { value: "prefijos", label: "Prefijos" },
   { value: "incidencias", label: "Incidencias" },
   { value: "admin", label: "Admin" },
   { value: "faq", label: "FAQ" },

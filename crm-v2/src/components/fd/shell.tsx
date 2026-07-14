@@ -31,6 +31,7 @@ const TABS = [
   { href: "/bookings", label: "Bookings", icon: "ti-anchor" },
   { href: "/contenedores", label: "Contenedores", icon: "ti-list-details" },
   { href: "/alertas", label: "Alertas", icon: "ti-bell" },
+  { href: "/prefijos", label: "Prefijos", icon: "ti-forbid-2" },
   { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
   { href: "/reportes", label: "Reportes", icon: "ti-report-analytics" },
   { href: "/admin", label: "Admin", icon: "ti-settings" },
@@ -54,6 +55,7 @@ const TAB_SECCION: Record<string, string> = {
   "/bookings": "bookings",
   "/contenedores": "contenedores",
   "/alertas": "alertas",
+  "/prefijos": "prefijos",
   "/incidencias": "incidencias",
   "/admin": "admin",
 };

@@ -12,6 +12,13 @@
 //   retiro_de_id (uuid) en el header. Si la migración 023 todavía no está desplegada
 //   (depositosDisponible=false, ver page.tsx) degrada al Input de texto libre de antes,
 //   mandando retiro_de texto — la RPC es retrocompatible con ambos casos.
+// - Prefijos restringidos (B6, migración 031 — "Dow container screen"): se lee el
+//   catálogo ACTIVO al montar (SELECT libre, sin escritura) y cada fila cuyo prefijo
+//   matchea se marca con warning ámbar (NO bloquea envío — el contenedor puede ya estar
+//   retirado). Al enviar con ≥1 restringido se pide confirmación explícita ANTES de
+//   llamar la RPC; la RPC registra la incidencia automática SIEMPRE, confirme o no el
+//   front — el warning acá es UX, no enforcement. Si el fetch del catálogo falla, se
+//   degrada en silencio (sin warning previo), la RPC igual detecta y registra.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerNumber } from "@/components/container-number";
@@ -24,7 +31,7 @@ import { ErrorState } from "@/components/fd/error-state";
 import { Checkbox, DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
 import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
-import { Modal } from "@/components/fd/modal";
+import { ConfirmDialog, Modal } from "@/components/fd/modal";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
 import { useToast } from "@/components/fd/toast";
@@ -180,6 +187,9 @@ type ResultadoFila = {
   operacion_id: string | null;
   motivo: string | null;
   motivo_texto: string | null;
+  /** 031: true si el prefijo estaba restringido al momento del envío (deploy desfasado
+   * sin esta clave → undefined, tratado como false). */
+  prefijo_restringido?: boolean;
 };
 
 const CARD: React.CSSProperties = {
@@ -333,6 +343,36 @@ export function TandaForm({
   // overrides de reforzado tocados por el usuario (numero → valor); default es true.
   const [reforzadoOverrides, setReforzadoOverrides] = useState<Record<string, boolean>>({});
 
+  // Prefijos restringidos (B6, 031): prefijo → nota, SOLO activos. Fetch una vez al
+  // montar; degrada en silencio si falla (sin warning previo — la RPC igual detecta y
+  // registra la incidencia automática). Vacío = sin warnings, nunca bloquea el formulario.
+  const [prefijosRestringidos, setPrefijosRestringidos] = useState<Map<string, string | null>>(new Map());
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const { data, error } = await getSupabase()
+          .from("prefijos_restringidos")
+          .select("prefijo, nota")
+          .eq("activo", true);
+        if (!alive || error || !data) return;
+        setPrefijosRestringidos(new Map((data as { prefijo: string; nota: string | null }[]).map((r) => [r.prefijo, r.nota])));
+      } catch {
+        // degradado silencioso: sin conexión / RLS / catálogo no desplegado aún
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const notaPrefijoRestringido = (numero: string): string | null | undefined =>
+    prefijosRestringidos.get(numero.slice(0, 4));
+  const esPrefijoRestringido = (numero: string): boolean => prefijosRestringidos.has(numero.slice(0, 4));
+
+  // Confirmación explícita (B6): filas pendientes de confirmar antes de disparar la RPC.
+  // null = sin diálogo abierto.
+  const [confirmPrefijos, setConfirmPrefijos] = useState<Row[] | null>(null);
+
   const [attempted, setAttempted] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -391,13 +431,26 @@ export function TandaForm({
   const submitDisabled =
     sending || rows.length === 0 || invalidCount > 0 || operadorSinPlanta;
 
-  const submit = async () => {
+  // Filas de la tanda actual con prefijo restringido (B6) — recalculado en cada render
+  // a partir de `rows` + el catálogo activo cacheado en `prefijosRestringidos`.
+  const restringidosEnTanda = rows.filter((r) => esPrefijoRestringido(r.numero));
+
+  /** Gate del botón: valida, y si hay restringidos pide confirmación ANTES de enviar. */
+  const attemptSubmit = () => {
     if (sending) return;
     setAttempted(true);
     setSubmitError(null);
     setUltimoResultado(null); // el resultado del envío anterior se reemplaza por el nuevo
     if (!headerComplete || rows.length === 0 || invalidCount > 0 || operadorSinPlanta) return;
+    if (restringidosEnTanda.length > 0) {
+      setConfirmPrefijos(restringidosEnTanda);
+      return;
+    }
+    void doSubmit();
+  };
 
+  const doSubmit = async () => {
+    if (sending) return;
     setSending(true);
     const p = {
       header: {
@@ -425,14 +478,21 @@ export function TandaForm({
 
     const { data, error } = await getSupabase().rpc("crm_crear_tanda_retiro", { p });
     setSending(false);
+    setConfirmPrefijos(null); // cierra el diálogo de confirmación (si estaba abierto), en éxito o error
     if (error) {
       // literal: "Contenedores con ciclo abierto: X, Y" es información útil para el operativo
       setSubmitError(error.message);
       return;
     }
-    const respuesta = data as { creadas?: number; rechazadas?: number; resultados?: ResultadoFila[] } | null;
+    const respuesta = data as {
+      creadas?: number;
+      rechazadas?: number;
+      resultados?: ResultadoFila[];
+      prefijos_restringidos_detectados?: number;
+    } | null;
     const creadas = respuesta?.creadas ?? rows.length;
     const rechazadas = respuesta?.rechazadas ?? 0;
+    const prefijosDetectados = respuesta?.prefijos_restringidos_detectados ?? 0;
 
     if (Array.isArray(respuesta?.resultados)) {
       // fila-por-fila (019): el textarea/tabla quedan SOLO con los rechazados, listos
@@ -452,19 +512,27 @@ export function TandaForm({
     setReforzadoOverrides({});
     setAttempted(false);
 
+    // B6: mención explícita si la RPC detectó prefijos restringidos en el envío, sin
+    // importar si el operador confirmó el diálogo o no lo vio (fetch de catálogo caído) —
+    // la RPC registra siempre.
+    const detalleExtra =
+      prefijosDetectados > 0
+        ? ` · ${prefijosDetectados} con prefijo restringido — incidencia automática registrada.`
+        : "";
+
     toast(
       rechazadas > 0
         ? {
             type: "info",
             title: `${creadas} creada${creadas === 1 ? "" : "s"} · ${rechazadas} rechazada${rechazadas === 1 ? "" : "s"}`,
-            detail: "Revisá el detalle fila por fila debajo de la tabla.",
+            detail: `Revisá el detalle fila por fila debajo de la tabla.${detalleExtra}`,
           }
         : {
             type: "exito",
             title: `${creadas} operación${creadas === 1 ? "" : "es"} creada${creadas === 1 ? "" : "s"}`,
-            detail: confirmaIngreso
-              ? "Ingreso a planta confirmado en la misma tanda."
-              : "Quedan pendientes de ingreso a planta.",
+            detail: `${
+              confirmaIngreso ? "Ingreso a planta confirmado en la misma tanda." : "Quedan pendientes de ingreso a planta."
+            }${detalleExtra}`,
           },
     );
     if (creadas > 0) onCreated();
@@ -508,8 +576,19 @@ export function TandaForm({
     },
   ];
 
-  const rowValidation = (r: Row): RowValidation | null =>
-    r.error ? { type: "error", message: `${r.numero}: ${r.error}` } : null;
+  // El error de dígito verificador (rojo) BLOQUEA el envío y tiene prioridad visual; el
+  // warning de prefijo restringido (ámbar, B6) NO bloquea — la fila sigue siendo enviable.
+  const rowValidation = (r: Row): RowValidation | null => {
+    if (r.error) return { type: "error", message: `${r.numero}: ${r.error}` };
+    if (esPrefijoRestringido(r.numero)) {
+      const nota = notaPrefijoRestringido(r.numero);
+      return {
+        type: "warning",
+        message: `Prefijo restringido por Dow container screen${nota ? ` — ${nota}` : ""}. El contenedor puede enviarse igual: se va a registrar una incidencia automática.`,
+      };
+    }
+    return null;
+  };
 
   if (maestrosError) {
     return (
@@ -835,6 +914,21 @@ export function TandaForm({
               <span style={{ color: "var(--color-text-secondary)" }}>
                 {r.estado === "aceptado" ? "operación creada" : (r.motivo_texto ?? "rechazado")}
               </span>
+              {r.prefijo_restringido && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    marginLeft: "auto",
+                    color: "var(--color-status-amber)",
+                    fontSize: 11,
+                  }}
+                >
+                  <i className="ti ti-alert-triangle" aria-hidden />
+                  prefijo restringido
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -853,13 +947,14 @@ export function TandaForm({
         <span style={{ fontSize: 11.5, color: "var(--color-text-muted)" }} className="mono">
           {rows.length} contenedor{rows.length === 1 ? "" : "es"}
           {invalidCount > 0 ? ` · ${invalidCount} con error` : ""}
+          {restringidosEnTanda.length > 0 ? ` · ${restringidosEnTanda.length} con prefijo restringido` : ""}
         </span>
         <Button
           variant="primary"
           icon="ti-truck-loading"
           loading={sending}
           disabled={submitDisabled}
-          onClick={() => void submit()}
+          onClick={attemptSubmit}
         >
           Crear tanda de retiro
         </Button>
@@ -901,6 +996,42 @@ export function TandaForm({
             setModalBookingTexto(null);
             toast({ type: "exito", title: "Booking creado", detail: `«${textoCreado}» ya está disponible.` });
           }}
+        />
+      )}
+
+      {/* Confirmación explícita de prefijos restringidos (B6) — se abre desde attemptSubmit
+          ANTES de llamar la RPC. NUNCA bloqueo duro: "Continuar" sigue siendo primary, no
+          danger — el contenedor puede ya estar retirado y frenarlo acá no ayuda. */}
+      {confirmPrefijos && (
+        <ConfirmDialog
+          open
+          loading={sending}
+          title="Contenedores con prefijo restringido"
+          confirmLabel="Continuar de todos modos"
+          cancelLabel="Revisar"
+          message={
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <FormAlert tone="warning">
+                {confirmPrefijos.length} contenedor{confirmPrefijos.length === 1 ? "" : "es"} tiene
+                {confirmPrefijos.length === 1 ? "" : "n"} prefijo restringido por el container screen de Dow. Si
+                continuás, se registra una incidencia automática por cada uno.
+              </FormAlert>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 180, overflowY: "auto" }}>
+                {confirmPrefijos.map((r) => {
+                  const nota = notaPrefijoRestringido(r.numero);
+                  return (
+                    <div key={r.numero} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ContainerNumber value={r.numero} />
+                      {nota && <span style={{ fontSize: 11, color: "var(--color-text-faint)" }}>{nota}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)" }}>¿Continuar?</p>
+            </div>
+          }
+          onConfirm={() => void doSubmit()}
+          onCancel={() => setConfirmPrefijos(null)}
         />
       )}
     </div>
