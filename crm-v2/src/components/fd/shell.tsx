@@ -59,6 +59,7 @@ const TAB_SECCION: Record<string, string> = {
   "/alertas": "alertas",
   "/prefijos": "prefijos",
   "/incidencias": "incidencias",
+  "/reportes": "reportes",
   "/admin": "admin",
 };
 

@@ -30,7 +30,18 @@ import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { Timeline, type TimelineItem, type TimelineStatus } from "@/components/fd/timeline";
-import { EVENTO_LABELS, TIPO_CIERRE_LABELS, TIPO_INCIDENCIA_LABELS, fmtFecha, fmtFechaHora, fmtHora, fmtUSD } from "@/lib/format";
+import {
+  ESTADO_RECLAMO_LABELS,
+  EVENTO_LABELS,
+  RESULTADO_RECLAMO_LABELS,
+  TIPO_CIERRE_LABELS,
+  TIPO_INCIDENCIA_LABELS,
+  fmtFecha,
+  fmtFechaHora,
+  fmtHora,
+  fmtUSD,
+  fmtUSDTarifa,
+} from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { EstadoCargaBadge, EstadoOperacionBadge } from "../estado-operacion";
@@ -275,7 +286,42 @@ function detalleTexto(
       ]);
     }
     case "incidencia": {
-      // humanizar el enum con el mapa único de M7 (mismo label que el badge de /incidencias)
+      // M5-030: dos shapes distintas bajo el mismo tipo_evento — se distinguen por
+      // detalle.accion (solo presente en los eventos que emite crm_actualizar_reclamo).
+      // El alta (crm_crear_incidencia, 030/032) nunca trae `accion` → cae al shape de abajo.
+      if (s("accion") === "reclamo") {
+        const cambiosRaw = detalle.cambios;
+        const cambios: Record<string, { de: unknown; a: unknown }> =
+          cambiosRaw && typeof cambiosRaw === "object" && !Array.isArray(cambiosRaw)
+            ? (cambiosRaw as Record<string, { de: unknown; a: unknown }>)
+            : {};
+        const piezas = Object.entries(cambios).map(([campo, cambio]) => {
+          if (campo === "estado_reclamo") {
+            const de = typeof cambio.de === "string" ? (ESTADO_RECLAMO_LABELS[cambio.de] ?? cambio.de) : "—";
+            const a = typeof cambio.a === "string" ? (ESTADO_RECLAMO_LABELS[cambio.a] ?? cambio.a) : "—";
+            return `estado ${de} → ${a}`;
+          }
+          if (campo === "resultado") {
+            const de = typeof cambio.de === "string" ? (RESULTADO_RECLAMO_LABELS[cambio.de] ?? cambio.de) : "—";
+            const a = typeof cambio.a === "string" ? (RESULTADO_RECLAMO_LABELS[cambio.a] ?? cambio.a) : "—";
+            return `resultado ${de} → ${a}`;
+          }
+          if (campo === "monto_usd") {
+            const de = typeof cambio.de === "number" ? fmtUSDTarifa(cambio.de) : "—";
+            const a = typeof cambio.a === "number" ? fmtUSDTarifa(cambio.a) : "—";
+            return `monto ${de} → ${a}`;
+          }
+          if (campo === "responsable") {
+            return `responsable ${fmtDetalleValor(cambio.de)} → ${fmtDetalleValor(cambio.a)}`;
+          }
+          // campo no reconocido (extensión futura de crm_actualizar_reclamo) → genérico
+          return `${campo} ${fmtDetalleValor(cambio.de)} → ${fmtDetalleValor(cambio.a)}`;
+        });
+        const resumen = piezas.length > 0 ? `Reclamo: ${piezas.join(" · ")}` : "Reclamo";
+        return joinParts([resumen, s("nota") ? `nota: ${s("nota")}` : null]);
+      }
+      // alta (crm_crear_incidencia, 030/032) — humanizar el enum con el mapa único de M7
+      // (mismo label que el badge de /incidencias)
       const tipoInc = s("tipo");
       return joinParts([tipoInc ? (TIPO_INCIDENCIA_LABELS[tipoInc] ?? tipoInc) : null, s("descripcion")]);
     }

@@ -9,6 +9,10 @@
 
 // Espejo del jsonb de crm.crm_ayuda_valores(uuid, text). Todos opcionales: sin naviera,
 // los valores por-naviera vienen null y sus *_frase ya traen el texto genérico.
+// Desde la 033 (M5): también expone el equivalente de DESTINO (freetime_destino,
+// navieras operativas ARG, hub null, vigente_hasta null) — ningún copy los usa todavía
+// (limitación reportada por B2-UI: los tooltips de /importacion quedaron genéricos),
+// quedan disponibles para cuando un copy de destino los necesite.
 export type AyudaValores = {
   umbral?: number | null;
   convencion?: string | null;
@@ -18,6 +22,11 @@ export type AyudaValores = {
   tarifa_usd_dia?: number | null;
   dias_libres_frase?: string | null;
   tarifa_frase?: string | null;
+  convencion_destino?: string | null;
+  dias_combined_destino?: number | null;
+  tarifa_destino_usd_dia?: number | null;
+  dias_combined_destino_frase?: string | null;
+  tarifa_destino_frase?: string | null;
 };
 
 // {{ key }} — letras/números/guion bajo; tolera espacios internos.

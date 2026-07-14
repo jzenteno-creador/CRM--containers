@@ -39,21 +39,11 @@ type AyudaRow = {
   publicado: boolean;
 };
 
-// CHECK de crm.ayuda_contenido.seccion (migración 002) — el alta solo puede usar estos.
-// ⚠️ 'bookings' (M5 B3) TODAVÍA NO está en ese CHECK — el ALTER que lo agrega vive en
-// supabase/seeds-ayuda/m5b3_bookings.sql (precondición documentada ahí mismo). Hasta que
-// se aplique, elegir "Bookings" acá y guardar falla con un error de constraint de Postgres
-// (no crashea, pero no guarda) — se deja igual el valor en la lista para no bloquear el
-// editor una vez que la migración esté puesta.
-// 'prefijos' (B6, migración 031) YA está en el CHECK — la 031 lo agregó junto con
-// 'bookings' en el mismo ALTER (ver 031 §5). El seed de contenido vive en
-// supabase/seeds-ayuda/m5b6_prefijos.sql, pendiente de aplicar por la próxima migración —
-// hasta entonces el editor funciona (INSERT/UPDATE pasan el CHECK), solo no hay copy
-// publicado todavía.
-// 'importacion' (M5 B2) TODAVÍA NO está en ese CHECK — mismo caso que 'bookings': el
-// ALTER que lo agrega vive en supabase/seeds-ayuda/m5b2_importacion.sql (precondición
-// documentada ahí mismo). Hasta que se aplique, elegir "Importación" acá y guardar falla
-// con un error de constraint de Postgres (no crashea, pero no guarda).
+// CHECK de crm.ayuda_contenido.seccion (migración 002, extendido por 031 con
+// 'bookings'/'prefijos' y por 033 con 'importacion'/'reportes') — el alta solo puede
+// usar estos. Las 4 secciones de M5 (bookings/prefijos/importacion/reportes) ya están
+// en el CHECK en vivo desde la 033 — el editor funciona para todas sin precondición
+// pendiente.
 const SECCIONES: { value: string; label: string }[] = [
   { value: "dashboard", label: "Inicio (dashboard)" },
   { value: "ingreso", label: "Ingreso" },
@@ -64,6 +54,7 @@ const SECCIONES: { value: string; label: string }[] = [
   { value: "alertas", label: "Alertas" },
   { value: "prefijos", label: "Prefijos" },
   { value: "incidencias", label: "Incidencias" },
+  { value: "reportes", label: "Reportes" },
   { value: "admin", label: "Admin" },
   { value: "faq", label: "FAQ" },
 ];

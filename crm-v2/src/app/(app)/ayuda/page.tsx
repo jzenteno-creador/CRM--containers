@@ -33,6 +33,7 @@ const SECTION_META: { seccion: string; label: string; icon: string }[] = [
   { seccion: "alertas", label: "Alertas", icon: "ti-bell" },
   { seccion: "prefijos", label: "Prefijos", icon: "ti-forbid-2" },
   { seccion: "incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
+  { seccion: "reportes", label: "Reportes", icon: "ti-report-analytics" },
   { seccion: "admin", label: "Admin", icon: "ti-settings" },
 ];
 
