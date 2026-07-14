@@ -36,6 +36,7 @@ import {
 } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { ESTADO_CARGA_LABELS, EstadoCargaBadge, EstadoOperacionBadge } from "../contenedores/estado-operacion";
+import { generarExcelOmar, type OmarResult } from "./omar-export";
 
 // ── contratos de datos ──────────────────────────────────────────────────────
 
@@ -117,6 +118,8 @@ const VIEW_NUM_COLS =
 
 // cap del fetch (patrón /contenedores, /alertas): si se toca, un badge lo avisa y se
 // refina con los filtros. La paginación del preview es client-side (DataTable).
+// omar-export.ts (B7) define su propio OMAR_FETCH_CAP con el mismo valor — no se importa
+// desde acá para no crear un ciclo page.tsx ↔ omar-export.ts.
 const FETCH_CAP = 1000;
 
 // lotes para el .in() de operacion_id contra las views: acota el largo de la URL (GET).
@@ -370,6 +373,12 @@ export default function ReportesPage() {
   const [exporting, setExporting] = useState(false);
   const reqIdRef = useRef(0);
 
+  // B7 — Excel formato Omar: acción independiente del export configurable de arriba.
+  // Fetch fresco propio (omar-export.ts), nunca reusa `rows` (que está filtrado).
+  const [omarBusy, setOmarBusy] = useState(false);
+  const [omarError, setOmarError] = useState<string | null>(null);
+  const [omarResult, setOmarResult] = useState<OmarResult | null>(null);
+
   // catálogos para los combobox de filtro — tolerante (si falla, el combo queda solo con "Todas")
   useEffect(() => {
     void (async () => {
@@ -541,6 +550,40 @@ export default function ReportesPage() {
     }
   };
 
+  // B7: doble-submit imposible (guard omarBusy) — mismo patrón que handleExport/exporting.
+  const handleGenerarOmar = async () => {
+    if (omarBusy) return;
+    setOmarBusy(true);
+    setOmarError(null);
+    try {
+      const res = await generarExcelOmar();
+      if (res.kind === "empty") {
+        setOmarResult(null);
+        toast({
+          type: "info",
+          title: "No hay operaciones abiertas",
+          detail: "El stock está en cero — no se generó ningún archivo.",
+        });
+        return;
+      }
+      setOmarResult(res);
+      const { general, vencidos, proximos, vacios } = res.counts;
+      toast({
+        type: "exito",
+        title: "Excel de Omar generado",
+        detail: `General: ${general} · Vencidos: ${vencidos} · Próx. a vencer: ${proximos} · Vacíos a vencer: ${vacios}${
+          res.capped ? ` · se tomaron las primeras ${FETCH_CAP} operaciones` : ""
+        }.`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error desconocido.";
+      setOmarError(msg);
+      toast({ type: "error", title: "No se pudo generar el Excel de Omar", detail: msg });
+    } finally {
+      setOmarBusy(false);
+    }
+  };
+
   const baseCols = COLS.filter((c) => c.group === "base");
   const viewCols = COLS.filter((c) => c.group === "view");
 
@@ -574,6 +617,65 @@ export default function ReportesPage() {
           </Button>
         }
       />
+
+      {/* ── B7: Excel formato Omar — acción fija, independiente de los filtros de abajo ── */}
+      <div className="fd-panel" style={{ marginBottom: 16 }}>
+        <div className="fd-panel-title">
+          <i className="ti ti-table" aria-hidden style={{ fontSize: 15 }} /> Reporte de stock (formato Omar)
+        </div>
+        <div className="fd-panel-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-text-muted)", lineHeight: 1.55, maxWidth: 640 }}>
+            Réplica exacta del Excel semanal de control de stock que arma Omar a mano los martes y jueves. Genera un
+            archivo con 4 hojas (General, Vencidos, Próximos a vencer, Vacíos a vencer) con TODO el stock de
+            operaciones abiertas del sistema — no usa los filtros de abajo, siempre trae el total.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <Button
+              variant="ghost"
+              icon="ti-table"
+              loading={omarBusy}
+              disabled={omarBusy}
+              onClick={() => void handleGenerarOmar()}
+            >
+              Excel formato Omar
+            </Button>
+            {omarResult && omarResult.kind === "ok" && (
+              <>
+                <Badge tone="neutro" mono icon="ti-list-details">
+                  General {omarResult.counts.general}
+                </Badge>
+                <Badge tone="rojo" mono icon="ti-alert-triangle">
+                  Vencidos {omarResult.counts.vencidos}
+                </Badge>
+                <Badge tone="amarillo" mono icon="ti-clock">
+                  Próx. a vencer {omarResult.counts.proximos}
+                </Badge>
+                <Badge tone="verde" mono icon="ti-box-off">
+                  Vacíos a vencer {omarResult.counts.vacios}
+                </Badge>
+                {omarResult.capped && (
+                  <Badge tone="amarillo" icon="ti-alert-triangle">
+                    se tomaron las primeras {FETCH_CAP} operaciones — hay más stock abierto del que entra en el cap
+                  </Badge>
+                )}
+              </>
+            )}
+          </div>
+          {omarError && (
+            <ErrorState
+              title="No se pudo generar el Excel de Omar"
+              detail={omarError}
+              onRetry={() => void handleGenerarOmar()}
+            />
+          )}
+          {!omarResult && !omarError && !omarBusy && (
+            <EmptyState icon="ti-table-off" title="Todavía no generaste este Excel">
+              Al hacer clic se arma el archivo con el stock completo de operaciones abiertas, en el mismo formato que
+              el Excel manual de Omar. Se genera bajo demanda — el envío automático queda para una próxima iteración.
+            </EmptyState>
+          )}
+        </div>
+      </div>
 
       {/* ── filtros ── */}
       <div className="fd-panel">
