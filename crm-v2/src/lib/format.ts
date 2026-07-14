@@ -133,10 +133,32 @@ export const EVENTO_LABELS: Record<string, string> = {
   waiver: "Waiver de detention",
 };
 
-// Tipos de incidencia (espeja el CHECK de crm.incidencias.tipo — M7). Fuente ÚNICA de
-// labels: la consumen el alta/historial de /incidencias y el timeline de la ficha.
+// Tipos de incidencia (espeja el CHECK de crm.incidencias.tipo — M7/B5, migración 030).
+// Fuente ÚNICA de labels: la consumen el alta/historial de /incidencias y el timeline de
+// la ficha. `no_reforzado` y `prefijo_restringido` los autogenera el sistema (nunca se
+// ofrecen en el alta manual — ver TIPO_INCIDENCIA_OPTIONS en incidencias/shared.tsx).
 export const TIPO_INCIDENCIA_LABELS: Record<string, string> = {
   averia_sufrida: "Avería sufrida",
   averia_recepcionada: "Avería recepcionada",
   otro: "Otro",
+  lavado_exigido: "Lavado exigido",
+  dano_refaccion: "Daño con refacción",
+  no_reforzado: "No reforzado (automático)",
+  prefijo_restringido: "Prefijo restringido (automático)",
+};
+
+// Ciclo del reclamo de una incidencia (B5, migración 030 — crm.incidencias.estado_reclamo).
+// sin_reclamo → abierta → reclamada → resuelta, sin saltos ni retrocesos (mutado solo por
+// crm_actualizar_reclamo).
+export const ESTADO_RECLAMO_LABELS: Record<string, string> = {
+  sin_reclamo: "sin reclamo",
+  abierta: "reclamo abierto",
+  reclamada: "reclamada",
+  resuelta: "resuelta",
+};
+
+// Resultado del reclamo — se fija SOLO al resolver (B5, migración 030).
+export const RESULTADO_RECLAMO_LABELS: Record<string, string> = {
+  recuperado: "recuperado",
+  no_recuperado: "no recuperado",
 };

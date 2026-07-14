@@ -1,52 +1,47 @@
 "use client";
 
-// Incidencias (M7 §6.3.9): alta con fotos + historial. Una pantalla, dos secciones
-// (patrón M3/M4): <AltaIncidenciaForm> arriba, historial abajo con búsqueda por
-// contenedor (debounce 300ms server-side), thumbnails y modal de foto grande.
+// Incidencias (B5, migración 030): alta con fotos + ciclo de reclamo (monto, responsable,
+// estado_reclamo). Una pantalla, dos secciones (patrón M3/M4): <AltaIncidenciaForm> arriba,
+// historial abajo con búsqueda por contenedor + filtros de tipo/estado del reclamo, y el
+// panel de gestión (<ReclamoModal>) al click en una fila.
 // - Fotos SIEMPRE por signed URLs del bucket privado crm-incidencias (1h) — cero URLs
 //   públicas de Storage (plan M7, regla dura 1). Firma en batch tras cada load.
 // - "por {nombre}" sale de usuarios_publicos (view §14) mapeada por usuario_id.
-// - CERO cálculo de negocio: el evento del timeline lo escribe el trigger de la DB.
+// - CERO cálculo de negocio: el evento del timeline lo escribe la RPC/el trigger de la DB.
+//   Los KPIs de arriba son una SUMA/CONTEO informativo de las filas YA TRAÍDAS y filtradas
+//   (rotulados "de lo filtrado") — no una agregación de negocio nueva.
 // Patrón de página del repo (espejo /contenedores): load() callback, anti-carrera por
 // reqId, refetch al recuperar foco, 4 estados en la tabla, paginación client-side.
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
 import { ContainerNumber } from "@/components/container-number";
 import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
-import { Field, Input } from "@/components/fd/fields";
+import { Field, Input, Select } from "@/components/fd/fields";
+import { KpiCard } from "@/components/fd/kpi-card";
 import { Modal } from "@/components/fd/modal";
 import { PageHeader } from "@/components/fd/page-header";
-import { SkeletonBlock } from "@/components/fd/skeleton-row";
-import { fmtFecha } from "@/lib/format";
+import { fmtFecha, fmtUSD } from "@/lib/format";
 import { normalizarNumero } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { AltaIncidenciaForm } from "./alta-form";
-import { BUCKET_INCIDENCIAS, TipoIncidenciaBadge } from "./shared";
+import { ReclamoModal, type IncidenciaDetalle } from "./reclamo-modal";
+import {
+  BUCKET_INCIDENCIAS,
+  ESTADO_RECLAMO_OPTIONS,
+  EstadoReclamoBadge,
+  FotoThumb,
+  TIPO_INCIDENCIA_OPTIONS_ALL,
+  TipoIncidenciaBadge,
+  type FotoUrl,
+} from "./shared";
 
-type FotoRow = { id: string; storage_path: string };
-
-type IncidenciaRow = {
-  id: string;
-  tipo: string;
-  descripcion: string | null;
-  fecha: string;
-  usuario_id: string | null;
-  operacion: {
-    id: string;
-    contenedor: { id: string; numero_contenedor: string } | null;
-    planta_actual: { nombre: string } | null;
-  } | null;
-  fotos: FotoRow[];
-};
-
-/** Resultado de firmar un path: url lista, o error para el placeholder tolerante. */
-type FotoUrl = { url: string | null; error: string | null };
+type IncidenciaRow = IncidenciaDetalle;
 
 // cap de fetch (el volumen esperado de incidencias es bajo; la búsqueda refina server-side)
 const FETCH_CAP = 200;
@@ -54,7 +49,18 @@ const FETCH_CAP = 200;
 // !inner en AMBOS niveles del embed: necesario para que el ilike sobre la columna
 // anidada (operacion.contenedor.numero_contenedor) filtre las filas raíz.
 const SELECT_HISTORIAL =
-  "id, tipo, descripcion, fecha, usuario_id, operacion:operaciones!inner(id, contenedor:contenedores!inner(id, numero_contenedor), planta_actual:plantas(nombre)), fotos:incidencia_fotos(id, storage_path)";
+  "id, tipo, descripcion, fecha, usuario_id, numero_orden, monto_usd, responsable, estado_reclamo, resultado, fecha_reclamo, fecha_resolucion, operacion:operaciones!inner(id, contenedor:contenedores!inner(id, numero_contenedor), planta_actual:plantas(nombre)), fotos:incidencia_fotos(id, storage_path)";
+
+// grilla compartida por los KPIs (mismo patrón que /inicio: min 210px por celda)
+const KPI_GRID: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+  border: "1px solid var(--color-border-subtle)",
+  borderRadius: "var(--radius-panel)",
+  overflow: "hidden",
+  background: "var(--color-surface-1)",
+  marginBottom: 20,
+};
 
 function SectionTitle({ title, count }: { title: string; count: number | null }) {
   return (
@@ -68,70 +74,6 @@ function SectionTitle({ title, count }: { title: string; count: number | null })
         </span>
       )}
     </div>
-  );
-}
-
-/* ---------- thumbnail de foto (skeleton mientras se firma / placeholder si falla) ---------- */
-
-function FotoThumb({
-  urlInfo,
-  nombre,
-  onOpen,
-}: {
-  /** undefined = la firma del batch todavía no llegó. */
-  urlInfo: FotoUrl | undefined;
-  nombre: string;
-  onOpen: (url: string) => void;
-}) {
-  if (urlInfo === undefined) {
-    return <SkeletonBlock width={30} height={30} style={{ borderRadius: 6, display: "inline-block" }} />;
-  }
-  if (urlInfo.url === null) {
-    return (
-      <span
-        title={`No se pudo cargar la foto: ${urlInfo.error ?? "enlace inválido"}`}
-        aria-label="foto no disponible"
-        style={{
-          width: 30,
-          height: 30,
-          display: "inline-grid",
-          placeItems: "center",
-          borderRadius: 6,
-          border: "1px solid var(--color-border-strong)",
-          background: "var(--color-surface-2)",
-          color: "var(--color-text-faint)",
-          fontSize: 14,
-        }}
-      >
-        <i className="ti ti-photo-off" aria-hidden />
-      </span>
-    );
-  }
-  const url = urlInfo.url;
-  return (
-    <button
-      type="button"
-      aria-label={`ver foto de ${nombre}`}
-      onClick={(e) => {
-        e.stopPropagation(); // la fila navega a la ficha; el thumb abre el modal
-        onOpen(url);
-      }}
-      style={{
-        width: 30,
-        height: 30,
-        minHeight: 0,
-        padding: 0,
-        borderRadius: 6,
-        border: "1px solid var(--color-border-strong)",
-        overflow: "hidden",
-        background: "var(--color-surface-2)",
-        cursor: "zoom-in",
-        flexShrink: 0,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element -- signed URLs efímeras de Storage, next/image no aplica */}
-      <img src={url} alt={`foto de ${nombre}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-    </button>
   );
 }
 
@@ -150,9 +92,14 @@ export default function IncidenciasPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [tipoFilter, setTipoFilter] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("");
 
-  // modal de foto grande (misma signed URL del thumbnail, vigente 1h)
+  // modal de foto grande (misma signed URL del thumbnail, vigente 1h) — usado desde la
+  // tabla; el panel de gestión abre las suyas en una pestaña nueva (evita anidar modales).
   const [verFoto, setVerFoto] = useState<{ url: string; numero: string; fecha: string } | null>(null);
+  // panel de gestión de reclamo: la fila completa (ya la tenemos cargada, sin refetch)
+  const [gestionRow, setGestionRow] = useState<IncidenciaRow | null>(null);
 
   // debounce 300ms (mismo patrón que /contenedores)
   useEffect(() => {
@@ -167,6 +114,8 @@ export default function IncidenciasPage() {
     const rid = ++reqIdRef.current;
     let q = getSupabase().from("incidencias").select(SELECT_HISTORIAL);
     if (searchActive) q = q.ilike("operacion.contenedor.numero_contenedor", `%${normalizarNumero(sane)}%`);
+    if (tipoFilter) q = q.eq("tipo", tipoFilter);
+    if (estadoFilter) q = q.eq("estado_reclamo", estadoFilter);
 
     const [inc, us] = await Promise.all([
       q.order("fecha", { ascending: false }).limit(FETCH_CAP),
@@ -186,6 +135,9 @@ export default function IncidenciasPage() {
     setLoadError(null);
     setUsuarios(userMap);
     setRows(nextRows);
+    // el panel de gestión (si estaba abierto) refleja los datos frescos, o se cierra si
+    // la fila salió del recorte de filtros vigente
+    setGestionRow((g) => (g ? (nextRows.find((r) => r.id === g.id) ?? null) : null));
 
     // firmar TODOS los paths en un batch (bucket privado → nunca URL pública)
     const paths = nextRows.flatMap((r) => r.fotos.map((f) => f.storage_path));
@@ -206,7 +158,7 @@ export default function IncidenciasPage() {
       });
     }
     setFotoUrls(map);
-  }, [sane, searchActive]);
+  }, [sane, searchActive, tipoFilter, estadoFilter]);
 
   useEffect(() => {
     void (async () => {
@@ -223,6 +175,15 @@ export default function IncidenciasPage() {
 
   const loading = rows === null && !loadError;
 
+  // KPIs "de lo filtrado": suma/conteo simple sobre las filas YA traídas — cero cálculo de
+  // negocio nuevo (el monto y el resultado ya viven en la fila; esto solo los agrega).
+  const totalMonto = useMemo(
+    () => (rows ?? []).reduce((acc, r) => acc + (r.monto_usd ?? 0), 0),
+    [rows],
+  );
+  const nRecuperado = useMemo(() => (rows ?? []).filter((r) => r.resultado === "recuperado").length, [rows]);
+  const nNoRecuperado = useMemo(() => (rows ?? []).filter((r) => r.resultado === "no_recuperado").length, [rows]);
+
   const cols: Column<IncidenciaRow>[] = [
     {
       key: "contenedor",
@@ -238,6 +199,39 @@ export default function IncidenciasPage() {
       sortValue: (r) => r.tipo,
     },
     {
+      key: "orden",
+      header: "orden",
+      render: (r) => (r.numero_orden ? <span className="mono">{r.numero_orden}</span> : "—"),
+      sortValue: (r) => r.numero_orden,
+    },
+    {
+      key: "estado_reclamo",
+      header: "reclamo",
+      render: (r) => <EstadoReclamoBadge estado={r.estado_reclamo} resultado={r.resultado} />,
+      sortValue: (r) => r.estado_reclamo,
+    },
+    {
+      key: "monto",
+      header: "monto",
+      numeric: true,
+      render: (r) => fmtUSD(r.monto_usd),
+      sortValue: (r) => r.monto_usd,
+    },
+    {
+      key: "fecha",
+      header: "fecha",
+      numeric: true,
+      render: (r) => fmtFecha(r.fecha),
+      sortValue: (r) => r.fecha,
+    },
+    {
+      key: "responsable",
+      header: "responsable",
+      render: (r) => r.responsable ?? "—",
+      sortValue: (r) => r.responsable,
+      hideOnMobile: true,
+    },
+    {
       key: "descripcion",
       header: "descripción",
       render: (r) => (
@@ -245,7 +239,7 @@ export default function IncidenciasPage() {
           title={r.descripcion ?? undefined}
           style={{
             display: "block",
-            maxWidth: 340,
+            maxWidth: 280,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -254,6 +248,7 @@ export default function IncidenciasPage() {
           {r.descripcion ?? "—"}
         </span>
       ),
+      hideOnMobile: true,
     },
     {
       key: "planta",
@@ -270,15 +265,9 @@ export default function IncidenciasPage() {
       hideOnMobile: true,
     },
     {
-      key: "fecha",
-      header: "fecha",
-      numeric: true,
-      render: (r) => fmtFecha(r.fecha),
-      sortValue: (r) => r.fecha,
-    },
-    {
       key: "fotos",
       header: "fotos",
+      hideOnMobile: true,
       render: (r) => {
         if (r.fotos.length === 0) return "—";
         const numero = r.operacion?.contenedor?.numero_contenedor ?? "contenedor";
@@ -299,6 +288,7 @@ export default function IncidenciasPage() {
   ];
 
   const count = rows?.length ?? null;
+  const filtersActive = tipoFilter !== "" || estadoFilter !== "";
 
   return (
     <>
@@ -327,22 +317,55 @@ export default function IncidenciasPage() {
 
       <SectionTitle title="Registrar incidencia" count={null} />
       {perfil ? (
-        <AltaIncidenciaForm perfil={perfil} onCreated={() => void load()} />
+        <AltaIncidenciaForm onCreated={() => void load()} />
       ) : (
         <DataTable columns={[]} rows={[]} rowKey={() => ""} loading skeletonRows={3} />
       )}
 
-      <SectionTitle title="Historial" count={count} />
+      <SectionTitle title="Historial y reclamos" count={count} />
 
-      <div style={{ maxWidth: 420, marginBottom: 12 }}>
-        <Field label="buscar por contenedor" htmlFor="inc-hist-search" hint="mínimo 2 caracteres">
-          <Input
-            id="inc-hist-search"
-            value={searchInput}
-            placeholder="MSKU1234565…"
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-        </Field>
+      {/* KPIs de lo filtrado — suma/conteo sobre las filas ya traídas, nunca cálculo nuevo */}
+      <div style={KPI_GRID}>
+        <KpiCard label="monto · de lo filtrado" value={Math.round(totalMonto)} prefix="USD " sub="suma de los montos cargados" />
+        <KpiCard label="recuperado · de lo filtrado" value={nRecuperado} sub="reclamos resueltos a favor" />
+        <KpiCard label="no recuperado · de lo filtrado" value={nNoRecuperado} amber={nNoRecuperado > 0} sub="reclamos resueltos en contra" />
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
+        <div style={{ maxWidth: 320, flex: "1 1 220px" }}>
+          <Field label="buscar por contenedor" htmlFor="inc-hist-search" hint="mínimo 2 caracteres">
+            <Input
+              id="inc-hist-search"
+              value={searchInput}
+              placeholder="MSKU1234565…"
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </Field>
+        </div>
+        <div style={{ maxWidth: 220, flex: "1 1 160px" }}>
+          <Field label="tipo" htmlFor="inc-hist-tipo">
+            <Select id="inc-hist-tipo" value={tipoFilter} onChange={(e) => setTipoFilter(e.target.value)}>
+              <option value="">— todos —</option>
+              {TIPO_INCIDENCIA_OPTIONS_ALL.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <div style={{ maxWidth: 220, flex: "1 1 160px" }}>
+          <Field label="estado del reclamo" htmlFor="inc-hist-estado">
+            <Select id="inc-hist-estado" value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)}>
+              <option value="">— todos —</option>
+              {ESTADO_RECLAMO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
       </div>
 
       <DataTable
@@ -354,31 +377,31 @@ export default function IncidenciasPage() {
         pageSize={10}
         maxHeight={560}
         defaultSort={{ key: "fecha", dir: "desc" }}
-        onRowClick={(r) => {
-          if (r.operacion?.contenedor) router.push(`/contenedores/${r.operacion.contenedor.id}`);
-        }}
+        onRowClick={(r) => setGestionRow(r)}
         errorState={
           loadError ? (
             <ErrorState title="No se pudo cargar el historial" detail={loadError} onRetry={() => void load()} />
           ) : undefined
         }
         emptyState={
-          searchActive ? (
-            <EmptyState icon="ti-search" title={`Sin incidencias para «${sane}»`}>
-              La búsqueda cubre el número de contenedor de la operación. Probá con otro término, o limpiá el campo para
-              ver el historial completo.
+          searchActive || filtersActive ? (
+            <EmptyState icon="ti-search" title="Sin incidencias para este filtro">
+              Probá con otro contenedor, o limpiá la búsqueda y los filtros de tipo/estado para ver el historial
+              completo.
             </EmptyState>
           ) : (
             <EmptyState icon="ti-alert-triangle" title="Todavía no hay incidencias">
-              Acá queda el registro de cada avería u otro evento sobre un contenedor: quién lo reportó, cuándo, con su
-              descripción y sus fotos. Se cargan desde el formulario de arriba buscando el contenedor de una operación
-              abierta; cada incidencia aparece también en el historial de la ficha del contenedor.
+              Acá queda el registro de cada avería, lavado exigido u otro evento sobre un contenedor: quién lo
+              reportó, cuándo, con su descripción y sus fotos. Se cargan desde el formulario de arriba buscando el
+              contenedor de una operación abierta. Cuando la incidencia implica un costo, hacé click en la fila para
+              gestionar el reclamo (monto, responsable y estado) — cada incidencia aparece también en el historial de
+              la ficha del contenedor.
             </EmptyState>
           )
         }
       />
 
-      {/* modal de foto grande — misma signed URL del thumbnail */}
+      {/* modal de foto grande — misma signed URL del thumbnail (solo desde la tabla) */}
       <Modal
         open={verFoto !== null}
         onClose={() => setVerFoto(null)}
@@ -400,6 +423,26 @@ export default function IncidenciasPage() {
           />
         )}
       </Modal>
+
+      {/* panel de gestión de reclamo */}
+      {gestionRow && perfil && (
+        <ReclamoModal
+          incidencia={gestionRow}
+          fotoUrls={fotoUrls}
+          usuarios={usuarios}
+          perfil={perfil}
+          onClose={() => setGestionRow(null)}
+          onUpdated={() => {
+            setGestionRow(null);
+            void load();
+          }}
+          onVerFicha={
+            gestionRow.operacion?.contenedor
+              ? () => router.push(`/contenedores/${gestionRow.operacion!.contenedor!.id}`)
+              : undefined
+          }
+        />
+      )}
     </>
   );
 }

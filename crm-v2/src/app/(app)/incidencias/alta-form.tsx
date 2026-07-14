@@ -1,17 +1,31 @@
 "use client";
 
-// Alta de incidencia (M7 §6.3.9): avería u otro evento sobre una operación abierta,
-// con fotos al bucket PRIVADO crm-incidencias. Orden de submit OBLIGADO por la policy
-// de Storage (el INSERT/SELECT de storage.objects exige que exista la fila de
-// crm.incidencias cuyo id es la carpeta del path):
-//   1. INSERT crm.incidencias → id            (usuario_id = perfil.usuario_id explícito)
-//   2. upload a `{incidencia_id}/{uuid}.{ext}` (secuencial, estado por foto)
-//   3. INSERT crm.incidencia_fotos por cada upload OK
-// Fotos que fallan NO revierten la incidencia (el evento del timeline ya existe —
-// decisión plan M7): quedan en estado error + FormAlert warning, y el form pasa a
-// modo reintento sobre el MISMO id (imposible duplicar la incidencia).
-// CERO cálculo de negocio; descripción REQUERIDA en UI aunque la columna sea nullable
-// (decisión plan M7 por calidad de dato). Timezone AR fija (-03:00).
+// Alta de incidencia (B5, migración 030 — RPC-only): avería, lavado exigido, daño con
+// refacción u otro evento sobre una operación abierta, con fotos al bucket PRIVADO
+// crm-incidencias y ciclo de reclamo (monto/responsable/estado) que se gestiona después
+// desde el panel de la fila (ver reclamo-modal.tsx).
+//
+// `crm.incidencias` es RPC-only desde la 030: el INSERT directo del form viejo ya no
+// funciona (42501 — authenticated perdió INSERT/UPDATE). Orden de submit:
+//   1. RPC crm_crear_incidencia(...) → incidencia_id (con p_fotos=[] si no hay fotos aún,
+//      o con los paths si YA están subidos — ver nota de Storage abajo).
+//   2. Fotos pendientes: upload secuencial a `{incidencia_id}/{uuid}.{ext}` (igual que
+//      antes) + UNA llamada a crm_agregar_fotos_incidencia con todos los paths subidos.
+//
+// ⚠️ Nota de diseño (verificado contra supabase/migrations/009_storage_incidencias.sql):
+// la policy de INSERT del bucket exige `exists (select 1 from crm.incidencias i where
+// i.id::text = (storage.foldername(name))[1])` — el primer folder del path DEBE ser el id
+// de una incidencia YA EXISTENTE. Por eso NO se puede subir la foto antes de crear la fila
+// (el intento daría 42501): la incidencia se crea primero (con p_fotos=[] si aún no hay
+// nada subido) y las fotos se adjuntan después vía crm_agregar_fotos_incidencia — mismo
+// patrón de "reintento sobre el mismo id" que ya tenía el form, ahora vía RPC en vez de
+// insert directo. Fotos que fallan NO revierten la incidencia (ya quedó registrada, que es
+// el dato que importa — D6 de John) y quedan en modo reintento.
+//
+// Obligatorios (D6): tipo, fecha, contenedor (vía operación), número de orden. El monto
+// NUNCA bloquea el alta — es estimativo y se corrige después desde el panel de reclamo.
+// CERO cálculo de negocio; descripción sigue REQUERIDA en UI (decisión plan M7, sin
+// cambios en B5). Timezone AR fija (-03:00).
 
 import { useEffect, useRef, useState } from "react";
 import { ContainerNumber } from "@/components/container-number";
@@ -25,7 +39,6 @@ import { useToast } from "@/components/fd/toast";
 import { hoyAR } from "@/lib/format";
 import { normalizarNumero } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
-import type { Perfil } from "@/lib/session";
 import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
 import { BUCKET_INCIDENCIAS, TIPO_INCIDENCIA_OPTIONS } from "./shared";
 
@@ -44,8 +57,10 @@ export type OperacionResult = {
   planta_actual: { nombre: string } | null;
 };
 
-/** PhotoItem del design system + el File original para poder subirlo/reintentar. */
-type FormPhoto = PhotoItem & { file: File };
+/** PhotoItem del design system + el File original para poder subirlo/reintentar, más el
+ * path de Storage ya subido (si lo hay) — evita re-subir un archivo cuyo único problema
+ * fue que crm_agregar_fotos_incidencia falló DESPUÉS de un upload exitoso. */
+type FormPhoto = PhotoItem & { file: File; uploadedPath?: string };
 
 const CARD: React.CSSProperties = {
   background: "var(--color-surface-1)",
@@ -66,7 +81,10 @@ function fileExt(f: File): string {
   return fromMime ? `.${fromMime}` : "";
 }
 
-export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCreated: () => void }) {
+// `usuario_id` de la incidencia lo resuelve crm_crear_incidencia server-side (vía
+// crm.perfil() dentro de la RPC) — el form ya no necesita el perfil como prop, solo lo
+// necesita el padre (page.tsx) para gatear el render mientras la sesión se resuelve.
+export function AltaIncidenciaForm({ onCreated }: { onCreated: () => void }) {
   const toast = useToast();
 
   /* ---------- selector de operación: búsqueda por contenedor ---------- */
@@ -119,6 +137,9 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
   const [tipo, setTipo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha, setFecha] = useState(hoyAR());
+  const [numeroOrden, setNumeroOrden] = useState("");
+  const [montoUsd, setMontoUsd] = useState("");
+  const [responsable, setResponsable] = useState("");
 
   /* ---------- fotos (estado controlado — el padre es dueño, PhotoUpload pinta) ---------- */
   const [photos, setPhotos] = useState<FormPhoto[]>([]);
@@ -129,7 +150,7 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // id de la incidencia ya insertada: activa el modo reintento de fotos (los campos se
-  // bloquean — ya están persistidos — y el submit NO vuelve a insertar la fila).
+  // bloquean — ya están persistidos — y el submit NO vuelve a invocar crm_crear_incidencia).
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [uploadWarning, setUploadWarning] = useState<string | null>(null);
 
@@ -187,6 +208,9 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
     setTipo("");
     setDescripcion("");
     setFecha(hoyAR());
+    setNumeroOrden("");
+    setMontoUsd("");
+    setResponsable("");
     setAttempted(false);
     setSubmitError(null);
     setCreatedId(null);
@@ -199,6 +223,7 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
     tipo: tipo === "" ? "elegí el tipo de incidencia" : null,
     descripcion: descripcion.trim() === "" ? "describí qué pasó — es obligatorio" : null,
     fecha: fecha === "" ? "indicá la fecha de la incidencia" : null,
+    numeroOrden: numeroOrden.trim() === "" ? "el número de orden es obligatorio" : null,
   };
   const formValid = Object.values(fieldErrors).every((e) => e === null);
 
@@ -209,37 +234,42 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
     if (!retryMode && !formValid) return;
     setSending(true);
 
-    // 1) la fila de incidencias PRIMERO: la policy de Storage exige que exista antes
-    //    del upload (el path es `{incidencia_id}/…`). En reintento ya existe.
+    // 1) la fila de incidencias PRIMERO vía RPC (ver nota de Storage arriba: la policy de
+    //    insert exige que el id ya exista antes de poder subir una foto a su carpeta). En
+    //    reintento ya existe — no se vuelve a llamar.
     let incidenciaId = createdId;
     if (incidenciaId === null) {
-      const { data, error } = await getSupabase()
-        .from("incidencias")
-        .insert({
-          operacion_id: selectedOp!.id,
-          tipo,
-          descripcion: descripcion.trim(),
-          fecha: `${fecha}T00:00:00-03:00`,
-          // atribución explícita — no depender del coalesce del trigger (plan M7)
-          usuario_id: perfil.usuario_id,
-        })
-        .select("id")
-        .single();
+      const { data, error } = await getSupabase().rpc("crm_crear_incidencia", {
+        p_operacion_id: selectedOp!.id,
+        p_tipo: tipo,
+        p_fecha: `${fecha}T00:00:00-03:00`,
+        p_numero_orden: numeroOrden.trim(),
+        p_descripcion: descripcion.trim(),
+        p_monto_usd: montoUsd.trim() === "" ? null : Number(montoUsd),
+        p_responsable: responsable.trim() === "" ? null : responsable.trim(),
+        p_fotos: [],
+      });
       if (error) {
         setSending(false);
         setSubmitError(error.message);
         return;
       }
-      incidenciaId = (data as { id: string }).id;
+      incidenciaId = data as string;
       setCreatedId(incidenciaId);
     }
 
-    // 2+3) fotos secuenciales: upload al path `{incidencia_id}/{uuid}.{ext}` y, si
-    //      subió, la fila de incidencia_fotos. Error en una NO frena a las demás.
+    // 2) fotos pendientes: upload secuencial al path `{incidencia_id}/{uuid}.{ext}` (se
+    //    saltea el upload de las que ya subieron en un intento previo y solo fallaron al
+    //    vincular) + UNA llamada a crm_agregar_fotos_incidencia con todos los paths listos.
     const pendientes = photos.filter((p) => p.status !== "ok");
-    let okCount = photos.length - pendientes.length;
     const failed: string[] = [];
+    const readyPaths: { photoId: string; path: string }[] = [];
+
     for (const p of pendientes) {
+      if (p.uploadedPath) {
+        readyPaths.push({ photoId: p.id, path: p.uploadedPath });
+        continue;
+      }
       setPhotos((list) => list.map((x) => (x.id === p.id ? { ...x, status: "subiendo", error: undefined } : x)));
       const path = `${incidenciaId}/${crypto.randomUUID()}${fileExt(p.file)}`;
       const up = await getSupabase()
@@ -251,17 +281,28 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
         setPhotos((list) => list.map((x) => (x.id === p.id ? { ...x, status: "error", error: msg } : x)));
         continue;
       }
-      const ins = await getSupabase()
-        .from("incidencia_fotos")
-        .insert({ incidencia_id: incidenciaId, storage_path: path });
-      if (ins.error) {
-        const msg = ins.error.message;
-        failed.push(p.name);
-        setPhotos((list) => list.map((x) => (x.id === p.id ? { ...x, status: "error", error: msg } : x)));
-        continue;
+      setPhotos((list) => list.map((x) => (x.id === p.id ? { ...x, uploadedPath: path } : x)));
+      readyPaths.push({ photoId: p.id, path });
+    }
+
+    let okCount = photos.length - pendientes.length;
+    if (readyPaths.length > 0) {
+      const { error: attachError } = await getSupabase().rpc("crm_agregar_fotos_incidencia", {
+        p_incidencia_id: incidenciaId,
+        p_fotos: readyPaths.map((r) => r.path),
+      });
+      if (attachError) {
+        const msg = attachError.message;
+        readyPaths.forEach((r) => failed.push(photos.find((x) => x.id === r.photoId)?.name ?? r.path));
+        setPhotos((list) =>
+          list.map((x) => (readyPaths.some((r) => r.photoId === x.id) ? { ...x, status: "error", error: msg } : x)),
+        );
+      } else {
+        okCount += readyPaths.length;
+        setPhotos((list) =>
+          list.map((x) => (readyPaths.some((r) => r.photoId === x.id) ? { ...x, status: "ok", progress: 100 } : x)),
+        );
       }
-      okCount += 1;
-      setPhotos((list) => list.map((x) => (x.id === p.id ? { ...x, status: "ok", progress: 100 } : x)));
     }
     setSending(false);
 
@@ -271,8 +312,8 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
     if (failed.length > 0) {
       setUploadWarning(
         `La incidencia quedó registrada, pero ${
-          failed.length === 1 ? "esta foto no se pudo subir" : "estas fotos no se pudieron subir"
-        }: ${failed.join(", ")}. Reintentá la subida, o quitalas y terminá sin ellas.`,
+          failed.length === 1 ? "esta foto no se pudo subir o vincular" : "estas fotos no se pudieron subir o vincular"
+        }: ${failed.join(", ")}. Reintentá, o quitalas y terminá sin ellas.`,
       );
       return;
     }
@@ -281,8 +322,8 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
       title: "Incidencia registrada",
       detail:
         okCount > 0
-          ? `Con ${okCount} foto${okCount === 1 ? "" : "s"} adjunta${okCount === 1 ? "" : "s"}. Quedó en el historial y en la ficha del contenedor.`
-          : "Quedó en el historial y en la ficha del contenedor.",
+          ? `Con ${okCount} foto${okCount === 1 ? "" : "s"} adjunta${okCount === 1 ? "" : "s"}. El reclamo se gestiona desde el historial de abajo.`
+          : "El reclamo (monto, responsable, estado) se gestiona desde el historial de abajo.",
     });
     resetForm();
   };
@@ -430,7 +471,7 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
         </Field>
       )}
 
-      {/* ---- tipo + fecha ---- */}
+      {/* ---- tipo + fecha + número de orden ---- */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
         <Field label="tipo de incidencia" htmlFor="inc-tipo" error={attempted ? fieldErrors.tipo : null}>
           <Select
@@ -462,9 +503,25 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
             onChange={(e) => setFecha(e.target.value)}
           />
         </Field>
+        <Field
+          label="número de orden"
+          htmlFor="inc-orden"
+          error={attempted ? fieldErrors.numeroOrden : null}
+          hint="obligatorio — es la referencia del reclamo"
+          help={<FieldHelp fieldKey="incidencias.numero_orden" />}
+        >
+          <Input
+            id="inc-orden"
+            value={numeroOrden}
+            error={attempted ? fieldErrors.numeroOrden : null}
+            disabled={retryMode || sending}
+            placeholder="ej: OR-4821"
+            onChange={(e) => setNumeroOrden(e.target.value)}
+          />
+        </Field>
       </div>
 
-      {/* ---- descripción (REQUERIDA en UI — decisión plan M7) ---- */}
+      {/* ---- descripción (REQUERIDA en UI — decisión plan M7, sin cambios en B5) ---- */}
       <Field
         label="descripción"
         htmlFor="inc-descripcion"
@@ -482,6 +539,37 @@ export function AltaIncidenciaForm({ perfil, onCreated }: { perfil: Perfil; onCr
           style={{ resize: "vertical" }}
         />
       </Field>
+
+      {/* ---- monto estimado + responsable (B5: NUNCA bloquean el alta) ---- */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
+        <Field
+          label="monto estimado (USD)"
+          htmlFor="inc-monto"
+          hint="opcional — estimativo, se puede cargar o corregir después"
+          help={<FieldHelp fieldKey="incidencias.monto_usd" />}
+        >
+          <Input
+            id="inc-monto"
+            type="number"
+            min={0}
+            step="0.01"
+            inputMode="decimal"
+            value={montoUsd}
+            disabled={retryMode || sending}
+            placeholder="ej: 150"
+            onChange={(e) => setMontoUsd(e.target.value)}
+          />
+        </Field>
+        <Field label="responsable" htmlFor="inc-responsable" hint="opcional — a quién se le imputa el costo">
+          <Input
+            id="inc-responsable"
+            value={responsable}
+            disabled={retryMode || sending}
+            placeholder="ej: naviera / depósito / transportista"
+            onChange={(e) => setResponsable(e.target.value)}
+          />
+        </Field>
+      </div>
 
       {/* ---- fotos ---- */}
       <Field label={`fotos (opcional, hasta ${MAX_FOTOS})`} hint={`solo imágenes, máx. ${MAX_PHOTO_MB} MB cada una`}>
