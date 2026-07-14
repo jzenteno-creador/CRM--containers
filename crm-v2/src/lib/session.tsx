@@ -122,6 +122,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // hash ya fueron consumidos por el SDK: la sesión temporal sobrevive a la navegación.
         setStatus("signedIn");
         userIdRef.current = nextSession.user.id;
+        // Cargar el perfil igual que el flujo normal (finding P1 del review M5): en el
+        // flujo /recuperar el evento llega YA estando en /auth/actualizar-password (sin
+        // redirect ni remount), el cambio de password emite USER_UPDATED (no SIGNED_IN) y
+        // changedUser es false → sin esta carga, "Entrar al CRM" navega client-side con
+        // perfil=null y AppGate queda en skeleton eterno.
+        window.setTimeout(() => {
+          void (async () => {
+            try {
+              await getSupabase().rpc("sync_mi_usuario");
+            } catch {
+              // best-effort: nunca corta el flujo de recovery
+            }
+            await refreshPerfil();
+          })();
+        }, 0);
         if (window.location.pathname !== "/auth/actualizar-password") {
           window.location.replace("/auth/actualizar-password");
         }
