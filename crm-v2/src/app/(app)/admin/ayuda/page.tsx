@@ -50,10 +50,15 @@ type AyudaRow = {
 // supabase/seeds-ayuda/m5b6_prefijos.sql, pendiente de aplicar por la próxima migración —
 // hasta entonces el editor funciona (INSERT/UPDATE pasan el CHECK), solo no hay copy
 // publicado todavía.
+// 'importacion' (M5 B2) TODAVÍA NO está en ese CHECK — mismo caso que 'bookings': el
+// ALTER que lo agrega vive en supabase/seeds-ayuda/m5b2_importacion.sql (precondición
+// documentada ahí mismo). Hasta que se aplique, elegir "Importación" acá y guardar falla
+// con un error de constraint de Postgres (no crashea, pero no guarda).
 const SECCIONES: { value: string; label: string }[] = [
   { value: "dashboard", label: "Inicio (dashboard)" },
   { value: "ingreso", label: "Ingreso" },
   { value: "egreso", label: "Egreso" },
+  { value: "importacion", label: "Importación" },
   { value: "bookings", label: "Bookings" },
   { value: "contenedores", label: "Contenedores" },
   { value: "alertas", label: "Alertas" },

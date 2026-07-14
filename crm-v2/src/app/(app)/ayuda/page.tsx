@@ -27,6 +27,7 @@ const SECTION_META: { seccion: string; label: string; icon: string }[] = [
   { seccion: "dashboard", label: "Inicio", icon: "ti-layout-dashboard" },
   { seccion: "ingreso", label: "Ingreso", icon: "ti-login-2" },
   { seccion: "egreso", label: "Egreso", icon: "ti-logout-2" },
+  { seccion: "importacion", label: "Importación", icon: "ti-ship" },
   { seccion: "bookings", label: "Bookings", icon: "ti-anchor" },
   { seccion: "contenedores", label: "Contenedores", icon: "ti-list-details" },
   { seccion: "alertas", label: "Alertas", icon: "ti-bell" },

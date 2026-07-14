@@ -162,3 +162,15 @@ export const RESULTADO_RECLAMO_LABELS: Record<string, string> = {
   recuperado: "recuperado",
   no_recuperado: "no recuperado",
 };
+
+// Estados del ciclo de IMPORTACIÓN (M5 B2, migración 032) — máquina de estados propia,
+// SEPARADA de ESTADO_LABELS (exportación): en_terminal → en_transito_a_planta →
+// en_planta → en_transito_devolucion → cerrado | anulada.
+export const ESTADO_IMPO_LABELS: Record<string, string> = {
+  en_terminal: "en terminal",
+  en_transito_a_planta: "en tránsito a planta",
+  en_planta: "en planta",
+  en_transito_devolucion: "en tránsito a devolución",
+  cerrado: "cerrado",
+  anulada: "anulada",
+};

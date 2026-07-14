@@ -23,12 +23,14 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { Field, Select } from "@/components/fd/fields";
+import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
 import { fmtFecha, fmtFechaDia, fmtUSD } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
+import { EstadoImpoBadge } from "../importacion/estado-impo";
 
 // Fila de crm.vista_bookings_saldo (028, M5 B3) — solo las columnas que usa la
 // sección "Bookings por rolear" de abajo.
@@ -234,7 +236,7 @@ function PrefijosRestringidosSection() {
 
 // Contrato real de crm.vista_alertas (pg_get_viewdef 2026-07-12, plan-m6):
 // nombres TEXT ya resueltos (planta_actual/naviera), números ya calculados en DB.
-type AlertaRow = {
+type ExpoRawRow = {
   operacion_id: string;
   contenedor_id: string;
   numero_contenedor: string;
@@ -250,6 +252,114 @@ type AlertaRow = {
   costo_proyectado: number | null;
   estado_semaforo: EstadoSemaforo;
 };
+
+// Contrato real de crm.vista_alertas_impo (migración 032, bloque G) — motor de destino:
+// 3 pares demurrage/detention/combined ya calculados en DB, `modo_reloj` dice cuál está
+// activo (mismo criterio que usó la view para dias_restantes/costo_proyectado/semáforo).
+// Sin `sin_cargo` (no existe en importación) ni `contenedor_id` (no hay ficha impo en v1
+// — el click de una fila IMPO navega a /importacion, no a una ficha).
+type ImpoRawRow = {
+  operacion_impo_id: string;
+  numero_orden: string;
+  numero_contenedor: string;
+  naviera: string | null;
+  planta: string | null;
+  estado: string;
+  fecha_arribo_terminal: string;
+  fecha_retiro_terminal: string | null;
+  fecha_devolucion: string | null;
+  modo_reloj: "split" | "combined";
+  dias_demurrage_transcurridos: number | null;
+  dias_detention_transcurridos: number | null;
+  dias_combined_transcurridos: number | null;
+  dias_libres_demurrage: number | null;
+  dias_libres_detention: number | null;
+  dias_libres_combined: number | null;
+  tarifa_dry_usd_dia: number | null;
+  exceso_total: number;
+  costo_proyectado: number | null;
+  estado_semaforo: EstadoSemaforo;
+  dias_restantes: number | null;
+};
+
+// Fila unificada EXPO+IMPO para la tabla principal (§ merge de Alertas, M5 B2). Todo
+// número viene YA calculado de la vista correspondiente — acá solo se copia, nunca se
+// recalcula. `ambito` es la columna nueva que distingue el origen de cada fila.
+type AlertaRow = {
+  ambito: "EXPO" | "IMPO";
+  operacion_id: string;
+  contenedor_id: string | null;
+  numero_contenedor: string;
+  naviera: string | null;
+  planta: string | null;
+  estado: string;
+  fecha_referencia: string | null;
+  sin_cargo: boolean;
+  dias_transcurridos: number | null;
+  dias_libres: number | null;
+  dias_restantes: number | null;
+  tarifa_usd_dia: number | null;
+  costo_proyectado: number | null;
+  estado_semaforo: EstadoSemaforo;
+};
+
+function mapExpo(r: ExpoRawRow): AlertaRow {
+  return {
+    ambito: "EXPO",
+    operacion_id: r.operacion_id,
+    contenedor_id: r.contenedor_id,
+    numero_contenedor: r.numero_contenedor,
+    naviera: r.naviera,
+    planta: r.planta_actual,
+    estado: r.estado,
+    fecha_referencia: r.fecha_retiro,
+    sin_cargo: r.sin_cargo,
+    dias_transcurridos: r.dias_transcurridos,
+    dias_libres: r.dias_libres,
+    dias_restantes: r.dias_restantes,
+    tarifa_usd_dia: r.tarifa_usd_dia,
+    costo_proyectado: r.costo_proyectado,
+    estado_semaforo: r.estado_semaforo,
+  };
+}
+
+function mapImpo(r: ImpoRawRow): AlertaRow {
+  // El reloj ACTIVO (modo_reloj + si ya hubo retiro) ya lo resolvió crm.vista_alertas_impo
+  // para dias_restantes/costo_proyectado/estado_semaforo — la MISMA condición se repite
+  // acá SOLO para elegir cuál de los 3 pares ya calculados (demurrage/detention/combined)
+  // mostrar en las columnas "días transcurridos"/"días libres". Cero aritmética nueva:
+  // ningún número se suma, resta ni deriva — se copia el par que corresponde.
+  const enFaseDetention = r.modo_reloj === "split" && r.fecha_retiro_terminal !== null;
+  const dias_transcurridos =
+    r.modo_reloj === "combined"
+      ? r.dias_combined_transcurridos
+      : enFaseDetention
+        ? r.dias_detention_transcurridos
+        : r.dias_demurrage_transcurridos;
+  const dias_libres =
+    r.modo_reloj === "combined"
+      ? r.dias_libres_combined
+      : enFaseDetention
+        ? r.dias_libres_detention
+        : r.dias_libres_demurrage;
+  return {
+    ambito: "IMPO",
+    operacion_id: r.operacion_impo_id,
+    contenedor_id: null,
+    numero_contenedor: r.numero_contenedor,
+    naviera: r.naviera,
+    planta: r.planta,
+    estado: r.estado,
+    fecha_referencia: r.fecha_arribo_terminal,
+    sin_cargo: false,
+    dias_transcurridos,
+    dias_libres,
+    dias_restantes: r.dias_restantes,
+    tarifa_usd_dia: r.tarifa_dry_usd_dia,
+    costo_proyectado: r.costo_proyectado,
+    estado_semaforo: r.estado_semaforo,
+  };
+}
 
 type SemaforoFilter = "todos" | EstadoSemaforo;
 
@@ -335,6 +445,9 @@ function AlertasPageContent() {
 
   const [rows, setRows] = useState<AlertaRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // vista_alertas_impo es TOLERANTE (§ merge de Alertas, M5 B2): si falla, se muestran
+  // igual las filas EXPO con un aviso discreto — no baja toda la pantalla a ErrorState.
+  const [impoError, setImpoError] = useState<string | null>(null);
   // umbral amarillo (solo para la leyenda): null = no disponible → leyenda oculta
   const [umbral, setUmbral] = useState<number | null>(null);
   // anti-carrera: descarta respuestas que llegan después de un load más nuevo
@@ -343,9 +456,14 @@ function AlertasPageContent() {
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
     const supabase = getSupabase();
-    const [alertas, config] = await Promise.all([
+    const [alertas, alertasImpo, config] = await Promise.all([
       supabase
         .from("vista_alertas")
+        .select("*")
+        .order("dias_restantes", { ascending: true, nullsFirst: false })
+        .limit(FETCH_CAP),
+      supabase
+        .from("vista_alertas_impo")
         .select("*")
         .order("dias_restantes", { ascending: true, nullsFirst: false })
         .limit(FETCH_CAP),
@@ -357,9 +475,19 @@ function AlertasPageContent() {
     if (alertas.error) {
       setRows(null);
       setLoadError(alertas.error.message);
+      setImpoError(null);
     } else {
       setLoadError(null);
-      setRows(alertas.data as unknown as AlertaRow[]);
+      const expoRows = (alertas.data as unknown as ExpoRawRow[]).map(mapExpo);
+      // fetch impo tolerante: si falla, se muestran solo las EXPO + aviso discreto.
+      if (alertasImpo.error) {
+        setImpoError(alertasImpo.error.message);
+        setRows(expoRows);
+      } else {
+        setImpoError(null);
+        const impoRows = (alertasImpo.data as unknown as ImpoRawRow[]).map(mapImpo);
+        setRows([...expoRows, ...impoRows]);
+      }
     }
 
     // valor es jsonb: en la DB real la clave guarda el objeto {"dias": 3} (la view hace
@@ -404,6 +532,13 @@ function AlertasPageContent() {
       width: "120px",
     },
     {
+      key: "ambito",
+      header: "ámbito",
+      render: (r) => <Badge tone={r.ambito === "IMPO" ? "accent" : "neutro"}>{r.ambito}</Badge>,
+      sortValue: (r) => r.ambito,
+      width: "80px",
+    },
+    {
       key: "contenedor",
       header: "contenedor",
       render: (r) => <ContainerNumber value={r.numero_contenedor} />,
@@ -419,29 +554,30 @@ function AlertasPageContent() {
     {
       key: "planta",
       header: "planta",
-      render: (r) => r.planta_actual ?? "—",
-      sortValue: (r) => r.planta_actual,
+      render: (r) => r.planta ?? "—",
+      sortValue: (r) => r.planta,
     },
     {
       key: "estado",
       header: "estado",
-      render: (r) => <EstadoOperacionBadge estado={r.estado} />,
+      render: (r) => (r.ambito === "EXPO" ? <EstadoOperacionBadge estado={r.estado} /> : <EstadoImpoBadge estado={r.estado} />),
       sortValue: (r) => r.estado,
       hideOnMobile: true,
     },
     {
-      key: "fecha_retiro",
-      header: "fecha retiro",
+      key: "fecha_referencia",
+      header: "fecha",
       numeric: true,
-      render: (r) => fmtFecha(r.fecha_retiro),
-      sortValue: (r) => r.fecha_retiro,
+      render: (r) => fmtFecha(r.fecha_referencia),
+      sortValue: (r) => r.fecha_referencia,
       hideOnMobile: true,
     },
     {
       key: "dias_transcurridos",
       header: "días transc.",
       numeric: true,
-      render: (r) => r.dias_transcurridos,
+      render: (r) =>
+        r.dias_transcurridos == null ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : r.dias_transcurridos,
       sortValue: (r) => r.dias_transcurridos,
       hideOnMobile: true,
       width: "90px",
@@ -524,6 +660,31 @@ function AlertasPageContent() {
           bookings (ver JSDoc del componente). */}
       <PrefijosRestringidosSection />
 
+      {/* vista_alertas_impo es TOLERANTE (M5 B2): si falla, igual se muestran las EXPO
+          con este aviso discreto — nunca tumba la pantalla entera. */}
+      {impoError && (
+        <div style={{ marginBottom: 12 }}>
+          <FormAlert tone="warning">
+            No se pudieron cargar las alertas de importación ahora — se muestran solo las de exportación.{" "}
+            <button
+              type="button"
+              onClick={() => void load()}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                font: "inherit",
+                color: "inherit",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              reintentar
+            </button>
+          </FormAlert>
+        </div>
+      )}
+
       {/* filtro de presentación por semáforo + leyenda del umbral (si está disponible) */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
         <Field label="semáforo" htmlFor="alertas-filtro">
@@ -551,14 +712,19 @@ function AlertasPageContent() {
       <DataTable
         columns={cols}
         rows={visibles}
-        rowKey={(r) => r.operacion_id}
+        rowKey={(r) => `${r.ambito}-${r.operacion_id}`}
         semaforo={(r) => r.estado_semaforo}
         loading={loading}
         skeletonRows={8}
         pageSize={15}
         maxHeight={560}
         defaultSort={{ key: "dias_restantes", dir: "asc" }}
-        onRowClick={(r) => router.push(`/contenedores/${r.contenedor_id}`)}
+        onRowClick={(r) => {
+          // EXPO tiene ficha de contenedor; IMPO no la tiene en v1 — su fila lleva de
+          // vuelta a /importacion, donde se gestiona el ciclo.
+          if (r.ambito === "EXPO" && r.contenedor_id) router.push(`/contenedores/${r.contenedor_id}`);
+          else router.push("/importacion");
+        }}
         errorState={
           loadError ? (
             <ErrorState title="No se pudieron cargar las alertas" detail={loadError} onRetry={() => void load()} />
@@ -572,10 +738,10 @@ function AlertasPageContent() {
             </EmptyState>
           ) : (
             <EmptyState icon="ti-bell" title="No hay operaciones en seguimiento">
-              Acá aparece cada contenedor con ciclo abierto (retirado y todavía sin devolver ni embarcar), con sus días
-              de freetime y el costo proyectado de detention — semáforo verde/amarillo/rojo según el umbral configurable
-              en <strong>Admin</strong>. Los ciclos se crean desde la solapa <strong>Ingreso</strong>; al cerrarse desde{" "}
-              <strong>Egreso</strong> salen de esta lista.
+              Acá aparece cada contenedor con ciclo abierto, de exportación o de importación, con sus días de freetime
+              y el costo proyectado de detention/demurrage — semáforo verde/amarillo/rojo según el umbral configurable
+              en <strong>Admin</strong>. Los ciclos de exportación se crean desde <strong>Ingreso</strong> y se cierran
+              desde <strong>Egreso</strong>; los de importación, desde <strong>Importación</strong>.
             </EmptyState>
           )
         }

@@ -107,6 +107,24 @@ export function DateField({
   );
 }
 
+/** Hora nativa 'HH:mm' (M5 B2/Importación — retiros escalonados: mismo día, distinto
+ * horario). Mismo tratamiento visual que DateField (mono, color-scheme dark). */
+export function TimeField({
+  error,
+  style,
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement> & WithError & { ref?: React.Ref<HTMLInputElement> }) {
+  return (
+    <input
+      type="time"
+      aria-invalid={!!error || undefined}
+      className="mono"
+      style={error ? { ...ERROR_STYLE, ...style } : style}
+      {...rest}
+    />
+  );
+}
+
 /** Checkbox con label clickeable (accent cyan nativo). */
 export function Checkbox({
   label,

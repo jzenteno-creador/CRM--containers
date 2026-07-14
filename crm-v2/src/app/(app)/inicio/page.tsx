@@ -42,6 +42,17 @@ type ResumenRow = {
   demora_promedio_dias: NumLike;
 };
 
+// Contrato real de crm.vista_kpi_resumen_impo (migración 032, bloque H) — espejo mínimo
+// del resumen EXPO, sin stock_vacios/demora_promedio_dias (no modelados para importación).
+type ResumenImpoRow = {
+  costo_mes: NumLike;
+  costo_ytd: NumLike;
+  costo_abierto_proyectado: NumLike;
+  en_riesgo_rojo: NumLike;
+  en_riesgo_amarillo: NumLike;
+  abiertas_total: NumLike;
+};
+
 type CostoNavieraRow = {
   naviera: string | null;
   costo_realizado_ytd: NumLike;
@@ -57,6 +68,9 @@ type TendenciaRow = {
 
 type DashboardData = {
   resumen: ResumenRow;
+  // null = vista_kpi_resumen_impo falló (tolerante — no tumba el dashboard, los KPIs de
+  // importación quedan en cero, igual que "sin datos" para el resto de la pantalla).
+  resumenImpo: ResumenImpoRow | null;
   porNaviera: CostoNavieraRow[];
   tendencia: TendenciaRow[];
 };
@@ -99,7 +113,7 @@ function DashboardSkeleton() {
   return (
     <div aria-hidden>
       <div style={KPI_GRID}>
-        {Array.from({ length: 7 }, (_, i) => (
+        {Array.from({ length: 9 }, (_, i) => (
           <div key={i} style={{ padding: "14px 18px" }}>
             <SkeletonBlock width={92} height={10} delay={i * 150} />
             <SkeletonBlock width={124} height={34} delay={i * 150} style={{ marginTop: 10 }} />
@@ -128,13 +142,23 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
   const costoMes = toNum(r.costo_mes);
   const costoYtd = toNum(r.costo_ytd);
   const proyectado = toNum(r.costo_abierto_proyectado);
-  const rojo = toNum(r.en_riesgo_rojo);
-  const amarillo = toNum(r.en_riesgo_amarillo);
   const stock = toNum(r.stock_vacios);
   // demora conserva el null de la view (sin cerradas YTD) — se muestra 0,0 con sub explicativo
   const demora = r.demora_promedio_dias == null ? null : Number(r.demora_promedio_dias);
 
+  // IMPO (migración 032, bloque H) — null si vista_kpi_resumen_impo falló (tolerante,
+  // ver DashboardData): degrada a cero, no tumba el resto del dashboard.
+  const ri = data.resumenImpo;
+  const proyectadoImpo = ri ? toNum(ri.costo_abierto_proyectado) : 0;
+  // "en riesgo" combinado EXPO+IMPO (§ Inicio, M5 B2): suma presentacional de dos counts
+  // ya calculados por cada view — mismo tipo de operación que "Total combinado" de costo,
+  // no un cálculo de negocio nuevo.
+  const rojo = toNum(r.en_riesgo_rojo) + (ri ? toNum(ri.en_riesgo_rojo) : 0);
+  const amarillo = toNum(r.en_riesgo_amarillo) + (ri ? toNum(ri.en_riesgo_amarillo) : 0);
+  const totalCombinado = proyectado + proyectadoImpo;
+
   // Datos de charts: filtro >0 y top 8 son presentación; los montos vienen de la DB.
+  // (EXPO-only: no hay vista de "por naviera" ni "tendencia mensual" para importación.)
   const barData: ChartDatum[] = data.porNaviera
     .filter((row) => toNum(row.costo_total) > 0)
     .slice(0, TOP_NAVIERAS)
@@ -148,7 +172,14 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
   // ¿Hay señal en la tendencia? (cerradas>0 con costo 0 — ej. todo sin cargo — ES dato)
   const hayTendencia = data.tendencia.some((row) => toNum(row.costo_realizado) > 0 || toNum(row.cerradas) > 0);
   const resumenEnCero =
-    costoMes === 0 && costoYtd === 0 && proyectado === 0 && rojo === 0 && amarillo === 0 && stock === 0 && demora == null;
+    costoMes === 0 &&
+    costoYtd === 0 &&
+    proyectado === 0 &&
+    proyectadoImpo === 0 &&
+    rojo === 0 &&
+    amarillo === 0 &&
+    stock === 0 &&
+    demora == null;
   const sinDatos = resumenEnCero && barData.length === 0 && !hayTendencia;
 
   return (
@@ -162,10 +193,24 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
           value={proyectado}
           prefix="USD "
           amber={proyectado > 0}
+          sub="expo · si nada se devuelve hoy"
+        />
+        <KpiCard
+          label="detention impo (proyectado)"
+          value={proyectadoImpo}
+          prefix="USD "
+          amber={proyectadoImpo > 0}
           sub="si nada se devuelve hoy"
         />
-        <KpiCard label="en riesgo · rojo" value={rojo} critical={rojo > 0} sub="freetime vencido" />
-        <KpiCard label="en riesgo · amarillo" value={amarillo} amber={amarillo > 0} sub="por vencer" />
+        <KpiCard
+          label="total combinado"
+          value={totalCombinado}
+          prefix="USD "
+          amber={totalCombinado > 0}
+          sub="expo + impo"
+        />
+        <KpiCard label="en riesgo · rojo" value={rojo} critical={rojo > 0} sub="freetime vencido · expo + impo" />
+        <KpiCard label="en riesgo · amarillo" value={amarillo} amber={amarillo > 0} sub="por vencer · expo + impo" />
         <KpiCard label="stock de vacíos" value={stock} sub="ciclos abiertos hoy" />
         <KpiCard
           label="demora promedio"
@@ -189,8 +234,9 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
             }
           >
             Los KPIs de arriba arrancan en cero. Este tablero se alimenta de los ciclos de contenedores: los
-            retiros se cargan desde <strong>Ingreso</strong> y los cierres desde <strong>Egreso</strong>. Con la
-            primera tanda vas a ver acá el costo proyectado, el riesgo por semáforo y la tendencia mensual.
+            retiros de exportación se cargan desde <strong>Ingreso</strong> y se cierran desde{" "}
+            <strong>Egreso</strong>; los ciclos de importación, desde <strong>Importación</strong>. Con el primer
+            ciclo vas a ver acá el costo proyectado, el riesgo por semáforo y la tendencia mensual.
           </EmptyState>
         </section>
       ) : (
@@ -256,8 +302,11 @@ export default function InicioPage() {
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
     const supabase = getSupabase();
-    const [resumen, porNaviera, tendencia] = await Promise.all([
+    const [resumen, resumenImpo, porNaviera, tendencia] = await Promise.all([
       supabase.from("vista_kpi_resumen").select("*").single(),
+      // TOLERANTE (M5 B2): si falla, el dashboard sigue con los KPIs de importación en
+      // cero — no tumba el resto (mismo criterio que vista_alertas_impo en /alertas).
+      supabase.from("vista_kpi_resumen_impo").select("*").single(),
       supabase.from("vista_kpi_costo_naviera").select("*").order("costo_total", { ascending: false }),
       supabase.from("vista_kpi_tendencia_mensual").select("*").order("mes", { ascending: true }),
     ]);
@@ -272,6 +321,7 @@ export default function InicioPage() {
     setLoadError(null);
     setData({
       resumen: resumen.data as unknown as ResumenRow,
+      resumenImpo: resumenImpo.error ? null : (resumenImpo.data as unknown as ResumenImpoRow),
       porNaviera: (porNaviera.data ?? []) as unknown as CostoNavieraRow[],
       tendencia: (tendencia.data ?? []) as unknown as TendenciaRow[],
     });
