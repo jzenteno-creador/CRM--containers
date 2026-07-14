@@ -13,8 +13,9 @@
 //   (depositosDisponible=false, ver page.tsx) degrada al Input de texto libre de antes,
 //   mandando retiro_de texto — la RPC es retrocompatible con ambos casos.
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerNumber } from "@/components/container-number";
+import { NuevoBookingModal } from "@/components/fd/booking-modal";
 import { Button } from "@/components/fd/button";
 import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DataTable, type Column, type RowValidation } from "@/components/fd/data-table";
@@ -25,7 +26,9 @@ import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { Modal } from "@/components/fd/modal";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
+import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
 import { useToast } from "@/components/fd/toast";
+import { fmtFechaDia } from "@/lib/format";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
 import type { Perfil } from "@/lib/session";
@@ -35,6 +38,11 @@ export type Planta = { id: string; nombre: string; codigo: string | null };
 export type Deposito = { id: string; nombre: string };
 
 type SimilarDeposito = { id: string; nombre: string; activo: boolean; similitud: number };
+// Booking de retiro (M5 B3) — filtrado por naviera+tipo='retiro'+estado='activo'.
+type Booking = { id: string; numero: string; etd: string; fecha_corte: string | null; buque: string | null };
+// Saldo del booking elegido (vista_bookings_saldo): la DB ya calcula días a ETD y
+// semáforo — el front NUNCA resta fechas para esto, solo muestra lo que llega.
+type BookingSaldo = { etd: string; dias_a_etd: number; estado_semaforo: EstadoSemaforo };
 
 /** Pre-check fuzzy + alta inline de depósito (023) — abierto desde el "Crear «X»" del
  * combobox. NUNCA crea en silencio: primero muestra similares (crm_depositos_similares)
@@ -237,10 +245,80 @@ export function TandaForm({
   const [retiroDeId, setRetiroDeId] = useState("");
   const [modalDepositoTexto, setModalDepositoTexto] = useState<string | null>(null);
   const [plantaSel, setPlantaSel] = useState("");
-  const [bookingRetiro, setBookingRetiro] = useState("");
   const [fechaRetiro, setFechaRetiro] = useState("");
 
+  // booking de retiro (028, M5 B3): OBLIGATORIO, filtrado por la naviera del
+  // encabezado + tipo='retiro' + estado='activo'. Deshabilitado hasta elegir naviera.
+  const [bookingId, setBookingId] = useState("");
+  const [modalBookingTexto, setModalBookingTexto] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
+  const [bookingSaldo, setBookingSaldo] = useState<BookingSaldo | null>(null);
+
   const plantaDestino = lockedPlanta ?? plantaSel;
+
+  // reset de la selección al cambiar de naviera (ajuste durante el render, mismo
+  // patrón que AlertasPageContent/HelpPanelContent): un booking de OTRA naviera deja
+  // de tener sentido apenas cambia el encabezado — nunca un efecto síncrono.
+  const [lastNavieraId, setLastNavieraId] = useState(navieraId);
+  if (navieraId !== lastNavieraId) {
+    setLastNavieraId(navieraId);
+    setBookingId("");
+  }
+
+  const loadBookings = useCallback(async () => {
+    if (navieraId === "") {
+      setBookings([]);
+      setBookingsError(null);
+      return;
+    }
+    const { data, error } = await getSupabase()
+      .from("bookings")
+      .select("id, numero, etd, fecha_corte, buque")
+      .eq("naviera_id", navieraId)
+      .eq("tipo", "retiro")
+      .eq("estado", "activo")
+      .order("etd", { ascending: true });
+    if (error) {
+      setBookings(null);
+      setBookingsError(error.message);
+      return;
+    }
+    setBookingsError(null);
+    setBookings(data as Booking[]);
+  }, [navieraId]);
+
+  useEffect(() => {
+    void (async () => {
+      await loadBookings();
+    })();
+  }, [loadBookings]);
+
+  // pill de ETD/días del booking elegido — la DB ya lo calcula (vista_bookings_saldo).
+  // El reset a null vive en el ajuste durante el render de abajo (evita setState
+  // síncrono en el cuerpo del efecto); el efecto solo dispara el fetch cuando hay id.
+  const [lastBookingId, setLastBookingId] = useState(bookingId);
+  if (bookingId !== lastBookingId) {
+    setLastBookingId(bookingId);
+    setBookingSaldo(null);
+  }
+
+  useEffect(() => {
+    if (bookingId === "") return;
+    let alive = true;
+    void (async () => {
+      const { data, error } = await getSupabase()
+        .from("vista_bookings_saldo")
+        .select("etd, dias_a_etd, estado_semaforo")
+        .eq("booking_id", bookingId)
+        .maybeSingle();
+      if (!alive) return;
+      setBookingSaldo(error || !data ? null : (data as BookingSaldo));
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [bookingId]);
 
   const [confirmaIngreso, setConfirmaIngreso] = useState(false);
   const [medio, setMedio] = useState<"camion" | "tren">("camion");
@@ -296,6 +374,7 @@ export function TandaForm({
         : null,
     plantaDestino: plantaDestino === "" ? "elegí la planta destino" : null,
     fechaRetiro: fechaRetiro === "" ? "indicá la fecha de retiro" : null,
+    booking: bookingId === "" ? "elegí el booking de retiro" : null,
   };
   const headerComplete = Object.values(headerErrors).every((e) => e === null);
 
@@ -327,7 +406,11 @@ export function TandaForm({
         // día 1 del freetime (conteo inclusivo, validado 2.804/2.804 vs Excel).
         fecha_retiro: `${fechaRetiro}T00:00:00-03:00`,
         confirma_ingreso: confirmaIngreso,
-        ...(bookingRetiro.trim() ? { booking_retiro: bookingRetiro.trim() } : {}),
+        // 028 (M5 B3): booking pasa a ser OBLIGATORIO en el alta — el front nuevo
+        // SIEMPRE manda booking_id + require_booking:true (headerComplete ya garantiza
+        // bookingId no vacío acá).
+        booking_id: bookingId,
+        require_booking: true,
         ...(confirmaIngreso ? { medio } : {}),
       },
       contenedores: rows.map((r) => ({ numero: r.numero, reforzado: r.reforzado })),
@@ -570,15 +653,63 @@ export function TandaForm({
           />
         </Field>
 
-        <Field label="booking de retiro" htmlFor="tanda-booking" hint="opcional">
-          <Input
-            id="tanda-booking"
-            value={bookingRetiro}
-            placeholder="opcional"
-            onChange={(e) => setBookingRetiro(e.target.value)}
-          />
+        <Field
+          label="booking de retiro"
+          htmlFor="tanda-booking"
+          error={attempted ? headerErrors.booking : null}
+          hint={navieraId === "" ? "elegí primero la naviera" : undefined}
+          help={<FieldHelp fieldKey="ingreso.booking_retiro" naviera={navieraId || undefined} />}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <ComboboxCreatable
+                id="tanda-booking"
+                options={(bookings ?? []).map((b) => ({ id: b.id, label: `${b.numero} · ETD ${fmtFechaDia(b.etd)}` }))}
+                value={bookingId}
+                onChange={setBookingId}
+                onCreate={(t) => setModalBookingTexto(t)}
+                disabled={navieraId === "" || bookings === null}
+                error={attempted ? headerErrors.booking : null}
+                placeholder={
+                  navieraId === ""
+                    ? "— elegí la naviera primero —"
+                    : bookings === null
+                      ? "cargando bookings…"
+                      : "buscá o creá un booking…"
+                }
+                emptyMessage="sin bookings activos para esta naviera — tipeá para crear uno nuevo"
+              />
+            </div>
+            {bookingSaldo && (
+              <StatusBadge estado={bookingSaldo.estado_semaforo}>
+                ETD {fmtFechaDia(bookingSaldo.etd)} ·{" "}
+                {bookingSaldo.dias_a_etd < 0 ? `−${Math.abs(bookingSaldo.dias_a_etd)}` : bookingSaldo.dias_a_etd}d
+              </StatusBadge>
+            )}
+          </div>
         </Field>
       </div>
+
+      {bookingsError && (
+        <FormAlert tone="warning">
+          No se pudieron cargar los bookings de esta naviera: {bookingsError}{" "}
+          <button
+            type="button"
+            onClick={() => void loadBookings()}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              font: "inherit",
+              color: "inherit",
+              textDecoration: "underline",
+              cursor: "pointer",
+            }}
+          >
+            reintentar
+          </button>
+        </FormAlert>
+      )}
 
       {operadorSinPlanta && (
         <FormAlert>
@@ -728,6 +859,24 @@ export function TandaForm({
             setRetiroDeId(id);
             setModalDepositoTexto(null);
             toast({ type: "exito", title: "Depósito creado", detail: `«${textoCreado}» ya está disponible.` });
+          }}
+        />
+      )}
+
+      {modalBookingTexto !== null && (
+        <NuevoBookingModal
+          texto={modalBookingTexto}
+          tipo="retiro"
+          navieraId={navieraId}
+          onClose={() => setModalBookingTexto(null)}
+          onCreado={async (id) => {
+            const textoCreado = modalBookingTexto;
+            // mismo orden que NuevoDepositoModal: esperamos el refetch ANTES de
+            // seleccionar, así el combobox ya trae la opción nueva al re-renderizar.
+            await loadBookings();
+            setBookingId(id);
+            setModalBookingTexto(null);
+            toast({ type: "exito", title: "Booking creado", detail: `«${textoCreado}» ya está disponible.` });
           }}
         />
       )}

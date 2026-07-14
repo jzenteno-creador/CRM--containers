@@ -16,7 +16,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/fd/badge";
+import { NuevoBookingModal, type NavieraOption } from "@/components/fd/booking-modal";
 import { Button } from "@/components/fd/button";
+import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { ContainerNumber } from "@/components/container-number";
 import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
@@ -26,7 +28,7 @@ import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { useToast } from "@/components/fd/toast";
-import { fmtFecha, hoyAR, TIPO_CIERRE_LABELS } from "@/lib/format";
+import { fmtFecha, fmtFechaDia, hoyAR, TIPO_CIERRE_LABELS } from "@/lib/format";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
 
@@ -58,6 +60,10 @@ type PendienteTerminalRow = {
 };
 
 type TipoCierre = "embarcado" | "devuelto_vacio";
+
+// Booking de embarque (M5 B3) — cualquier tipo/naviera activos (a diferencia de
+// Ingreso, acá NO se filtra por naviera: el lote de salida puede mezclar navieras).
+type BookingOption = { id: string; numero: string; etd: string; naviera: { nombre: string } | null };
 
 const TIPOS_CIERRE: { value: TipoCierre; label: string }[] = [
   { value: "embarcado", label: TIPO_CIERRE_LABELS.embarcado },
@@ -111,9 +117,39 @@ export default function EgresoPage() {
   const [buque, setBuque] = useState("");
   const [destino, setDestino] = useState("");
 
+  // booking de embarque desde catálogo (028, M5 B3) — opcional, tiene prioridad
+  // sobre el texto libre `bookingAsignado` de arriba (que se mantiene como fallback).
+  const [bookingId, setBookingId] = useState("");
+  const [modalBookingTexto, setModalBookingTexto] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<BookingOption[] | null>(null);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
+  // navieras activas: solo hacen falta para el selector del alta inline (acá el
+  // booking nuevo puede ser de cualquier naviera, a diferencia de Ingreso).
+  const [navieras, setNavieras] = useState<NavieraOption[]>([]);
+
   const [salidaAttempted, setSalidaAttempted] = useState(false);
   const [salidaSending, setSalidaSending] = useState(false);
   const [salidaError, setSalidaError] = useState<string | null>(null);
+
+  const loadBookings = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("bookings")
+      .select("id, numero, etd, naviera:navieras(nombre)")
+      .eq("estado", "activo")
+      .order("etd", { ascending: true });
+    if (error) {
+      setBookings(null);
+      setBookingsError(error.message);
+      return;
+    }
+    setBookingsError(null);
+    setBookings(data as unknown as BookingOption[]);
+  }, []);
+
+  const loadNavieras = useCallback(async () => {
+    const { data, error } = await getSupabase().from("navieras").select("id, nombre").eq("activa", true).order("nombre");
+    setNavieras(error ? [] : ((data as NavieraOption[]) ?? []));
+  }, []);
 
   const loadEnPlanta = useCallback(async () => {
     const { data, error } = await getSupabase()
@@ -182,19 +218,20 @@ export default function EgresoPage() {
 
   useEffect(() => {
     void (async () => {
-      await Promise.all([loadEnPlanta(), loadPendientes()]);
+      await Promise.all([loadEnPlanta(), loadPendientes(), loadBookings(), loadNavieras()]);
     })();
-  }, [loadEnPlanta, loadPendientes]);
+  }, [loadEnPlanta, loadPendientes, loadBookings, loadNavieras]);
 
   // refetch al recuperar foco (mismo criterio que /ingreso y la campana §13)
   useEffect(() => {
     const onFocus = () => {
       void loadEnPlanta();
       void loadPendientes();
+      void loadBookings();
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [loadEnPlanta, loadPendientes]);
+  }, [loadEnPlanta, loadPendientes, loadBookings]);
 
   const enPlantaLoading = enPlanta === null && !enPlantaError;
   const pendientesLoading = pendientes === null && !pendientesError;
@@ -249,6 +286,10 @@ export default function EgresoPage() {
         ? {
             orden: orden.trim(),
             shp: shp.trim(),
+            // booking_id (catálogo) tiene prioridad — la RPC pisa el snapshot texto
+            // con el numero del booking resuelto cuando viene. El texto libre sigue
+            // mandándose igual como fallback si no se eligió ninguno del catálogo.
+            ...(bookingId ? { booking_id: bookingId } : {}),
             ...(bookingAsignado.trim() ? { booking_asignado: bookingAsignado.trim() } : {}),
             ...(buque.trim() ? { buque: buque.trim() } : {}),
             ...(destino.trim() ? { destino: destino.trim() } : {}),
@@ -593,7 +634,26 @@ export default function EgresoPage() {
                     onChange={(e) => setShp(e.target.value)}
                   />
                 </Field>
-                <Field label="booking asignado" htmlFor="egreso-booking" hint="opcional">
+                <Field label="booking (catálogo)" htmlFor="egreso-booking-cat" hint="opcional — prioriza sobre el texto libre">
+                  <ComboboxCreatable
+                    id="egreso-booking-cat"
+                    options={(bookings ?? []).map((b) => ({
+                      id: b.id,
+                      label: `${b.numero} — ${b.naviera?.nombre ?? "—"} (ETD ${fmtFechaDia(b.etd)})`,
+                    }))}
+                    value={bookingId}
+                    onChange={setBookingId}
+                    onCreate={(t) => setModalBookingTexto(t)}
+                    disabled={bookings === null}
+                    placeholder={bookings === null ? "cargando bookings…" : "buscá o creá un booking…"}
+                    emptyMessage="sin bookings activos — tipeá para crear uno nuevo"
+                  />
+                </Field>
+                <Field
+                  label="booking asignado (texto libre)"
+                  htmlFor="egreso-booking"
+                  hint="opcional — se ignora si elegiste uno del catálogo"
+                >
                   <Input
                     id="egreso-booking"
                     value={bookingAsignado}
@@ -618,6 +678,26 @@ export default function EgresoPage() {
                   />
                 </Field>
               </div>
+              {bookingsError && (
+                <FormAlert tone="warning">
+                  No se pudieron cargar los bookings: {bookingsError}{" "}
+                  <button
+                    type="button"
+                    onClick={() => void loadBookings()}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      font: "inherit",
+                      color: "inherit",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                    }}
+                  >
+                    reintentar
+                  </button>
+                </FormAlert>
+              )}
             </>
           )}
 
@@ -730,6 +810,22 @@ export default function EgresoPage() {
           </EmptyState>
         }
       />
+
+      {modalBookingTexto !== null && (
+        <NuevoBookingModal
+          texto={modalBookingTexto}
+          tipo="embarque"
+          navieras={navieras}
+          onClose={() => setModalBookingTexto(null)}
+          onCreado={async (id) => {
+            const textoCreado = modalBookingTexto;
+            await loadBookings();
+            setBookingId(id);
+            setModalBookingTexto(null);
+            toast({ type: "exito", title: "Booking creado", detail: `«${textoCreado}» ya está disponible.` });
+          }}
+        />
+      )}
     </>
   );
 }

@@ -40,10 +40,16 @@ type AyudaRow = {
 };
 
 // CHECK de crm.ayuda_contenido.seccion (migración 002) — el alta solo puede usar estos.
+// ⚠️ 'bookings' (M5 B3) TODAVÍA NO está en ese CHECK — el ALTER que lo agrega vive en
+// supabase/seeds-ayuda/m5b3_bookings.sql (precondición documentada ahí mismo). Hasta que
+// se aplique, elegir "Bookings" acá y guardar falla con un error de constraint de Postgres
+// (no crashea, pero no guarda) — se deja igual el valor en la lista para no bloquear el
+// editor una vez que la migración esté puesta.
 const SECCIONES: { value: string; label: string }[] = [
   { value: "dashboard", label: "Inicio (dashboard)" },
   { value: "ingreso", label: "Ingreso" },
   { value: "egreso", label: "Egreso" },
+  { value: "bookings", label: "Bookings" },
   { value: "contenedores", label: "Contenedores" },
   { value: "alertas", label: "Alertas" },
   { value: "incidencias", label: "Incidencias" },

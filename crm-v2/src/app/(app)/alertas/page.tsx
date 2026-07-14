@@ -24,10 +24,116 @@ import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { Field, Select } from "@/components/fd/fields";
 import { PageHeader } from "@/components/fd/page-header";
+import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
-import { fmtFecha, fmtUSD } from "@/lib/format";
+import { fmtFecha, fmtFechaDia, fmtUSD } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
+
+// Fila de crm.vista_bookings_saldo (028, M5 B3) — solo las columnas que usa la
+// sección "Bookings por rolear" de abajo.
+type BookingRolearRow = {
+  booking_id: string;
+  numero: string;
+  naviera: string;
+  etd: string;
+  dias_a_etd: number;
+  contenedores_en_planta: number;
+  estado_semaforo: EstadoSemaforo;
+};
+
+/**
+ * Sección secundaria (M5 B3): bookings de retiro rojo/amarillo con contenedores en
+ * planta — el mismo control que Omar hacía a mano cada viernes. Widget tolerante:
+ * si la vista falla (RLS, red, o el entorno todavía no tiene la 028) se oculta en
+ * silencio, igual que la campana de notificaciones — no bloquea ni ensucia Alertas,
+ * que sigue siendo la pantalla de freetime de contenedores. "Sin ninguna" también
+ * se oculta entera (sin ruido), por eso NO usa el <EmptyState> estándar de la tabla.
+ */
+function BookingsPorRolearSection() {
+  const router = useRouter();
+  const [rows, setRows] = useState<BookingRolearRow[] | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const { data, error } = await getSupabase()
+        .from("vista_bookings_saldo")
+        .select("booking_id, numero, naviera, etd, dias_a_etd, contenedores_en_planta, estado_semaforo")
+        .in("estado_semaforo", ["rojo", "amarillo"])
+        .order("dias_a_etd", { ascending: true })
+        .limit(50);
+      setRows(error ? null : (data as unknown as BookingRolearRow[]));
+      setLoaded(true);
+    })();
+  }, []);
+
+  if (!loaded) {
+    return (
+      <div className="fd-panel" style={{ marginBottom: 16 }} aria-busy="true" aria-label="cargando bookings por rolear">
+        <SkeletonBlock width={200} height={13} />
+        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+          <SkeletonBlock height={30} delay={80} />
+          <SkeletonBlock height={30} delay={160} />
+        </div>
+      </div>
+    );
+  }
+  if (!rows || rows.length === 0) return null;
+
+  const bookingCols: Column<BookingRolearRow>[] = [
+    {
+      key: "semaforo",
+      header: "semáforo",
+      width: "110px",
+      render: (r) => <StatusBadge estado={r.estado_semaforo}>{r.estado_semaforo === "rojo" ? "vencido" : "por vencer"}</StatusBadge>,
+      sortValue: (r) => (r.estado_semaforo === "rojo" ? 0 : 1),
+    },
+    {
+      key: "numero",
+      header: "booking",
+      render: (r) => (
+        <span className="mono" style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>
+          {r.numero}
+        </span>
+      ),
+      sortValue: (r) => r.numero,
+    },
+    { key: "naviera", header: "naviera", render: (r) => r.naviera, sortValue: (r) => r.naviera },
+    { key: "etd", header: "ETD", numeric: true, render: (r) => fmtFechaDia(r.etd), sortValue: (r) => r.etd },
+    { key: "dias", header: "días a ETD", numeric: true, render: (r) => r.dias_a_etd, sortValue: (r) => r.dias_a_etd, width: "95px" },
+    {
+      key: "en_planta",
+      header: "en planta",
+      numeric: true,
+      render: (r) => r.contenedores_en_planta,
+      sortValue: (r) => r.contenedores_en_planta,
+      width: "90px",
+    },
+  ];
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+        <span className="fd-display fd-display-sm" style={{ color: "var(--color-text-secondary)" }}>
+          <i className="ti ti-anchor" aria-hidden style={{ marginRight: 6, color: "var(--color-accent-500)" }} />
+          Bookings por rolear
+        </span>
+        <span className="mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+          {rows.length}
+        </span>
+      </div>
+      <DataTable
+        columns={bookingCols}
+        rows={rows}
+        rowKey={(r) => r.booking_id}
+        semaforo={(r) => r.estado_semaforo}
+        maxHeight={220}
+        onRowClick={(r) => router.push(`/bookings?semaforo=${r.estado_semaforo}`)}
+      />
+    </div>
+  );
+}
 
 // Contrato real de crm.vista_alertas (pg_get_viewdef 2026-07-12, plan-m6):
 // nombres TEXT ya resueltos (planta_actual/naviera), números ya calculados en DB.
@@ -312,6 +418,10 @@ function AlertasPageContent() {
           </Button>
         }
       />
+
+      {/* Bookings por rolear (M5 B3) — se oculta entera si no hay ninguno o si la
+          vista falla (widget secundario, tolerante — ver JSDoc del componente). */}
+      <BookingsPorRolearSection />
 
       {/* filtro de presentación por semáforo + leyenda del umbral (si está disponible) */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
