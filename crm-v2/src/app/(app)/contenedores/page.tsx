@@ -25,7 +25,7 @@ import { PageHeader } from "@/components/fd/page-header";
 import { fmtFecha } from "@/lib/format";
 import { normalizarNumero } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
-import { EstadoOperacionBadge } from "./estado-operacion";
+import { EstadoCargaBadge, EstadoOperacionBadge } from "./estado-operacion";
 
 type ContenedorEmbed = {
   id: string;
@@ -38,6 +38,8 @@ type ContenedorEmbed = {
 type PlanillaRow = {
   id: string;
   estado: string;
+  // informativo (M5-029, D3): lleno/vacío — NO afecta tarifa ni freetime.
+  estado_carga: string;
   fecha_retiro: string;
   booking_retiro: string | null;
   orden: string | null;
@@ -64,7 +66,7 @@ const FETCH_CAP = 500;
 // !inner en el embed: obligatorio para que el filtro ilike sobre la columna embebida
 // (numero_contenedor) filtre las filas raíz, no solo el embed.
 const SELECT_PLANILLA =
-  "id, estado, fecha_retiro, booking_retiro, orden, booking_asignado, contenedor:contenedores!inner(id, numero_contenedor, tipo, reforzado_estado, naviera:navieras(nombre)), planta_actual:plantas(nombre)";
+  "id, estado, estado_carga, fecha_retiro, booking_retiro, orden, booking_asignado, contenedor:contenedores!inner(id, numero_contenedor, tipo, reforzado_estado, naviera:navieras(nombre)), planta_actual:plantas(nombre)";
 
 function basePlanillaQuery(filtro: EstadoFilter) {
   let q = getSupabase().from("operaciones").select(SELECT_PLANILLA);
@@ -224,6 +226,13 @@ export default function ContenedoresPage() {
       header: "estado",
       render: (r) => <EstadoOperacionBadge estado={r.estado} />,
       sortValue: (r) => r.estado,
+    },
+    {
+      key: "carga",
+      header: "carga",
+      render: (r) => <EstadoCargaBadge estadoCarga={r.estado_carga} />,
+      sortValue: (r) => r.estado_carga,
+      hideOnMobile: true,
     },
     {
       key: "planta",

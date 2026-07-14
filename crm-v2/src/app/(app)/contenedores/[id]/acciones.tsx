@@ -11,13 +11,13 @@
 // El gating por rol de los botones que abren estos modales es UX: el enforcement real
 // es de cada RPC (+ RLS).
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/fd/button";
 import { ComboboxCreatable } from "@/components/fd/combobox-creatable";
 import { DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
 import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
-import { Modal } from "@/components/fd/modal";
+import { ConfirmDialog, Modal } from "@/components/fd/modal";
 import { useToast } from "@/components/fd/toast";
 import { fmtFecha, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
@@ -826,5 +826,410 @@ export function CorregirDatoModal({
         </ModalFooter>
       </div>
     </Modal>
+  );
+}
+
+/* ================= Consolidar / Desconsolidar (M5-029, D3 informativo) ================= */
+// El sistema de contenedores en planta como depósito: "consolidar" carga mercadería
+// (producto por GMID + bolsas + lote opcional, multi-línea) y "desconsolidar" la
+// descarga entera. NO toca tarifa ni el reloj de detention — es trazabilidad de stock.
+
+export type ProductoOption = { id: string; gmid: string; descripcion: string };
+
+/** Pre-check simple + alta inline de producto (029) — abierto desde el "Crear «X»" del
+ * combobox de una línea de consolidación. Mismo patrón que NuevoBookingModal: el
+ * combobox NO crea nada por sí mismo, solo notifica onCreate(texto); acá se llama
+ * crm_crear_producto y se devuelve el id nuevo para autoseleccionar la fila. */
+function NuevoProductoModal({
+  texto,
+  onClose,
+  onCreado,
+}: {
+  /** Texto tipeado en el combobox de origen — precarga el GMID, editable. */
+  texto: string;
+  onClose: () => void;
+  onCreado: (id: string) => void;
+}) {
+  const [gmid, setGmid] = useState(texto);
+  const [descripcion, setDescripcion] = useState("");
+  const [attempted, setAttempted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const errors = {
+    gmid: gmid.trim() === "" ? "el GMID es obligatorio" : null,
+    descripcion: descripcion.trim() === "" ? "la descripción es obligatoria" : null,
+  };
+  const valid = Object.values(errors).every((e) => e === null);
+
+  const crear = async () => {
+    setAttempted(true);
+    setSubmitError(null);
+    if (!valid || sending) return;
+    setSending(true);
+    const { data, error } = await getSupabase().rpc("crm_crear_producto", {
+      p_gmid: gmid.trim(),
+      p_descripcion: descripcion.trim(),
+    });
+    setSending(false);
+    if (error) {
+      // "producto_duplicado" trae el detalle legible en error.hint (misma RPC que armó el mensaje)
+      setSubmitError(error.hint || error.message);
+      return;
+    }
+    onCreado(data as string);
+  };
+
+  return (
+    <Modal
+      open
+      onClose={sending ? () => {} : onClose}
+      title={`Crear producto «${texto}»`}
+      width={440}
+      closeOnBackdrop={!sending}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Field label="GMID" htmlFor="np-gmid" error={attempted ? errors.gmid : null}>
+          <Input
+            id="np-gmid"
+            className="mono"
+            value={gmid}
+            error={attempted ? errors.gmid : null}
+            onChange={(e) => setGmid(e.target.value)}
+          />
+        </Field>
+        <Field label="descripción" htmlFor="np-descripcion" error={attempted ? errors.descripcion : null}>
+          <Input
+            id="np-descripcion"
+            value={descripcion}
+            error={attempted ? errors.descripcion : null}
+            onChange={(e) => setDescripcion(e.target.value)}
+          />
+        </Field>
+        {submitError && <FormAlert>{submitError}</FormAlert>}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+          <Button variant="ghost" onClick={onClose} disabled={sending}>
+            Cancelar
+          </Button>
+          <Button variant="primary" icon="ti-plus" loading={sending} disabled={!valid} onClick={() => void crear()}>
+            Crear producto
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+type LineaConsolidacion = { key: string; productoId: string; cantidad: string; lote: string };
+
+/** Consolidar (o "Agregar carga" si ya está lleno, título condicional) — N líneas
+ * dinámicas de {producto, bolsas, lote?}. Todo-o-nada en la RPC: acá solo se valida
+ * en vivo antes de enviar (patrón waiver/tanda). */
+export function ConsolidarModal({
+  operacionId,
+  numeroContenedor,
+  yaLleno,
+  onClose,
+  onDone,
+}: {
+  operacionId: string;
+  numeroContenedor: string;
+  /** Si ya está lleno, la RPC es incremental — el título y el CTA dicen "Agregar carga". */
+  yaLleno: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const [productos, setProductos] = useState<ProductoOption[] | null>(null);
+  const [productosError, setProductosError] = useState<string | null>(null);
+
+  // arranca en 1: la fila inicial usa la key literal "l0" (no puede leer el ref durante
+  // el inicializador perezoso de useState — regla react-hooks/refs).
+  const nextKeyRef = useRef(1);
+  const makeLinea = useCallback(
+    (): LineaConsolidacion => ({ key: `l${nextKeyRef.current++}`, productoId: "", cantidad: "", lote: "" }),
+    [],
+  );
+  const [lineas, setLineas] = useState<LineaConsolidacion[]>(() => [
+    { key: "l0", productoId: "", cantidad: "", lote: "" },
+  ]);
+  const [modalProducto, setModalProducto] = useState<{ key: string; texto: string } | null>(null);
+
+  const [attempted, setAttempted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const loadProductos = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("productos")
+      .select("id, gmid, descripcion")
+      .eq("activo", true)
+      .order("gmid");
+    if (error) {
+      setProductos(null);
+      setProductosError(error.message);
+      return;
+    }
+    setProductosError(null);
+    setProductos(data as ProductoOption[]);
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      await loadProductos();
+    })();
+  }, [loadProductos]);
+
+  const updateLinea = (key: string, patch: Partial<LineaConsolidacion>) => {
+    setLineas((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  };
+  const quitarLinea = (key: string) => {
+    setLineas((ls) => (ls.length > 1 ? ls.filter((l) => l.key !== key) : ls));
+  };
+
+  // validación en vivo (cantidad inválida se marca apenas se tipea algo — patrón waiver
+  // días); los "obligatorio" recién al intentar enviar (patrón encabezado de tanda).
+  const cantidadError = (l: LineaConsolidacion): string | null => {
+    const n = Number(l.cantidad);
+    if (l.cantidad.trim() !== "" && (!Number.isInteger(n) || n <= 0)) return "cantidad inválida (entero > 0)";
+    if (attempted && l.cantidad.trim() === "") return "indicá la cantidad";
+    return null;
+  };
+  const productoError = (l: LineaConsolidacion): string | null =>
+    attempted && l.productoId === "" ? "elegí el producto" : null;
+
+  const valid = lineas.every((l) => {
+    const n = Number(l.cantidad);
+    return l.productoId !== "" && l.cantidad.trim() !== "" && Number.isInteger(n) && n > 0;
+  });
+
+  const submit = async () => {
+    setAttempted(true);
+    setSubmitError(null);
+    if (!valid || sending) return;
+    setSending(true);
+    const p_lineas = lineas.map((l) => ({
+      producto_id: l.productoId,
+      cantidad_bolsas: Number(l.cantidad),
+      lote: l.lote.trim() === "" ? null : l.lote.trim(),
+    }));
+    const { data, error } = await getSupabase().rpc("crm_consolidar", {
+      p_operacion_id: operacionId,
+      p_lineas,
+    });
+    setSending(false);
+    if (error) {
+      // errores P0001 LITERALES (rol, operación no en_planta, producto inactivo…)
+      setSubmitError(error.message);
+      return;
+    }
+    const resp = data as { lineas_agregadas?: number; total_lineas_vigentes?: number } | null;
+    const agregadas = resp?.lineas_agregadas ?? lineas.length;
+    toast({
+      type: "exito",
+      title: yaLleno ? "Carga agregada" : "Contenedor consolidado",
+      detail: `${numeroContenedor}: ${agregadas} línea${agregadas === 1 ? "" : "s"} cargada${agregadas === 1 ? "" : "s"}${
+        resp?.total_lineas_vigentes != null ? ` — ${resp.total_lineas_vigentes} vigente${resp.total_lineas_vigentes === 1 ? "" : "s"} en total` : ""
+      }.`,
+    });
+    onDone();
+  };
+
+  return (
+    <>
+      <Modal
+        open
+        onClose={sending ? () => {} : onClose}
+        title={yaLleno ? "Agregar carga" : "Consolidar"}
+        width={640}
+        closeOnBackdrop={!sending}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ fontSize: 12.5, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
+            Mercadería consolidada dentro de <span className="mono">{numeroContenedor}</span> — producto (GMID),
+            cantidad de bolsas y lote opcional. Es informativo: no afecta la tarifa ni el freetime.
+          </div>
+
+          {productosError && (
+            <FormAlert tone="warning">
+              No se pudo cargar el catálogo de productos: {productosError}{" "}
+              <button
+                type="button"
+                onClick={() => void loadProductos()}
+                style={{
+                  background: "none", border: "none", padding: 0, font: "inherit",
+                  color: "inherit", textDecoration: "underline", cursor: "pointer",
+                }}
+              >
+                reintentar
+              </button>
+            </FormAlert>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {lineas.map((l, i) => (
+              <div key={l.key} style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div style={{ flex: "2 1 220px", minWidth: 200 }}>
+                  <Field label={i === 0 ? "producto (GMID)" : undefined} error={productoError(l)}>
+                    <ComboboxCreatable
+                      id={`consolidar-producto-${l.key}`}
+                      options={(productos ?? []).map((p) => ({ id: p.id, label: `${p.gmid} — ${p.descripcion}` }))}
+                      value={l.productoId}
+                      onChange={(id) => updateLinea(l.key, { productoId: id })}
+                      onCreate={(texto) => setModalProducto({ key: l.key, texto })}
+                      disabled={productos === null}
+                      error={productoError(l)}
+                      placeholder={productos === null ? "cargando productos…" : "buscá o creá un producto…"}
+                      emptyMessage="sin productos que matcheen — tipeá para crear uno nuevo"
+                    />
+                  </Field>
+                </div>
+                <div style={{ width: 120 }}>
+                  <Field label={i === 0 ? "bolsas" : undefined} error={cantidadError(l)}>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      inputMode="numeric"
+                      className="mono"
+                      value={l.cantidad}
+                      error={cantidadError(l)}
+                      onChange={(e) => updateLinea(l.key, { cantidad: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                <div style={{ width: 150 }}>
+                  <Field label={i === 0 ? "lote" : undefined} hint={i === 0 ? "opcional" : undefined}>
+                    <Input
+                      value={l.lote}
+                      placeholder="opcional"
+                      onChange={(e) => updateLinea(l.key, { lote: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                <Button
+                  variant="ghost"
+                  icon="ti-x"
+                  aria-label={`quitar línea ${i + 1}`}
+                  disabled={lineas.length === 1}
+                  onClick={() => quitarLinea(l.key)}
+                  style={{ minHeight: 0, padding: "4px 8px", marginTop: i === 0 ? 20 : 0 }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <Button
+              variant="ghost"
+              icon="ti-plus"
+              onClick={() => setLineas((ls) => [...ls, makeLinea()])}
+              style={{ minHeight: 0, padding: "4px 10px", fontSize: 12 }}
+            >
+              Agregar línea
+            </Button>
+          </div>
+
+          {submitError && <FormAlert>{submitError}</FormAlert>}
+          <ModalFooter onCancel={onClose} sending={sending}>
+            <Button variant="primary" icon="ti-package-import" loading={sending} onClick={() => void submit()}>
+              {yaLleno ? "Agregar carga" : "Consolidar"}
+            </Button>
+          </ModalFooter>
+        </div>
+      </Modal>
+
+      {/* stacked sobre el modal de arriba (mismo patrón que NuevoDepositoModal/
+          NuevoBookingModal en ingreso) — sibling, no anidado dentro del <Modal>. */}
+      {modalProducto && (
+        <NuevoProductoModal
+          texto={modalProducto.texto}
+          onClose={() => setModalProducto(null)}
+          onCreado={async (id) => {
+            const rowKey = modalProducto.key;
+            const textoCreado = modalProducto.texto;
+            await loadProductos();
+            updateLinea(rowKey, { productoId: id });
+            setModalProducto(null);
+            toast({ type: "exito", title: "Producto creado", detail: `«${textoCreado}» ya está disponible.` });
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/** Desconsolidar — cierra TODAS las líneas vigentes de la operación (soft-close) y la
+ * marca vacía. Motivo opcional (a diferencia de anular/corregir): es un movimiento de
+ * stock rutinario, no una corrección. */
+export function DesconsolidarModal({
+  operacionId,
+  numeroContenedor,
+  totalBolsas,
+  onClose,
+  onDone,
+}: {
+  operacionId: string;
+  numeroContenedor: string;
+  /** Total de bolsas vigentes (de vista_carga_actual) — solo para el mensaje de contexto. */
+  totalBolsas: number;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const [motivo, setMotivo] = useState("");
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (sending) return;
+    setSubmitError(null);
+    setSending(true);
+    const { data, error } = await getSupabase().rpc("crm_desconsolidar", {
+      p_operacion_id: operacionId,
+      p_motivo: motivo.trim() === "" ? null : motivo.trim(),
+    });
+    setSending(false);
+    if (error) {
+      setSubmitError(error.message);
+      return;
+    }
+    const cerradas = (data as { lineas_cerradas?: number } | null)?.lineas_cerradas ?? 0;
+    toast({
+      type: "exito",
+      title: "Contenedor desconsolidado",
+      detail: `${numeroContenedor}: se cerraron ${cerradas} línea${cerradas === 1 ? "" : "s"} de carga — el contenedor queda vacío.`,
+    });
+    onDone();
+  };
+
+  return (
+    <ConfirmDialog
+      open
+      title="Desconsolidar contenedor"
+      confirmLabel="Desconsolidar"
+      cancelLabel="Cancelar"
+      loading={sending}
+      onConfirm={() => void submit()}
+      onCancel={onClose}
+      message={
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <span>
+            Se cierran las <strong className="mono">{totalBolsas.toLocaleString("es-AR")}</strong> bolsa
+            {totalBolsas === 1 ? "" : "s"} vigentes de <span className="mono">{numeroContenedor}</span> y el
+            contenedor pasa a <strong>vacío</strong>. Es informativo: no afecta la tarifa ni el freetime.
+          </span>
+          <Field label="motivo" htmlFor="desconsolidar-motivo" hint="opcional — queda en el historial">
+            <Textarea
+              id="desconsolidar-motivo"
+              rows={2}
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+            />
+          </Field>
+          {submitError && <FormAlert>{submitError}</FormAlert>}
+        </div>
+      }
+    />
   );
 }

@@ -33,12 +33,14 @@ import { Timeline, type TimelineItem, type TimelineStatus } from "@/components/f
 import { EVENTO_LABELS, TIPO_CIERRE_LABELS, TIPO_INCIDENCIA_LABELS, fmtFecha, fmtFechaHora, fmtHora, fmtUSD } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
-import { EstadoOperacionBadge } from "../estado-operacion";
+import { EstadoCargaBadge, EstadoOperacionBadge } from "../estado-operacion";
 import {
   AnularOperacionModal,
   AnularWaiverModal,
   ConfirmarLlegadaModal,
+  ConsolidarModal,
   CorregirDatoModal,
+  DesconsolidarModal,
   MoverPlantasModal,
   REFORZADO_OPTIONS,
   RegistrarWaiverModal,
@@ -62,6 +64,8 @@ type ContenedorFicha = {
 type OperacionFicha = {
   id: string;
   estado: string;
+  // informativo (M5-029, D3): NO selecciona tarifa ni corta el reloj de detention.
+  estado_carga: string;
   fecha_retiro: string;
   retiro_de: string;
   booking_retiro: string | null;
@@ -117,6 +121,11 @@ type EventoRow = {
 
 type UsuarioPublico = { id: string; nombre: string };
 
+// Línea agregada de crm.vista_carga_actual (M5-029) — GMID + descripción + bolsas +
+// lote opcional. La view solo trae filas con al menos una línea vigente.
+type CargaLinea = { gmid: string; descripcion: string; cantidad_bolsas: number; lote: string | null };
+type CargaActualRow = { operacion_id: string; lineas: CargaLinea[]; total_bolsas: number };
+
 type FichaData = {
   contenedor: ContenedorFicha;
   operaciones: OperacionFicha[];
@@ -128,6 +137,8 @@ type FichaData = {
   costos: CostosFicha | null;
   /** Historial de crm.operacion_waivers (021) de la operación mostrada — orden created_at desc. */
   waivers: OperacionWaiverRow[];
+  /** null = sin líneas vigentes (vacío, o fetch tolerante que falló) — ver targetOp abajo. */
+  cargaActual: CargaActualRow | null;
 };
 
 /* ---------- display helpers (solo formato — cero negocio) ---------- */
@@ -144,6 +155,25 @@ const CARD: React.CSSProperties = {
   border: "1px solid var(--color-border-subtle)",
   borderRadius: "var(--radius-input)",
   padding: 16,
+};
+
+// tabla chica "carga actual" (029) — mismos tokens que DataTable (uppercase label,
+// tabular-nums) pero sin header sticky/paginación: son a lo sumo unas pocas líneas.
+const TH_MINI: React.CSSProperties = {
+  textAlign: "left",
+  padding: "4px 10px 4px 0",
+  color: "var(--color-text-label)",
+  fontWeight: 500,
+  fontSize: 10,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  borderBottom: "1px solid var(--color-border-subtle)",
+};
+
+const TD_MINI: React.CSSProperties = {
+  padding: "5px 10px 5px 0",
+  borderBottom: "1px solid var(--color-border-subtle)",
+  color: "var(--color-text-secondary)",
 };
 
 function medioLabel(medio: string | null): string | null {
@@ -188,7 +218,36 @@ function detalleTexto(
         // el flag quedó congelado al crear el evento: solo afirma el caso true
         detalle.confirmado === true ? "confirmado al registrar" : null,
       ]);
-    case "carga":
+    case "carga": {
+      // M5-029: un mismo tipo de evento cubre dos flujos — se distinguen por
+      // detalle.accion (solo presente en consolidar/desconsolidar). Los eventos legacy
+      // de asignación de embarque (pre-029) no tienen esa clave → caen al shape de abajo.
+      const accion = s("accion");
+      if (accion === "consolidar") {
+        const lineasArr = Array.isArray(detalle.lineas) ? (detalle.lineas as Array<Record<string, unknown>>) : [];
+        const resumen = lineasArr
+          .map((l) => {
+            const gmid = typeof l.gmid === "string" ? l.gmid : "—";
+            const cant = typeof l.cantidad_bolsas === "number" ? l.cantidad_bolsas : null;
+            return cant != null ? `${gmid} (${cant})` : gmid;
+          })
+          .join(", ");
+        const total = detalle.total_lineas_vigentes;
+        return joinParts([
+          resumen ? `agregado: ${resumen}` : null,
+          typeof total === "number" ? `${total} línea${total === 1 ? "" : "s"} vigente${total === 1 ? "" : "s"}` : null,
+        ]);
+      }
+      if (accion === "desconsolidar") {
+        const cerradas = detalle.lineas_cerradas;
+        return joinParts([
+          typeof cerradas === "number"
+            ? `${cerradas} línea${cerradas === 1 ? "" : "s"} cerrada${cerradas === 1 ? "" : "s"}`
+            : null,
+          s("motivo") ? `motivo: ${s("motivo")}` : null,
+        ]);
+      }
+      // legacy: asignación de embarque (evt_operacion_update, 005/019)
       return joinParts([
         s("orden") ? `orden ${s("orden")}` : null,
         s("shp") ? `SHP ${s("shp")}` : null,
@@ -196,6 +255,7 @@ function detalleTexto(
         s("buque") ? `buque ${s("buque")}` : null,
         s("destino") ? `destino ${s("destino")}` : null,
       ]);
+    }
     case "egreso": {
       const tc = s("tipo_cierre");
       return tc ? `cierre: ${TIPO_CIERRE_LABELS[tc] ?? tc}` : null;
@@ -309,6 +369,8 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
   const [waiverOpen, setWaiverOpen] = useState(false);
   const [corregirOpen, setCorregirOpen] = useState(false);
   const [anularWaiver, setAnularWaiver] = useState<{ id: string; dias: number } | null>(null);
+  const [consolidarOpen, setConsolidarOpen] = useState(false);
+  const [desconsolidarOpen, setDesconsolidarOpen] = useState(false);
 
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
@@ -331,7 +393,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       supabase
         .from("operaciones")
         .select(
-          "id, estado, fecha_retiro, retiro_de, booking_retiro, orden, shp, booking_asignado, buque, destino, fecha_egreso_planta, tipo_cierre, fecha_devolucion, anulada_motivo, planta_actual_id, planta_actual:plantas(nombre)",
+          "id, estado, estado_carga, fecha_retiro, retiro_de, booking_retiro, orden, shp, booking_asignado, buque, destino, fecha_egreso_planta, tipo_cierre, fecha_devolucion, anulada_motivo, planta_actual_id, planta_actual:plantas(nombre)",
         )
         .eq("contenedor_id", id)
         .order("fecha_retiro", { ascending: false }),
@@ -441,6 +503,20 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       waivers = wv.data as unknown as OperacionWaiverRow[];
     }
 
+    // carga actual (029) de la MISMA operación mostrada — READ directo (RLS scopea
+    // transitivamente vía la operación). Fetch TOLERANTE: es informativo (D3), si falla
+    // o no hay fila (vacío) la ficha sale igual sin el bloque de carga.
+    let cargaActual: CargaActualRow | null = null;
+    if (targetOp) {
+      const ca = await supabase
+        .from("vista_carga_actual")
+        .select("operacion_id, lineas, total_bolsas")
+        .eq("operacion_id", targetOp.id)
+        .maybeSingle();
+      if (rid !== reqIdRef.current) return;
+      if (!ca.error && ca.data) cargaActual = ca.data as unknown as CargaActualRow;
+    }
+
     setLoadError(null);
     setNotFound(false);
     setData({
@@ -452,6 +528,7 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
       usuarios: us.data as UsuarioPublico[],
       costos,
       waivers,
+      cargaActual,
     });
   }, [id]);
 
@@ -685,7 +762,10 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
               )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
                 <DataItem label="estado">
-                  <EstadoOperacionBadge estado={shownOp.estado} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <EstadoOperacionBadge estado={shownOp.estado} />
+                    <EstadoCargaBadge estadoCarga={shownOp.estado_carga} />
+                  </div>
                 </DataItem>
                 <DataItem label="planta actual">{shownOp.planta_actual?.nombre ?? "—"}</DataItem>
                 <DataItem label="fecha retiro">
@@ -734,6 +814,18 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
                       Mover entre plantas
                     </Button>
                   )}
+                  {/* consolidar/desconsolidar (029, D3 — informativo): solo en_planta, mismo
+                      gate que "mover entre plantas" */}
+                  {openOp?.estado === "en_planta" && (
+                    <Button variant="ghost" icon="ti-package-import" onClick={() => setConsolidarOpen(true)}>
+                      {openOp.estado_carga === "lleno" ? "Agregar carga" : "Consolidar"}
+                    </Button>
+                  )}
+                  {openOp?.estado === "en_planta" && openOp.estado_carga === "lleno" && (
+                    <Button variant="ghost" icon="ti-package-export" onClick={() => setDesconsolidarOpen(true)}>
+                      Desconsolidar
+                    </Button>
+                  )}
                   {/* waiver (019): sup+ sobre cualquier operación no anulada — la naviera
                       suele condonar días DESPUÉS del cierre, por eso no se gatea a abierta */}
                   {canSupAdmin && shownOp.estado !== "anulada" && (
@@ -761,6 +853,69 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
                 Este contenedor todavía no tiene ningún ciclo. Los ciclos se crean desde la solapa{" "}
                 <strong>Ingreso</strong> con una tanda de retiro; al cargar una, el ciclo aparece acá con su historial.
               </EmptyState>
+            </div>
+          )}
+
+          {/* ---------- carga actual (029, D3 — informativo): solo si está lleno ---------- */}
+          {shownOp && shownOp.estado_carga === "lleno" && (
+            <div style={{ ...CARD, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div
+                className="fd-label"
+                style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--color-text-secondary)" }}
+              >
+                <i className="ti ti-box" aria-hidden />
+                Carga actual
+                {data.cargaActual && data.cargaActual.lineas.length > 0 && (
+                  <span className="mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                    {data.cargaActual.lineas.length} producto{data.cargaActual.lineas.length === 1 ? "" : "s"}
+                  </span>
+                )}
+              </div>
+              {!data.cargaActual || data.cargaActual.lineas.length === 0 ? (
+                <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                  El estado dice «lleno» pero no hay líneas de carga vigentes — usá <strong>Consolidar</strong> para
+                  cargar el detalle, o <strong>Desconsolidar</strong> si en realidad está vacío.
+                </span>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, fontVariantNumeric: "tabular-nums" }}>
+                    <thead>
+                      <tr>
+                        <th style={TH_MINI}>gmid</th>
+                        <th style={TH_MINI}>descripción</th>
+                        <th style={{ ...TH_MINI, textAlign: "right" }}>bolsas</th>
+                        <th style={TH_MINI}>lote</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.cargaActual.lineas.map((l, i) => (
+                        <tr key={`${l.gmid}-${l.lote ?? ""}-${i}`}>
+                          <td style={TD_MINI} className="mono">{l.gmid}</td>
+                          <td style={TD_MINI}>{l.descripcion}</td>
+                          <td style={{ ...TD_MINI, textAlign: "right" }} className="mono">
+                            {l.cantidad_bolsas.toLocaleString("es-AR")}
+                          </td>
+                          <td style={TD_MINI}>{l.lote ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td style={{ ...TD_MINI, fontWeight: 700, borderBottom: "none" }} colSpan={2}>
+                          Total
+                        </td>
+                        <td
+                          style={{ ...TD_MINI, textAlign: "right", fontWeight: 700, borderBottom: "none" }}
+                          className="mono"
+                        >
+                          {data.cargaActual.total_bolsas.toLocaleString("es-AR")}
+                        </td>
+                        <td style={{ ...TD_MINI, borderBottom: "none" }} />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -988,6 +1143,30 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
           onClose={() => setCorregirOpen(false)}
           onDone={() => {
             setCorregirOpen(false);
+            void load();
+          }}
+        />
+      )}
+      {consolidarOpen && openOp && (
+        <ConsolidarModal
+          operacionId={openOp.id}
+          numeroContenedor={cont.numero_contenedor}
+          yaLleno={openOp.estado_carga === "lleno"}
+          onClose={() => setConsolidarOpen(false)}
+          onDone={() => {
+            setConsolidarOpen(false);
+            void load();
+          }}
+        />
+      )}
+      {desconsolidarOpen && openOp && (
+        <DesconsolidarModal
+          operacionId={openOp.id}
+          numeroContenedor={cont.numero_contenedor}
+          totalBolsas={data.cargaActual?.total_bolsas ?? 0}
+          onClose={() => setDesconsolidarOpen(false)}
+          onDone={() => {
+            setDesconsolidarOpen(false);
             void load();
           }}
         />

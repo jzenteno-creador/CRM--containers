@@ -323,6 +323,11 @@ export function TandaForm({
   const [confirmaIngreso, setConfirmaIngreso] = useState(false);
   const [medio, setMedio] = useState<"camion" | "tren">("camion");
 
+  // estado_carga (M5-029, D3 informativo): default 'vacio' — caso raro (movimiento
+  // entre plantas de un contenedor ya lleno) queda a un click. Aplica a TODAS las
+  // operaciones de la tanda (columna de header, no por contenedor).
+  const [estadoCarga, setEstadoCarga] = useState<"vacio" | "lleno">("vacio");
+
   const [pasteText, setPasteText] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   // overrides de reforzado tocados por el usuario (numero → valor); default es true.
@@ -412,6 +417,8 @@ export function TandaForm({
         booking_id: bookingId,
         require_booking: true,
         ...(confirmaIngreso ? { medio } : {}),
+        // 029 (M5): solo se manda si es 'lleno' — el default 'vacio' lo pone la DB.
+        ...(estadoCarga === "lleno" ? { estado_carga: "lleno" } : {}),
       },
       contenedores: rows.map((r) => ({ numero: r.numero, reforzado: r.reforzado })),
     };
@@ -687,6 +694,22 @@ export function TandaForm({
               </StatusBadge>
             )}
           </div>
+        </Field>
+
+        <Field
+          label="estado de carga"
+          htmlFor="tanda-estado-carga"
+          hint="caso raro — movimiento entre plantas de un contenedor ya lleno"
+          help={<FieldHelp fieldKey="ingreso.estado_carga" />}
+        >
+          <Select
+            id="tanda-estado-carga"
+            value={estadoCarga}
+            onChange={(e) => setEstadoCarga(e.target.value as "vacio" | "lleno")}
+          >
+            <option value="vacio">Vacío</option>
+            <option value="lleno">Lleno</option>
+          </Select>
         </Field>
       </div>
 

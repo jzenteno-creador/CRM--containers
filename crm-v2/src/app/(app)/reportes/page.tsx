@@ -35,7 +35,7 @@ import {
   hoyAR,
 } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
-import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
+import { ESTADO_CARGA_LABELS, EstadoCargaBadge, EstadoOperacionBadge } from "../contenedores/estado-operacion";
 
 // ── contratos de datos ──────────────────────────────────────────────────────
 
@@ -44,6 +44,8 @@ import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
 type BaseRow = {
   id: string;
   estado: string;
+  // informativo (M5-029, D3): lleno/vacío — NO afecta tarifa ni freetime.
+  estado_carga: string;
   tipo_cierre: string;
   fecha_retiro: string;
   fecha_egreso_planta: string | null;
@@ -80,6 +82,9 @@ type ReportRow = {
   planta: string | null;
   deposito: string | null;
   estado: string;
+  estado_carga: string;
+  /** "GMID (bolsas); GMID (bolsas)…" desde vista_carga_actual — null si no hay líneas vigentes. */
+  productos_gmid: string | null;
   tipo_cierre: string;
   fecha_retiro: string;
   fecha_egreso_planta: string | null;
@@ -102,7 +107,7 @@ type Catalogo = { id: string; nombre: string };
 // contenedor embebido con !inner (todo op tiene contenedor → no descarta filas) para que
 // el filtro por contenedor.naviera_id recorte las filas raíz, no solo el embed.
 const SELECT_BASE =
-  "id, estado, tipo_cierre, fecha_retiro, fecha_egreso_planta, fecha_devolucion, retiro_de, " +
+  "id, estado, estado_carga, tipo_cierre, fecha_retiro, fecha_egreso_planta, fecha_devolucion, retiro_de, " +
   "booking_retiro, booking_asignado, orden, shp, " +
   "contenedor:contenedores!inner(numero_contenedor, naviera:navieras(nombre)), " +
   "planta_actual:plantas(nombre), deposito:depositos!retiro_de_id(nombre)";
@@ -124,7 +129,8 @@ type ColKey =
   | "fecha_retiro" | "fecha_egreso_planta" | "fecha_devolucion"
   | "dias_estadia" | "dias_libres" | "tarifa_usd_dia"
   | "costo_bruto" | "costo_absorbido" | "costo_neto" | "waiver_dias"
-  | "booking_retiro" | "booking_asignado" | "orden" | "shp";
+  | "booking_retiro" | "booking_asignado" | "orden" | "shp"
+  | "estado_carga" | "productos_gmid";
 
 // `base` = descriptivo (tablas base) · `view` = número ya calculado por las views.
 type ColGroup = "base" | "view";
@@ -244,6 +250,14 @@ const COLS: ColDef[] = [
     preview: (r) => TIPO_CIERRE_LABELS[r.tipo_cierre] ?? r.tipo_cierre,
     excel: (r) => TIPO_CIERRE_LABELS[r.tipo_cierre] ?? r.tipo_cierre,
   },
+  {
+    // M5-029, D3 informativo — deshabilitada por default (ver DEFAULT_HIDDEN) para no
+    // ensanchar el reporte existente.
+    key: "estado_carga", th: "carga", label: "Estado de carga", group: "base", hideOnMobile: true,
+    sortValue: (r) => r.estado_carga,
+    preview: (r) => <EstadoCargaBadge estadoCarga={r.estado_carga} />,
+    excel: (r) => ESTADO_CARGA_LABELS[r.estado_carga] ?? r.estado_carga,
+  },
   dateCol("fecha_retiro", "f. retiro", "Fecha de retiro", (r) => r.fecha_retiro),
   dateCol("fecha_egreso_planta", "f. egreso", "Fecha de egreso de planta", (r) => r.fecha_egreso_planta),
   dateCol("fecha_devolucion", "f. devol.", "Fecha de devolución", (r) => r.fecha_devolucion),
@@ -258,7 +272,13 @@ const COLS: ColDef[] = [
   textCol("booking_asignado", "book. asig.", "Booking asignado", (r) => r.booking_asignado, { mono: true, hideOnMobile: true }),
   textCol("orden", "orden", "Orden", (r) => r.orden, { mono: true, hideOnMobile: true }),
   textCol("shp", "shp", "SHP", (r) => r.shp, { mono: true, hideOnMobile: true }),
+  // M5-029, D3 informativo — deshabilitada por default (ver DEFAULT_HIDDEN).
+  textCol("productos_gmid", "productos (gmid)", "Productos (GMID)", (r) => r.productos_gmid, { hideOnMobile: true }),
 ];
+
+// columnas nuevas de 029 que arrancan DESACTIVADAS (no ensanchar el reporte existente) —
+// el usuario las tilda desde el selector si las necesita.
+const DEFAULT_HIDDEN: ColKey[] = ["estado_carga", "productos_gmid"];
 
 const ALL_KEYS = COLS.map((c) => c.key);
 
@@ -297,6 +317,31 @@ async function fetchViewNumbers(ids: string[]): Promise<Map<string, ViewNums>> {
   return map;
 }
 
+// Carga vigente por operación (M5-029, informativo D3) — MISMO patrón de chunked .in()
+// que fetchViewNumbers de arriba: copia literal de crm.vista_carga_actual, cero cálculo.
+// La view solo trae filas con al menos una línea vigente (vacío → sin fila, no error).
+type CargaActualNums = {
+  operacion_id: string;
+  lineas: { gmid: string; descripcion: string; cantidad_bolsas: number; lote: string | null }[];
+  total_bolsas: number;
+};
+
+async function fetchCargaActual(ids: string[]): Promise<Map<string, CargaActualNums>> {
+  const map = new Map<string, CargaActualNums>();
+  if (ids.length === 0) return map;
+  const supabase = getSupabase();
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += IN_CHUNK) chunks.push(ids.slice(i, i + IN_CHUNK));
+  const results = await Promise.all(
+    chunks.map((c) => supabase.from("vista_carga_actual").select("operacion_id, lineas, total_bolsas").in("operacion_id", c)),
+  );
+  for (const res of results) {
+    if (res.error || !res.data) continue; // tolerante: sin líneas para ese lote → "—"
+    for (const row of res.data as unknown as CargaActualNums[]) map.set(row.operacion_id, row);
+  }
+  return map;
+}
+
 export default function ReportesPage() {
   const toast = useToast();
 
@@ -314,8 +359,11 @@ export default function ReportesPage() {
   const [estado, setEstado] = useState("");
   const [tipoCierre, setTipoCierre] = useState("");
 
-  // selección de columnas (solo afecta preview + export, NO dispara load)
-  const [selected, setSelected] = useState<Set<ColKey>>(() => new Set(ALL_KEYS));
+  // selección de columnas (solo afecta preview + export, NO dispara load) — las de 029
+  // arrancan desactivadas (DEFAULT_HIDDEN) para no ensanchar el reporte existente.
+  const [selected, setSelected] = useState<Set<ColKey>>(
+    () => new Set(ALL_KEYS.filter((k) => !DEFAULT_HIDDEN.includes(k))),
+  );
 
   const [rows, setRows] = useState<ReportRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -363,12 +411,17 @@ export default function ReportesPage() {
     }
 
     const base = (data as unknown as BaseRow[]) ?? [];
-    // números YA CALCULADOS, traídos de las views por operacion_id (nunca recalculados)
-    const nums = await fetchViewNumbers(base.map((b) => b.id));
+    // números YA CALCULADOS (views) + carga vigente (029) — ambos merge por operacion_id,
+    // nunca recalculados; en paralelo, mismo patrón chunked .in() los dos.
+    const [nums, cargas] = await Promise.all([
+      fetchViewNumbers(base.map((b) => b.id)),
+      fetchCargaActual(base.map((b) => b.id)),
+    ]);
     if (rid !== reqIdRef.current) return;
 
     const merged: ReportRow[] = base.map((b) => {
       const n = nums.get(b.id);
+      const carga = cargas.get(b.id);
       return {
         operacion_id: b.id,
         numero_contenedor: b.contenedor?.numero_contenedor ?? "",
@@ -376,6 +429,11 @@ export default function ReportesPage() {
         planta: b.planta_actual?.nombre ?? null,
         deposito: b.deposito?.nombre ?? b.retiro_de ?? null, // vivo, fallback al snapshot
         estado: b.estado,
+        estado_carga: b.estado_carga,
+        productos_gmid:
+          carga && carga.lineas.length > 0
+            ? carga.lineas.map((l) => `${l.gmid} (${l.cantidad_bolsas})`).join("; ")
+            : null,
         tipo_cierre: b.tipo_cierre,
         fecha_retiro: b.fecha_retiro,
         fecha_egreso_planta: b.fecha_egreso_planta,

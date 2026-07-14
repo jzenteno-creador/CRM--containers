@@ -120,7 +120,10 @@ export const EVENTO_LABELS: Record<string, string> = {
   retiro: "Retiro en depósito",
   ingreso_planta: "Ingreso a planta",
   movimiento: "Movimiento entre plantas",
-  carga: "Carga / asignación",
+  // Un solo tipo de evento cubre dos flujos distintos (M5-029 los distingue por
+  // detalle.accion): asignación de embarque legacy (orden/shp/buque/destino) y
+  // consolidación/desconsolidación de mercadería (GMID/bolsas/lote).
+  carga: "Carga / consolidación",
   egreso: "Salida de planta",
   devolucion: "Devolución / gate-in terminal",
   anulacion: "Anulación",

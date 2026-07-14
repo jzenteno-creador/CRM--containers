@@ -31,6 +31,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha, fmtFechaDia, hoyAR, TIPO_CIERRE_LABELS } from "@/lib/format";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
+import { EstadoCargaBadge } from "../contenedores/estado-operacion";
 
 type ContenedorEmbed = {
   numero_contenedor: string;
@@ -43,6 +44,8 @@ type EnPlantaRow = {
   fecha_retiro: string;
   booking_retiro: string | null;
   retiro_de: string;
+  // informativo (M5-029, D3): visible acá para no embarcar un lleno por error visual.
+  estado_carga: string;
   contenedor: ContenedorEmbed | null;
   planta_actual: { nombre: string } | null;
 };
@@ -156,7 +159,7 @@ export default function EgresoPage() {
       .from("operaciones")
       .select(
         // operaciones→plantas tiene UNA sola FK (planta_actual_id) → sin desambiguar
-        "id, fecha_retiro, booking_retiro, retiro_de, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre)), planta_actual:plantas(nombre)",
+        "id, fecha_retiro, booking_retiro, retiro_de, estado_carga, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre)), planta_actual:plantas(nombre)",
       )
       .eq("estado", "en_planta")
       .order("fecha_retiro", { ascending: true });
@@ -391,6 +394,14 @@ export default function EgresoPage() {
       render: (r) => r.contenedor?.tipo ?? "—",
       sortValue: (r) => r.contenedor?.tipo ?? null,
       hideOnMobile: true,
+    },
+    {
+      key: "carga",
+      header: "carga",
+      // NUNCA hideOnMobile: es la señal visual contra embarcar un lleno por error (el
+      // operario que registra la salida suele estar en el celular en planta).
+      render: (r) => <EstadoCargaBadge estadoCarga={r.estado_carga} />,
+      sortValue: (r) => r.estado_carga,
     },
     {
       key: "planta",
