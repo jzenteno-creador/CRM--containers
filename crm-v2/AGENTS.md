@@ -25,6 +25,39 @@ y NUNCA escribe directo sobre tablas de plata.
   interpolan vía `crm_ayuda_valores`, nunca se escriben a mano).
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
+- **Enforcement a nivel DB (fix P1 de CP3, migración 025 — APLICADA en prod 2026-07-13,
+  registrada `20260713160000`, verificada por 3 verifiers — docs/GATE-025.md):** la regla
+  "PROHIBIDO" de arriba ya no vive solo en el front. La 025 hace `REVOKE INSERT/UPDATE` de
+  `authenticated` sobre `operaciones`/`movimientos_planta`/`contenedores` y pasa las 6 RPCs
+  operativas a `SECURITY DEFINER owner = crm_rpc_executor` (rol sin BYPASSRLS → la RLS sigue
+  scopeando por planta). Un PATCH crudo de la anon key → `42501`. Ver docs/FIX-P1-BAKEOFF.md.
+
+# Excepción DOCUMENTADA a §14.8 — usuarios_publicos es SECURITY DEFINER a propósito (CP3, 2026-07-13)
+
+La view `crm.usuarios_publicos` (proyecta SOLO `id, nombre`) es **SECURITY DEFINER, NO
+security_invoker**, como excepción documentada a §14.8 ("views siempre security_invoker").
+**RAZÓN MEDIDA** (CP3, harness — docs/GATE-025.md §2.5): con `security_invoker=true` un operador
+ve SOLO su propia fila (n=1 vs n=4) → los nombres de otros usuarios quedan en blanco y el join
+de la UI (`"por {nombre}"`, `confirmado_por`) se **ROMPE**. Column-grants `(id,nombre)` tampoco
+sirven: el panel Admin lee `email/rol/estado_cuenta` de `usuarios` directo (solicitudes/page.tsx:300).
+El leak de la view es SOLO nombres, que §14.6 quiere visibles; la proyección a `(id,nombre)` + el
+guard de caller activo son el límite de seguridad. **NO la "arregles" a security_invoker — rompe el
+sistema.** Silenciar el advisor 0010 del todo requiere convertirla en función DEFINER + cambiar los
+3 `.from("usuarios_publicos")` del front a `.rpc(...)` (un deploy).
+
+# Supervisores GLOBALES — decisión explícita de John (CP3, 2026-07-13)
+
+Los roles `supervisor` y `administrador` NO son planta-scoped: ven y operan sobre las dos plantas
+(BAHIA y ABBOTT). Es intencional (spec §7 / §14.4; en la RLS de 004, `operaciones_select/update` usan
+`p.rol in ('supervisor','administrador')` SIN condición de planta). Razón: SSB tiene 2 plantas y un
+supervisor necesita ver las dos. Los operadores SÍ son planta-scoped.
+
+Consecuencia (auditada en CP3, `docs/AUDIT-4-DEFINER-RPCS.md`): las 4 RPCs de más plata que corren
+como DEFINER owner=postgres (waiver, corrección de cerradas, validar_reforzado, versionado de tarifas)
+dejan a un supervisor operar cross-planta. **NO es un bug, es el diseño.** El control del waiver/corrección
+NO es la RLS, es la **AUDITORÍA**: motivo obligatorio + evento en el timeline + quién y cuándo. Un waiver
+indebido queda registrado. **NO "arregles" esto scopeando supervisores por planta sin decisión explícita
+de John** — hoy los supervisores ni siquiera tienen `planta_asignada_id` (es null para ellos).
 
 # Constantes que QUEDAN EN CÓDIGO (decisión de John, 2026-07-13)
 
