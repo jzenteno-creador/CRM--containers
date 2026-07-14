@@ -1,6 +1,7 @@
 "use client";
 
-// Admin → Plantas (M9 + M4 Bloque 2): listado + alta + edición + baja lógica.
+// Admin → Plantas (M9 + M4 Bloque 2 + B1 multi-región): listado + alta + edición + baja
+// lógica.
 // RLS verificada en vivo (2026-07-12): SELECT activos · INSERT admin · UPDATE admin ·
 // SIN DELETE — por eso acá NUNCA hay "borrar": la baja es `activa = false` (soft),
 // igual que el resto del sistema (naviera nunca se borra, usuario se suspende).
@@ -9,16 +10,20 @@
 // violation del nombre incluida — el CHECK de catálogo cerrado se eliminó en 019).
 // El listado muestra TAMBIÉN las inactivas (con badge) para poder reactivarlas;
 // los pickers de planta de /ingreso y /admin/solicitudes filtran `activa=true`.
+// B1 (migración 026): `plantas.pais_id` es NOT NULL — el alta manda pais_id SIEMPRE
+// (Select de países activos, default ARGENTINA); sin este fix el INSERT rompía por la
+// constraint (bug detectado y corregido en este mismo cambio, no existía antes de 026).
 // Guard admin (patrón solicitudes §14.7): skeleton + redirect; RLS es la compuerta real.
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
 import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
-import { Field, Input } from "@/components/fd/fields";
+import { Field, Input, Select } from "@/components/fd/fields";
+import { FieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { ConfirmDialog, Modal } from "@/components/fd/modal";
 import { PageHeader } from "@/components/fd/page-header";
@@ -27,35 +32,53 @@ import { fmtFecha } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 
+type Pais = { id: string; nombre: string; activo: boolean };
+
 type PlantaRow = {
   id: string;
   nombre: string;
   codigo: string | null;
   activa: boolean;
   created_at: string;
+  pais_id: string;
+  pais: { nombre: string } | null;
 };
 
 /* ---------- modal de alta / edición (mismo form) ---------- */
 
 function PlantaModal({
   target,
+  paises,
+  defaultPaisId,
   onClose,
   onDone,
 }: {
   /** null = alta; con fila = edición. */
   target: PlantaRow | null;
+  paises: Pais[];
+  defaultPaisId: string;
   onClose: () => void;
   onDone: () => void;
 }) {
   const toast = useToast();
   const [nombre, setNombre] = useState(target?.nombre ?? "");
   const [codigo, setCodigo] = useState(target?.codigo ?? "");
+  const [paisId, setPaisId] = useState(target?.pais_id ?? defaultPaisId);
   const [attempted, setAttempted] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // si el país actual de la planta no está en la lista de activos (desactivado después
+  // de asignarlo), igual se lo incluye como opción — nunca queremos "perder" la
+  // selección vigente al abrir el modal de edición.
+  const paisOptions =
+    target && target.pais && !paises.some((p) => p.id === target.pais_id)
+      ? [...paises, { id: target.pais_id, nombre: `${target.pais.nombre} (inactivo)`, activo: false }]
+      : paises;
+
   const nombreError = attempted && nombre.trim() === "" ? "el nombre es obligatorio" : null;
-  const valid = nombre.trim() !== "";
+  const paisError = attempted && paisId === "" ? "elegí el país" : null;
+  const valid = nombre.trim() !== "" && paisId !== "";
 
   const submit = async () => {
     setAttempted(true);
@@ -63,7 +86,11 @@ function PlantaModal({
     if (!valid || sending) return;
     setSending(true);
     const supabase = getSupabase();
-    const payload = { nombre: nombre.trim(), codigo: codigo.trim() === "" ? null : codigo.trim() };
+    const payload = {
+      nombre: nombre.trim(),
+      codigo: codigo.trim() === "" ? null : codigo.trim(),
+      pais_id: paisId,
+    };
     const { data, error } = target
       ? await supabase.from("plantas").update(payload).eq("id", target.id).select("id")
       : await supabase.from("plantas").insert(payload).select("id");
@@ -119,6 +146,22 @@ function PlantaModal({
             onChange={(e) => setCodigo(e.target.value)}
           />
         </Field>
+        <Field
+          label="país"
+          htmlFor="planta-pais"
+          error={paisError}
+          hint="de qué país es esta planta — define qué tarifa de freetime de origen aplica"
+          help={<FieldHelp fieldKey="admin.planta.pais" />}
+        >
+          <Select id="planta-pais" value={paisId} error={paisError} onChange={(e) => setPaisId(e.target.value)}>
+            <option value="">— elegí el país —</option>
+            {paisOptions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </Select>
+        </Field>
         {submitError && <FormAlert>{submitError}</FormAlert>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
           <Button variant="ghost" onClick={onClose} disabled={sending}>
@@ -148,6 +191,8 @@ export default function PlantasPage() {
 
   const [rows, setRows] = useState<PlantaRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [paises, setPaises] = useState<Pais[] | null>(null);
+  const [paisesError, setPaisesError] = useState<string | null>(null);
   const [modal, setModal] = useState<{ open: boolean; target: PlantaRow | null }>({ open: false, target: null });
   const [estadoTarget, setEstadoTarget] = useState<{ planta: PlantaRow; activa: boolean } | null>(null);
   const [estadoSending, setEstadoSending] = useState(false);
@@ -162,7 +207,7 @@ export default function PlantasPage() {
   const load = useCallback(async () => {
     const { data, error } = await getSupabase()
       .from("plantas")
-      .select("id, nombre, codigo, activa, created_at")
+      .select("id, nombre, codigo, activa, created_at, pais_id, pais:paises(nombre)")
       .order("activa", { ascending: false })
       .order("nombre");
     if (error) {
@@ -171,25 +216,45 @@ export default function PlantasPage() {
       return;
     }
     setLoadError(null);
-    setRows(data as PlantaRow[]);
+    setRows(data as unknown as PlantaRow[]);
+  }, []);
+
+  // países activos, para el Select del modal (default ARGENTINA — B1, 90% del uso es local)
+  const loadPaises = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("paises")
+      .select("id, nombre, activo")
+      .eq("activo", true)
+      .order("nombre");
+    if (error) {
+      setPaises(null);
+      setPaisesError(error.message);
+      return;
+    }
+    setPaisesError(null);
+    setPaises(data as Pais[]);
   }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
     void (async () => {
-      await load();
+      await Promise.all([load(), loadPaises()]);
     })();
-  }, [isAdmin, load]);
+  }, [isAdmin, load, loadPaises]);
 
   // refetch al recuperar foco (mismo criterio que navieras/solicitudes)
   useEffect(() => {
     if (!isAdmin) return;
-    const onFocus = () => void load();
+    const onFocus = () => {
+      void load();
+      void loadPaises();
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [isAdmin, load]);
+  }, [isAdmin, load, loadPaises]);
 
   const loading = rows === null && !loadError;
+  const defaultPaisId = useMemo(() => paises?.find((p) => p.nombre === "ARGENTINA")?.id ?? "", [paises]);
   const activas = (rows ?? []).filter((r) => r.activa).length;
   const inactivas = (rows ?? []).length - activas;
 
@@ -246,6 +311,13 @@ export default function PlantasPage() {
       header: "código",
       render: (r) => (r.codigo ? <span className="mono">{r.codigo}</span> : "—"),
       sortValue: (r) => r.codigo,
+    },
+    {
+      key: "pais",
+      header: "país",
+      render: (r) => r.pais?.nombre ?? "—",
+      sortValue: (r) => r.pais?.nombre ?? null,
+      hideOnMobile: true,
     },
     {
       key: "estado",
@@ -336,11 +408,24 @@ export default function PlantasPage() {
           ) : undefined
         }
         action={
-          <Button variant="primary" icon="ti-plus" onClick={() => setModal({ open: true, target: null })}>
+          <Button
+            variant="primary"
+            icon="ti-plus"
+            disabled={paises === null}
+            onClick={() => setModal({ open: true, target: null })}
+          >
             Nueva planta
           </Button>
         }
       />
+
+      {paisesError && (
+        <div style={{ marginBottom: 10 }}>
+          <FormAlert tone="warning">
+            No se pudieron cargar los países para el selector de planta: {paisesError}
+          </FormAlert>
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -371,6 +456,8 @@ export default function PlantasPage() {
       {modal.open && (
         <PlantaModal
           target={modal.target}
+          paises={paises ?? []}
+          defaultPaisId={defaultPaisId}
           onClose={() => setModal({ open: false, target: null })}
           onDone={() => {
             setModal({ open: false, target: null });

@@ -80,7 +80,11 @@ export default function IngresoPage() {
   const loadMaestros = useCallback(async () => {
     const supabase = getSupabase();
     const [nv, pl, dp] = await Promise.all([
-      supabase.from("navieras").select("id, nombre").order("nombre"),
+      // activa=true (B1, migración 026): naviera/forwarder dado de baja deja de ofrecerse
+      // para tandas nuevas — es un combo OPERATIVO (elegir naviera para crear la tanda),
+      // a diferencia de Admin → Tarifas/Navieras o Reportes/Contenedores, que siguen
+      // mostrando todas (gestión y consulta histórica, no alta de operaciones nuevas).
+      supabase.from("navieras").select("id, nombre").eq("activa", true).order("nombre"),
       // activa=true: una planta dada de baja (Admin → Plantas) deja de ofrecerse para
       // tandas nuevas, sin afectar las operaciones que ya la tienen como destino.
       supabase.from("plantas").select("id, nombre, codigo").eq("activa", true).order("nombre"),

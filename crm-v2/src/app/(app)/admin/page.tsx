@@ -36,7 +36,7 @@ export default function AdminHubPage() {
       <>
         <PageHeader title="Administración" />
         <div style={GRID} aria-hidden>
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
             <SkeletonBlock key={i} height={74} delay={i * 150} style={{ borderRadius: "var(--radius-input)" }} />
           ))}
         </div>
@@ -56,10 +56,13 @@ export default function AdminHubPage() {
           Aprobá, rechazá y suspendé cuentas del CRM.
         </QuickLink>
         <QuickLink href="/admin/navieras" icon="ti-ship" title="Navieras">
-          Alta y edición de líneas navieras y su detention en origen.
+          Alta y edición de líneas navieras, tipo de proveedor y detention en origen.
         </QuickLink>
         <QuickLink href="/admin/tarifas" icon="ti-receipt-2" title="Tarifas de freetime">
-          Días libres y USD/día por naviera, con historial versionado.
+          Días libres y USD/día por naviera y país, origen y destino, con historial versionado.
+        </QuickLink>
+        <QuickLink href="/admin/paises" icon="ti-world" title="Países">
+          Alta y edición de países y su región, para tarifas multi-región.
         </QuickLink>
         <QuickLink href="/admin/plantas" icon="ti-building-factory-2" title="Plantas">
           Alta, edición y baja lógica de plantas operativas.
