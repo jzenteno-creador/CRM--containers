@@ -35,6 +35,7 @@ const TABS = [
   { href: "/prefijos", label: "Prefijos", icon: "ti-forbid-2" },
   { href: "/incidencias", label: "Incidencias", icon: "ti-alert-triangle" },
   { href: "/reportes", label: "Reportes", icon: "ti-report-analytics" },
+  { href: "/vision", label: "Visión", icon: "ti-camera" },
   { href: "/admin", label: "Admin", icon: "ti-settings" },
   { href: "/ayuda", label: "Ayuda", icon: "ti-help-circle" },
 ];

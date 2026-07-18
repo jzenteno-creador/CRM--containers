@@ -14,6 +14,7 @@ export const ROUTE_BUILT: Record<string, boolean> = {
   "/prefijos": true,
   "/incidencias": true,
   "/reportes": true,
+  "/vision": true,
   "/admin": true,
   "/ayuda": true,
 };
