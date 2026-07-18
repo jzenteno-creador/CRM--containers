@@ -1,0 +1,508 @@
+{
+  "generado": "2026-07-18T19:08:12.136Z",
+  "fuentes": {
+    "control": "../CONTROL DE VACIOS DOW-SSB 2025-2026 real.xlsx",
+    "costos": "../COSTOS POR DETENTION SEMANAL 2024-2025-2026 - REPORTE.xlsx"
+  },
+  "conteos": {
+    "total": 2959,
+    "cerradas": 2922,
+    "activas": 37,
+    "por_anio": {
+      "2025": 1728,
+      "2026": 1231,
+      "otros": 0
+    }
+  },
+  "corte": "2026-07-18",
+  "activas_para_revision_john": [
+    {
+      "fila": 2924,
+      "numero": "MRKU5908735",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2925,
+      "numero": "MRKU4251918",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2926,
+      "numero": "MRKU2199533",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-25",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2927,
+      "numero": "MRSU9025388",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-03",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2928,
+      "numero": "MRSU7721941",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-06",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2929,
+      "numero": "GCXU6415141",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-06",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2930,
+      "numero": "MRSU3124953",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-04",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2931,
+      "numero": "CAAU6726073",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2932,
+      "numero": "MRSU8451310",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-04",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2933,
+      "numero": "TLLU5115061",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2934,
+      "numero": "TCKU6406472",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2935,
+      "numero": "MRSU6960432",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2936,
+      "numero": "TCLU5463500",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2937,
+      "numero": "CAAU5693545",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-06",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2938,
+      "numero": "MRKU3439794",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-06",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2939,
+      "numero": "SUDU8978860",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-06",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2940,
+      "numero": "HASU4997875",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2941,
+      "numero": "TCNU2488857",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2942,
+      "numero": "FFAU2345302",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2943,
+      "numero": "TCNU7555120",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-18",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2944,
+      "numero": "HASU5082008",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-25",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2945,
+      "numero": "MRKU5386749",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-25",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2946,
+      "numero": "MRKU4407390",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-25",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2947,
+      "numero": "MRKU5404837",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-25",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2948,
+      "numero": "MRSU6034663",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-06",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2949,
+      "numero": "MRKU2304921",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-05-12",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2950,
+      "numero": "MRSU6066233",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-14",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2951,
+      "numero": "MRKU4864252",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-14",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2952,
+      "numero": "MRSU5585743",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-14",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2953,
+      "numero": "SEKU4466006",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-14",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2954,
+      "numero": "CAAU8300214",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-14",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2955,
+      "numero": "MIEU2034087",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-13",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2956,
+      "numero": "MRKU3394703",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-13",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2957,
+      "numero": "CAAU6202501",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-13",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2958,
+      "numero": "TCKU7740859",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-07-13",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2959,
+      "numero": "MRSU7785400",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    },
+    {
+      "fila": 2960,
+      "numero": "MRSU6517147",
+      "naviera": "MAERSK",
+      "fechaRetiro": "2026-06-30",
+      "fechaDev": "2026-07-20",
+      "cargado": "SI",
+      "estado": "en_transito_a_terminal"
+    }
+  ],
+  "depositos_sin_match": {
+    "TERMINAL 4/ABBOTT": 1,
+    "TERMINAL EXOLGAN": 4
+  },
+  "advertencias": [],
+  "referencia_2024_usd": 434415,
+  "resumen_costos_excel": {
+    "2024": {
+      "HAPAG": {
+        "meses": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 5500,
+          "6": 5950,
+          "7": 0,
+          "8": 0,
+          "9": 700,
+          "10": 2325,
+          "11": 0,
+          "12": 0
+        },
+        "total_anual": 14475
+      },
+      "MAERSK": {
+        "meses": {
+          "1": 66205,
+          "2": 55185,
+          "3": 21805,
+          "4": 45770,
+          "5": 20320,
+          "6": 49585,
+          "7": 27600,
+          "8": 21260,
+          "9": 31780,
+          "10": 22575,
+          "11": 23205,
+          "12": 34650
+        },
+        "total_anual": 419940
+      }
+    },
+    "2025": {
+      "HAPAG": {
+        "meses": {
+          "1": 0,
+          "2": 1850,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 3675,
+          "8": 400,
+          "9": 1400,
+          "10": 5875,
+          "11": 0,
+          "12": 1250
+        },
+        "total_anual": 14450
+      },
+      "MAERSK": {
+        "meses": {
+          "1": 24535,
+          "2": 8155,
+          "3": 9016,
+          "4": 33023,
+          "5": 3325,
+          "6": 9240,
+          "7": 2380,
+          "8": 15155,
+          "9": 12040,
+          "10": 31780,
+          "11": 21700,
+          "12": 22120
+        },
+        "total_anual": 192469
+      },
+      "CMA-CGM": {
+        "meses": {
+          "1": 0,
+          "2": 0,
+          "3": 7975,
+          "4": 58025,
+          "5": 2525,
+          "6": 1025,
+          "7": 7425,
+          "8": 1800,
+          "9": 1425,
+          "10": 500,
+          "11": 1550,
+          "12": 7575
+        },
+        "total_anual": 89825
+      }
+    },
+    "2026": {
+      "HAPAG": {
+        "meses": {
+          "1": 5775,
+          "2": 1375,
+          "3": 425,
+          "4": 0,
+          "5": 0,
+          "6": 100,
+          "7": 0,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 0,
+          "12": 0
+        },
+        "total_anual": 7675
+      },
+      "MAERSK": {
+        "meses": {
+          "1": 51975,
+          "2": 31780,
+          "3": 53305,
+          "4": 117355,
+          "5": 105000,
+          "6": 96145,
+          "7": 0,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 0,
+          "12": 0
+        },
+        "total_anual": 455560
+      },
+      "CMA-CGM": {
+        "meses": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 0,
+          "12": 0
+        },
+        "total_anual": 0
+      }
+    }
+  },
+  "discrepancias_internas_fuente2": [
+    "COSTOS DETENTION SEMANAL 2024 · HAPAG · mes 9: W1-4 suman 0 pero Total=700 (se usa Total)",
+    "COSTOS DETENTION SEMANAL 2025 · MAERSK · mes 5: W1-4 suman 3290 pero Total=3325 (se usa Total)",
+    "COSTOS DETENTION SEMANAL 2026 · HAPAG · mes 2: W1-4 suman 0 pero Total=1375 (se usa Total)"
+  ]
+}
