@@ -17,10 +17,16 @@ import { Button } from "@/components/fd/button";
 import { ErrorState } from "@/components/fd/error-state";
 import { PageHeader } from "@/components/fd/page-header";
 import type { DetectedObject, ObjectDetection } from "@tensorflow-models/coco-ssd";
+import {
+  ERRORES_CAMARA,
+  abrirCamara,
+  errorDeCamara,
+  soportaCamara,
+  type ErrorCamara,
+  type Facing,
+} from "./camara";
 
-type Facing = "environment" | "user";
 type Estado = "idle" | "iniciando" | "activo" | "error";
-type ErrorInfo = { titulo: string; detalle: string };
 
 /** Contexto mutable del motor de captura. `sesion` es la generación: cada arranque o
  * parada la bumpea y los loops viejos mueren en su próximo check — sin esto un toggle
@@ -74,38 +80,13 @@ function getTokensCanvas() {
   return tokensCanvas;
 }
 
-const ERRORES: Record<string, ErrorInfo> = {
-  noSoportado: {
-    titulo: "Cámara no disponible en este navegador",
-    detalle:
-      "El navegador no expone acceso a cámara. Fuera de HTTPS (o localhost) los navegadores la deshabilitan por completo — entrá por la URL https del deploy.",
-  },
-  permiso: {
-    titulo: "Permiso de cámara denegado",
-    detalle:
-      "Habilitá el acceso a la cámara para este sitio (candado en la barra de dirección) y reintentá.",
-  },
-  sinCamara: {
-    titulo: "No se encontró cámara",
-    detalle: "El dispositivo no tiene cámara disponible o la está usando otra aplicación.",
-  },
-  modelo: {
-    titulo: "No se pudo descargar el modelo",
-    detalle:
-      "El modelo (~1 MB) se baja del CDN de Google la primera vez. Revisá la conexión y reintentá.",
-  },
+// El único error propio de esta solapa (la descarga del modelo TF.js); el resto de la
+// taxonomía de cámara vive en ./camara.ts, compartida con el modo En vivo del escaneo.
+const ERROR_MODELO: ErrorCamara = {
+  titulo: "No se pudo descargar el modelo",
+  detalle:
+    "El modelo (~1 MB) se baja del CDN de Google la primera vez. Revisá la conexión y reintentá.",
 };
-
-function errorDeCamara(e: unknown): ErrorInfo {
-  const name = e instanceof DOMException ? e.name : "";
-  if (name === "NotAllowedError" || name === "SecurityError") return ERRORES.permiso;
-  if (name === "NotFoundError" || name === "OverconstrainedError" || name === "NotReadableError")
-    return ERRORES.sinCamara;
-  return {
-    titulo: "No se pudo iniciar la cámara",
-    detalle: e instanceof Error ? e.message : "Error desconocido al abrir la cámara.",
-  };
-}
 
 /** Cajas + etiqueta + score sobre el frame. Coordenadas del modelo = píxeles del video;
  * el canvas se dimensiona igual y se estira por CSS junto al <video>, así la alineación
@@ -202,7 +183,7 @@ export default function VisionClient() {
   const router = useRouter();
   const [estado, setEstado] = useState<Estado>("idle");
   const [facing, setFacing] = useState<Facing>("environment"); // default trasera (celular)
-  const [error, setError] = useState<ErrorInfo | null>(null);
+  const [error, setError] = useState<ErrorCamara | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -241,8 +222,8 @@ export default function VisionClient() {
     setError(null);
     setEstado("iniciando");
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError(ERRORES.noSoportado);
+    if (!soportaCamara()) {
+      setError(ERRORES_CAMARA.noSoportado);
       setEstado("error");
       return;
     }
@@ -251,15 +232,9 @@ export default function VisionClient() {
     const modeloEnCurso = cargarModelo();
 
     let stream: MediaStream;
+    let facingReal: Facing;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: target },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
+      ({ stream, facingReal } = await abrirCamara(target));
     } catch (e) {
       if (sesion !== motor.sesion) return;
       setError(errorDeCamara(e));
@@ -281,7 +256,7 @@ export default function VisionClient() {
     } catch {
       stream.getTracks().forEach((t) => t.stop());
       if (sesion !== motor.sesion) return;
-      setError(ERRORES.modelo);
+      setError(ERROR_MODELO);
       setEstado("error");
       return;
     }
@@ -290,15 +265,10 @@ export default function VisionClient() {
       return;
     }
 
-    // si el track reporta el lado real (celulares), chip y espejado siguen la realidad,
-    // no lo pedido — en desktop "trasera" suele resolver a la única webcam frontal
-    const ajustes = stream.getVideoTracks()[0]?.getSettings();
-    const real: Facing =
-      ajustes?.facingMode === "user" || ajustes?.facingMode === "environment"
-        ? ajustes.facingMode
-        : target;
-    motor.facing = real;
-    setFacing(real);
+    // lado real reportado por el track (lo resuelve abrirCamara): chip y espejado
+    // siguen la realidad, no lo pedido
+    motor.facing = facingReal;
+    setFacing(facingReal);
 
     const video = videoRef.current;
     if (!video) {

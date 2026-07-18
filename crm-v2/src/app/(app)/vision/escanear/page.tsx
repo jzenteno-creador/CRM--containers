@@ -15,9 +15,12 @@ import { Button } from "@/components/fd/button";
 import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
+import { ConfirmDialog } from "@/components/fd/modal";
 import { PageHeader } from "@/components/fd/page-header";
-import type { SiglaExtraida } from "@/lib/iso6346";
+import { limpiarRegistrosPropios } from "@/lib/scan-comprobantes";
 import { getSupabase } from "@/lib/supabase";
+import type { ScanRespuesta } from "./tipos";
+import { ScanVivo } from "./vivo";
 
 type ScanRow = {
   id: string;
@@ -28,22 +31,6 @@ type ScanRow = {
   modelo_usado: string | null;
   created_at: string;
 };
-
-type Fragmento = { texto: string; confianza: number | null; x: number | null; y: number | null };
-
-type ScanRespuesta =
-  | {
-      ok: true;
-      sigla: SiglaExtraida | null;
-      confianza: number | null;
-      recognizedText: string | null;
-      fragmentos: Fragmento[];
-      imagenAnotada: string | null;
-      guardado: boolean;
-      errorGuardado: string | null;
-      raw: unknown;
-    }
-  | { ok: false; error: string; detalle: string };
 
 const MAX_LADO = 1280; // px — suficiente para el OCR, mantiene el payload chico
 
@@ -95,6 +82,7 @@ export default function EscanearPage() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [modoVivo, setModoVivo] = useState(false);
   const [preview, setPreview] = useState<string | null>(null); // data URL reducida
   const [base64, setBase64] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -104,6 +92,7 @@ export default function EscanearPage() {
   // undefined = cargando · null = error · array = poblada
   const [rows, setRows] = useState<ScanRow[] | null | undefined>(undefined);
   const [limpiando, setLimpiando] = useState(false);
+  const [confirmLimpiar, setConfirmLimpiar] = useState(false);
   const [errorLimpiar, setErrorLimpiar] = useState<string | null>(null);
 
   // carga inicial: IIFE async con guard `alive` (patrón del shell) — el estado inicial
@@ -158,7 +147,7 @@ export default function EscanearPage() {
       });
       const json = (await res.json()) as ScanRespuesta;
       setRespuesta(json);
-      if (json.ok && json.guardado) recargar();
+      if (json.ok && json.registrado) recargar();
     } catch (e) {
       setRespuesta({
         ok: false,
@@ -174,21 +163,17 @@ export default function EscanearPage() {
     setLimpiando(true);
     setErrorLimpiar(null);
     try {
-      const { data } = await getSupabase().auth.getSession();
-      const uid = data.session?.user.id;
-      if (!uid) {
-        setErrorLimpiar("Sesión vencida — volvé a iniciar sesión.");
-        return;
-      }
-      // RLS solo permite borrar filas propias — el .eq es por prolijidad, no la barrera
-      const { error } = await getSupabase().from("scan_pruebas").delete().eq("usuario_id", uid);
-      if (error) {
-        setErrorLimpiar("No se pudieron borrar los registros — reintentá.");
+      // rutina compartida con /vision/registros: fotos del bucket PRIMERO, filas después
+      // (el review cazó la regresión: borrar solo filas dejaba comprobantes huérfanos)
+      const err = await limpiarRegistrosPropios();
+      if (err) {
+        setErrorLimpiar(err);
         return;
       }
       recargar();
     } finally {
       setLimpiando(false);
+      setConfirmLimpiar(false);
     }
   }
 
@@ -253,15 +238,42 @@ export default function EscanearPage() {
         }
         action={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Button variant="ghost" icon="ti-photo" onClick={() => router.push("/vision/registros")}>
+              Registros
+            </Button>
             <Button variant="ghost" icon="ti-camera" onClick={() => router.push("/vision")}>
-              Visión en vivo
+              Detección de objetos
             </Button>
-            <Button variant="primary" icon="ti-photo-scan" onClick={() => inputRef.current?.click()}>
-              {preview ? "Otra foto" : "Sacar / elegir foto"}
-            </Button>
+            {!modoVivo && (
+              <Button
+                variant="primary"
+                icon="ti-photo-scan"
+                onClick={() => inputRef.current?.click()}
+              >
+                {preview ? "Otra foto" : "Sacar / elegir foto"}
+              </Button>
+            )}
           </div>
         }
       />
+
+      {/* modo: Foto (una a la vez) | En vivo (auto-scan continuo) */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <Button
+          variant={modoVivo ? "ghost" : "primary"}
+          icon="ti-photo-scan"
+          onClick={() => setModoVivo(false)}
+        >
+          Foto
+        </Button>
+        <Button
+          variant={modoVivo ? "primary" : "ghost"}
+          icon="ti-video"
+          onClick={() => setModoVivo(true)}
+        >
+          En vivo
+        </Button>
+      </div>
       {/* capture=environment: en el celular abre la cámara trasera directo */}
       <input
         ref={inputRef}
@@ -274,20 +286,21 @@ export default function EscanearPage() {
 
       <section className="fd-panel" style={{ maxWidth: 720 }}>
         <div className="fd-panel-title">
-          <i className="ti ti-scan" aria-hidden />
-          Foto y resultado
+          <i className={`ti ${modoVivo ? "ti-video" : "ti-scan"}`} aria-hidden />
+          {modoVivo ? "Escaneo en vivo" : "Foto y resultado"}
         </div>
         <div className="fd-panel-body">
-          {!preview && !errorFoto && (
+          {modoVivo && <ScanVivo onRegistrado={recargar} />}
+          {!modoVivo && !preview && !errorFoto && (
             <EmptyState icon="ti-photo-scan" title="Sin foto todavía">
               Sacá una foto de la sigla del contenedor (o subí una de la galería). El sistema
               lee el texto, reconstruye la sigla ISO 6346 y valida el dígito verificador.
               Los registros son de prueba — se pueden borrar cuando quieras.
             </EmptyState>
           )}
-          {errorFoto && <ErrorState title="No se pudo leer la foto" detail={errorFoto} />}
+          {!modoVivo && errorFoto && <ErrorState title="No se pudo leer la foto" detail={errorFoto} />}
 
-          {preview && (
+          {!modoVivo && preview && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {/* imagen anotada del modelo si vino; sino la preview local */}
               {/* eslint-disable-next-line @next/next/no-img-element -- data URL local, next/image no aplica */}
@@ -308,7 +321,7 @@ export default function EscanearPage() {
             </div>
           )}
 
-          {respuesta && !respuesta.ok && (
+          {!modoVivo && respuesta && !respuesta.ok && (
             <ErrorState
               title={
                 respuesta.error === "sin_configurar"
@@ -321,7 +334,7 @@ export default function EscanearPage() {
             />
           )}
 
-          {resultadoOk && (
+          {!modoVivo && resultadoOk && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
               {resultadoOk.sigla ? (
                 <div
@@ -360,11 +373,11 @@ export default function EscanearPage() {
                   )}
                   <span style={{ fontSize: 11.5, color: "var(--color-text-muted)" }}>
                     Confianza OCR: {pct(resultadoOk.confianza)}
-                    {!resultadoOk.guardado && " · ⚠ no se guardó el registro"}
+                    {!resultadoOk.registrado && " · ⚠ no se guardó el registro"}
                   </span>
-                  {resultadoOk.errorGuardado && (
+                  {resultadoOk.errorRegistro && (
                     <span style={{ fontSize: 11.5, color: "var(--color-status-amber)" }}>
-                      Error al guardar: {resultadoOk.errorGuardado}
+                      Error al guardar: {resultadoOk.errorRegistro}
                     </span>
                   )}
                 </div>
@@ -452,11 +465,21 @@ export default function EscanearPage() {
               variant="ghost"
               icon="ti-trash"
               loading={limpiando}
-              onClick={() => void limpiarMisPruebas()}
+              onClick={() => setConfirmLimpiar(true)}
             >
               Limpiar mis escaneos
             </Button>
           </div>
+          <ConfirmDialog
+            open={confirmLimpiar}
+            title="¿Limpiar tus escaneos de prueba?"
+            message="Borra TODOS tus registros de prueba y sus fotos de comprobante. No se puede deshacer."
+            confirmLabel="Borrar todo"
+            danger
+            loading={limpiando}
+            onConfirm={() => void limpiarMisPruebas()}
+            onCancel={() => setConfirmLimpiar(false)}
+          />
         </div>
       </section>
     </>

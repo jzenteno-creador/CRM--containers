@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { extraerSigla, type SiglaExtraida } from "@/lib/iso6346";
+import { BUCKET_SCAN } from "@/lib/scan-comprobantes";
 
 // POST /api/vision/scan — PoC escaneo de sigla (modo prueba, 2026-07-18).
 // Primer endpoint server-side de crm-v2: existe SOLO porque la API key de Roboflow no
@@ -21,6 +22,9 @@ const API_URL = process.env.ROBOFLOW_API_URL ?? "https://serverless.roboflow.com
 const MAX_BASE64 = 4_000_000;
 // strings gigantes del JSON crudo (imágenes anotadas en base64) se podan de la respuesta
 const MAX_STRING_RAW = 10_000;
+// anti-duplicado del modo vivo: misma sigla registrada hace <5 min (GLOBAL, entre
+// usuarios: un contenedor físico = un registro) no se re-inserta
+const DEDUP_MS = 5 * 60_000;
 
 type Fragmento = { texto: string; confianza: number | null; x: number | null; y: number | null };
 
@@ -172,8 +176,9 @@ export async function POST(req: NextRequest) {
   }
 
   let imagen: string;
+  let modo: "manual" | "vivo";
   try {
-    const body = (await req.json()) as { imageBase64?: unknown };
+    const body = (await req.json()) as { imageBase64?: unknown; modo?: unknown };
     if (typeof body.imageBase64 !== "string" || body.imageBase64.length === 0) {
       return respError(400, "payload", "Falta imageBase64 en el cuerpo del request.");
     }
@@ -181,6 +186,7 @@ export async function POST(req: NextRequest) {
     if (imagen.length > MAX_BASE64) {
       return respError(413, "payload", "La imagen supera el límite (~4.5 MB) — reducila antes de enviar.");
     }
+    modo = body.modo === "vivo" ? "vivo" : "manual";
   } catch {
     return respError(400, "payload", "Cuerpo del request inválido (se espera JSON).");
   }
@@ -216,24 +222,86 @@ export async function POST(req: NextRequest) {
   const confianza =
     confianzas.length > 0 ? confianzas.reduce((a, b) => a + b, 0) / confianzas.length : null;
 
-  // Registro de prueba como el usuario (mismo cliente per-request de arriba: el Bearer
-  // reenviado decide vía RLS). usuario_id NO se setea acá: default auth.uid() de la tabla.
-  const { error: dbError } = await supabase.from("scan_pruebas").insert({
-    sigla_leida: sigla?.sigla ?? null,
-    check_digit_valido: sigla?.valido ?? null,
-    confianza,
-    modelo_usado: WORKFLOW_ID,
-  });
+  // ---- Registro (como el usuario: mismo cliente per-request, RLS decide) ----
+  // vivo: SOLO verde + dedup 5 min global. manual: siempre inserta (acción deliberada,
+  // sin dedup), con foto solo si la sigla es verde. usuario_id lo pone el default
+  // auth.uid() de la tabla.
+  const esVivo = modo === "vivo";
+  let registrado = false;
+  let motivoNoRegistro: "digito_invalido" | "sin_sigla" | "duplicado" | null = null;
+  let errorRegistro: string | null = null;
+  let imagenPath: string | null = null;
+
+  if (esVivo && !sigla?.valido) {
+    motivoNoRegistro = sigla ? "digito_invalido" : "sin_sigla";
+  } else {
+    if (esVivo && sigla?.valido) {
+      const desde = new Date(Date.now() - DEDUP_MS).toISOString();
+      const { data: dup, error: dupError } = await supabase
+        .from("scan_pruebas")
+        .select("id")
+        .eq("sigla_leida", sigla.sigla)
+        .gte("created_at", desde)
+        .limit(1);
+      if (dupError) {
+        // sin chequeo confiable NO se inserta — el dedup también protege de flood
+        errorRegistro = `No se pudo chequear duplicados: ${dupError.message}`;
+      } else if (dup && dup.length > 0) {
+        motivoNoRegistro = "duplicado";
+      }
+    }
+
+    if (!motivoNoRegistro && !errorRegistro) {
+      // la foto sube ANTES del insert: scan_pruebas no tiene policy de UPDATE (a
+      // propósito), así que imagen_url viaja en el INSERT o no viaja nunca
+      if (sigla?.valido) {
+        const path = `${userData.user.id}/${Date.now()}-${sigla.sigla}.jpg`;
+        const up = await supabase.storage
+          .from(BUCKET_SCAN)
+          .upload(path, Buffer.from(imagen, "base64"), {
+            contentType: "image/jpeg",
+            upsert: false,
+          });
+        if (up.error) {
+          // el registro no se pierde por la foto — queda sin comprobante y se avisa
+          errorRegistro = `Foto no subida: ${up.error.message}`;
+        } else {
+          imagenPath = path;
+        }
+      }
+      const { error: dbError } = await supabase.from("scan_pruebas").insert({
+        sigla_leida: sigla?.sigla ?? null,
+        check_digit_valido: sigla?.valido ?? null,
+        confianza,
+        modelo_usado: WORKFLOW_ID,
+        imagen_url: imagenPath,
+      });
+      if (dbError) {
+        // la fila no existe: el comprobante recién subido no debe quedar huérfano en el
+        // bucket (ningún wipe lo encontraría — derivan paths de las filas)
+        if (imagenPath) {
+          await supabase.storage.from(BUCKET_SCAN).remove([imagenPath]);
+          imagenPath = null;
+        }
+        errorRegistro = errorRegistro ? `${errorRegistro} · ${dbError.message}` : dbError.message;
+      } else {
+        registrado = true;
+      }
+    }
+  }
 
   return NextResponse.json({
     ok: true as const,
+    modo,
     sigla,
     confianza,
     recognizedText: textos.join(" · ") || null,
     fragmentos,
     imagenAnotada: buscarImagenAnotada(raw),
-    guardado: !dbError,
-    errorGuardado: dbError?.message ?? null,
+    registrado,
+    motivoNoRegistro,
+    errorRegistro,
+    imagenPath,
     raw: podarRaw(raw),
   });
 }
