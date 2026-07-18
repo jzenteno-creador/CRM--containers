@@ -10,6 +10,7 @@
 // contexto mutable estable — fuera del cuerpo del componente, donde el React Compiler
 // exige pureza. El componente solo maneja estado de UI y gestos.
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
@@ -198,6 +199,7 @@ async function correrTick(m: Motor, sesion: number) {
 }
 
 export default function VisionClient() {
+  const router = useRouter();
   const [estado, setEstado] = useState<Estado>("idle");
   const [facing, setFacing] = useState<Facing>("environment"); // default trasera (celular)
   const [error, setError] = useState<ErrorInfo | null>(null);
@@ -344,6 +346,13 @@ export default function VisionClient() {
         }
         action={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Button
+              variant="ghost"
+              icon="ti-photo-scan"
+              onClick={() => router.push("/vision/escanear")}
+            >
+              Escanear sigla
+            </Button>
             <Button
               variant="ghost"
               icon="ti-camera-rotate"

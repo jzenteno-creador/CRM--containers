@@ -36,6 +36,15 @@ y NUNCA escribe directo sobre tablas de plata.
   incidencias `tipo='no_reforzado'` (INSERT directo, corre como `crm_rpc_executor`) por
   cada contenedor `reforzado=false` de la tanda. `authenticated` perdió INSERT/UPDATE en
   ambas tablas — queda SELECT.
+- **`scan_pruebas` ENTRÓ a la lista sancionada (migración 035, decisión explícita de John
+  2026-07-18 — PoC escaneo OCR).** TABLA DE PRUEBA (comment en la tabla lo declara): datos
+  desechables, sin impacto en costo, CERO FKs, CERO referencias a M5. Escritura directa bajo
+  RLS: INSERT con `with check (usuario_id = auth.uid())` (lo hace el route handler
+  `/api/vision/scan` reenviando el Bearer del usuario — sin service role), DELETE solo filas
+  propias ("limpiar mis escaneos"), SELECT compartido para authenticated, SIN policy de
+  UPDATE. Las policies usan SOLO `auth.uid()` — sin gate de `estado_cuenta='activo'`: una
+  cuenta pendiente/rechazada con JWT vigente puede leer/insertar en ESTA tabla (aceptado
+  para fase de prueba; ratificación pendiente de John en checkpoint). NO volcar PII acá.
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
 - **Enforcement a nivel DB (fix P1 de CP3, migración 025 — APLICADA en prod 2026-07-13,
