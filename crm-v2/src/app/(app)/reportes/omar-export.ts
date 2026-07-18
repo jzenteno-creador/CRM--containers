@@ -52,13 +52,14 @@ type StockAbiertoRow = {
   dias_estadia: number | null;
   dias_libres: number | null;
   dias_restantes: number | null;
+  tarifa_usd_dia: number | null;
   costo_neto: number | null;
   estado_semaforo: Semaforo;
 };
 
 const STOCK_SELECT =
   "operacion_id, numero_contenedor, naviera, planta_actual, fecha_retiro, " +
-  "dias_estadia, dias_libres, dias_restantes, costo_neto, estado_semaforo";
+  "dias_estadia, dias_libres, dias_restantes, tarifa_usd_dia, costo_neto, estado_semaforo";
 
 /**
  * Trae TODO el stock abierto (vista_alertas ya excluye cerrado/anulada — no se agrega
@@ -86,6 +87,7 @@ type DetalleRow = {
   id: string;
   retiro_de: string | null;
   booking_retiro: string | null;
+  booking_asignado: string | null;
   estado_carga: string;
   observaciones: string | null;
   contenedor: { tipo: string; reforzado_estado: string } | null;
@@ -95,7 +97,7 @@ type DetalleRow = {
 // contenedor con !inner: toda operación tiene contenedor (FK not null) → no descarta filas,
 // mismo patrón que SELECT_BASE de page.tsx.
 const DETALLE_SELECT =
-  "id, retiro_de, booking_retiro, estado_carga, observaciones, " +
+  "id, retiro_de, booking_retiro, booking_asignado, estado_carga, observaciones, " +
   "contenedor:contenedores!inner(tipo, reforzado_estado), " +
   "deposito:depositos!retiro_de_id(nombre)";
 
@@ -122,8 +124,7 @@ async function fetchDetalleOperaciones(ids: string[]): Promise<Map<string, Detal
 
 type CargaActualRow = {
   operacion_id: string;
-  lineas: { gmid: string; descripcion: string; cantidad_bolsas: number; lote: string | null }[];
-  total_bolsas: number;
+  lineas: { gmid: string; descripcion: string }[];
 };
 
 async function fetchCargaActualOmar(ids: string[]): Promise<Map<string, CargaActualRow>> {
@@ -134,7 +135,7 @@ async function fetchCargaActualOmar(ids: string[]): Promise<Map<string, CargaAct
   for (let i = 0; i < ids.length; i += IN_CHUNK) chunks.push(ids.slice(i, i + IN_CHUNK));
   const results = await Promise.all(
     chunks.map((c) =>
-      supabase.from("vista_carga_actual").select("operacion_id, lineas, total_bolsas").in("operacion_id", c),
+      supabase.from("vista_carga_actual").select("operacion_id, lineas").in("operacion_id", c),
     ),
   );
   for (const res of results) {
@@ -144,26 +145,28 @@ async function fetchCargaActualOmar(ids: string[]): Promise<Map<string, CargaAct
   return map;
 }
 
-// ── mapeos de presentación (vocabulario propio del Excel de Omar — Title Case, no reusa
-// los labels en minúscula de las badges de pantalla) ────────────────────────────────────
+// ── mapeos de presentación (vocabulario del Excel de Omar: TODO MAYÚSCULAS, tal cual
+// su archivo — no reusa los labels de las badges de pantalla) ───────────────────────────
 
+// Vocabulario EXACTO del archivo real de Omar (CONTROL DE VACIOS 2025-2026, verificado
+// 2026-07-18 hoja por hoja): la columna 9 es una CATEGORIA, no un semaforo del sistema.
 const ALERTA_LABEL: Record<Semaforo, string> = {
-  rojo: "Vencido",
-  amarillo: "Por vencer",
-  verde: "OK",
-  neutro: "Sin tarifa",
+  rojo: "VENCIDO",
+  amarillo: "PROXIMO A VENCER",
+  verde: "VENCE > 5 DÍAS",
+  neutro: "SIN TARIFA",
 };
 
 const REFORZADO_LABEL: Record<string, string> = {
-  confirmado_reforzado: "Sí",
-  confirmado_no_reforzado: "No",
-  pendiente_validacion: "Pendiente",
-  discrepancia: "Discrepancia",
+  confirmado_reforzado: "REFORZADO",
+  confirmado_no_reforzado: "NO REFORZADO",
+  pendiente_validacion: "PENDIENTE",
+  discrepancia: "DISCREPANCIA",
 };
 
 const LLENO_VACIO_LABEL: Record<string, string> = {
-  lleno: "Lleno",
-  vacio: "Vacío",
+  lleno: "LLENO",
+  vacio: "VACIO",
 };
 
 // ── aritmética de fecha PURA (sin Date local, sin timezone) sobre strings 'YYYY-MM-DD' ──
@@ -179,13 +182,6 @@ function addDiasYMD(ymd: string, dias: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
-// 'YYYY-MM-DD' → 'DD/MM/AAAA' (4 dígitos de año, formato pedido por el brief B7 — distinto
-// del DD/MM/AA de fmtFechaDia que usa el export configurable de esta misma pantalla).
-function fmtFechaLarga(ymd: string): string {
-  const [y, m, d] = ymd.split("-");
-  return `${d}/${m}/${y}`;
-}
-
 // ── merge + derivación ──────────────────────────────────────────────────────────────────
 
 type OmarRow = {
@@ -195,16 +191,19 @@ type OmarRow = {
   planta: string;
   tipo: string;
   reforzado: string;
-  fechaRetiro: string;
-  fechaVencimiento: string;
+  /** 'YYYY-MM-DD' — se convierte a celda de FECHA real al armar la hoja (como Omar). */
+  fechaRetiroYmd: string;
+  fechaVencimientoYmd: string | null;
   alerta: string;
   booking: string;
   estadiaDias: number | "";
   diasLibres: number | "";
   demoraDias: number | "";
+  valorUnit: number | "";
   costoUsd: number | "";
   llenoVacio: string;
-  productos: string;
+  producto: string;
+  gmid: string;
   observaciones: string;
   // no van al Excel — solo para bucketizar en las 3 hojas de detalle:
   semaforo: Semaforo;
@@ -242,6 +241,13 @@ function buildOmarRows(
     const reforzadoEstado = d?.contenedor?.reforzado_estado ?? "";
     const estadoCarga = d?.estado_carga ?? "";
 
+    // BOOKING DE RETIRO de Omar viene slasheado (retiro/asignado/roleos) — se replica el
+    // patrón con lo que el sistema tiene: retiro + asignado cuando difieren.
+    const bookings = [d?.booking_retiro, d?.booking_asignado]
+      .filter((b): b is string => !!b)
+      .filter((b, i, arr) => arr.indexOf(b) === i)
+      .join("/");
+
     return {
       contenedor: s.numero_contenedor,
       naviera: s.naviera ?? "",
@@ -249,16 +255,18 @@ function buildOmarRows(
       planta: s.planta_actual ?? "",
       tipo,
       reforzado: REFORZADO_LABEL[reforzadoEstado] ?? reforzadoEstado,
-      fechaRetiro: fmtFechaLarga(fechaRetiroYmd),
-      fechaVencimiento: fechaVencimientoYmd ? fmtFechaLarga(fechaVencimientoYmd) : "",
+      fechaRetiroYmd,
+      fechaVencimientoYmd,
       alerta: ALERTA_LABEL[s.estado_semaforo],
-      booking: d?.booking_retiro ?? "",
+      booking: bookings,
       estadiaDias: s.dias_estadia ?? "",
       diasLibres: s.dias_libres ?? "",
       demoraDias: demora ?? "",
+      valorUnit: s.tarifa_usd_dia ?? "",
       costoUsd: s.costo_neto ?? "",
       llenoVacio: LLENO_VACIO_LABEL[estadoCarga] ?? estadoCarga,
-      productos: c && c.lineas.length > 0 ? c.lineas.map((l) => `${l.gmid} (${l.cantidad_bolsas})`).join(", ") : "",
+      producto: c && c.lineas.length > 0 ? c.lineas.map((l) => l.descripcion).join(" / ") : "",
+      gmid: c && c.lineas.length > 0 ? c.lineas.map((l) => l.gmid).join("/") : "",
       observaciones: d?.observaciones ?? "",
       semaforo: s.estado_semaforo,
       estadoCarga,
@@ -280,46 +288,72 @@ function bucketize(rows: OmarRow[]) {
 
 // ── armado del Excel (headers EXACTOS del brief B7 — Omar compara sin traducir) ─────────
 
-const HEADERS = [
-  "Contenedor",
-  "Naviera",
-  "Retiro de",
-  "Planta",
-  "Tipo",
-  "Reforzado",
-  "Fecha retiro",
-  "Fecha vencimiento",
-  "Alerta",
-  "Booking",
-  "Estadía (días)",
-  "Días libres",
-  "Demora (días)",
-  "Costo (USD)",
-  "Lleno/Vacío",
-  "Producto(s)",
-  "Observaciones",
-] as const;
+// Headers EXACTOS del archivo REAL de Omar (CONTROL DE VACIOS DOW-SSB 2025-2026,
+// verificado hoja por hoja el 2026-07-18) — incluidas SUS inconsistencias, porque la
+// fidelidad es literal: espacios finales en "CONTENEDORES " / "RETIRO DE " /
+// "DIAS LIBRES ", col 9 "VENCIDOS" en GENERAL/VENCIDOS pero "ALERTA DE DIAS A VENCER"
+// en PROXIMOS/VACIOS, col 15 "COSTOS usd" salvo PROXIMOS que dice "COSTOS", y col 17
+// "PRODUCT" solo en GENERAL. NO "corregir" nada de esto: Omar compara sin traducir.
+function headersDe(hoja: "general" | "vencidos" | "proximos" | "vacios"): string[] {
+  const col9 = hoja === "general" || hoja === "vencidos" ? "VENCIDOS" : "ALERTA DE DIAS A VENCER";
+  const col15 = hoja === "proximos" ? "COSTOS" : "COSTOS usd";
+  const col17 = hoja === "general" ? "PRODUCT" : "PRODUCTO";
+  return [
+    "CONTENEDORES ",
+    "NAVIERA",
+    "RETIRO DE ",
+    "PLANTA",
+    "TIPO",
+    "REFORZADO",
+    "FECHA DE RETIRO",
+    "FECHA DE VENCIMIENTO",
+    col9,
+    "BOOKING DE RETIRO",
+    "ESTADIA",
+    "DIAS LIBRES ",
+    "DEMORA",
+    "VALOR UNIT",
+    col15,
+    "LLENOS",
+    col17,
+    "GMID",
+    "OBSERVACIONES",
+  ];
+}
 
-function toExcelRow(r: OmarRow): Record<(typeof HEADERS)[number], string | number> {
-  return {
-    Contenedor: r.contenedor,
-    Naviera: r.naviera,
-    "Retiro de": r.retiroDe,
-    Planta: r.planta,
-    Tipo: r.tipo,
-    Reforzado: r.reforzado,
-    "Fecha retiro": r.fechaRetiro,
-    "Fecha vencimiento": r.fechaVencimiento,
-    Alerta: r.alerta,
-    Booking: r.booking,
-    "Estadía (días)": r.estadiaDias,
-    "Días libres": r.diasLibres,
-    "Demora (días)": r.demoraDias,
-    "Costo (USD)": r.costoUsd,
-    "Lleno/Vacío": r.llenoVacio,
-    "Producto(s)": r.productos,
-    Observaciones: r.observaciones,
-  };
+/** 'YYYY-MM-DD' → Date con componentes LOCALES — NO Date.UTC. El write path de SheetJS
+ * (t:'d' con cellDates) interpreta el Date como hora LOCAL y le resta
+ * getTimezoneOffset() al serializar: con componentes UTC, en TZ negativas (AR, donde
+ * corre todo usuario real) TODAS las fechas del archivo quedaban un día atrás (P1 del
+ * review 2026-07-18, verificado contra el XML crudo de xlsx 0.18.5). Con componentes
+ * locales el archivo lleva la medianoche exacta del día pedido en cualquier TZ. */
+function ymdADate(ymd: string): Date {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function toExcelAoa(r: OmarRow): (string | number | Date)[] {
+  return [
+    r.contenedor,
+    r.naviera,
+    r.retiroDe,
+    r.planta,
+    r.tipo,
+    r.reforzado,
+    ymdADate(r.fechaRetiroYmd),
+    r.fechaVencimientoYmd ? ymdADate(r.fechaVencimientoYmd) : "",
+    r.alerta,
+    r.booking,
+    r.estadiaDias,
+    r.diasLibres,
+    r.demoraDias,
+    r.valorUnit,
+    r.costoUsd,
+    r.llenoVacio,
+    r.producto,
+    r.gmid,
+    r.observaciones,
+  ];
 }
 
 export type OmarResult =
@@ -349,17 +383,24 @@ export async function generarExcelOmar(): Promise<OmarResult> {
   // dynamic import: SheetJS solo se descarga al generar (mismo patrón que handleExport).
   const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
-  const sheets: [string, OmarRow[]][] = [
-    ["General", general],
-    ["Vencidos", vencidos],
-    ["Próximos a vencer", proximos],
-    ["Vacíos a vencer", vacios],
+  // Nombres de hoja EXACTOS del archivo de Omar — incluido el espacio final de "GENERAL "
+  const sheets: [string, "general" | "vencidos" | "proximos" | "vacios", OmarRow[]][] = [
+    ["GENERAL ", "general", general],
+    ["VENCIDOS", "vencidos", vencidos],
+    ["PROXIMOS A VENCER", "proximos", proximos],
+    ["VACIOS A VENCER > A 5 DÍAS", "vacios", vacios],
   ];
-  for (const [nombre, filas] of sheets) {
-    const ws = XLSX.utils.json_to_sheet(filas.map(toExcelRow), { header: [...HEADERS] });
+  for (const [nombre, clave, filas] of sheets) {
+    // Layout de Omar: fila 1 = "FECHA ACTUAL" + fecha (celda de fecha), fila 2 = headers
+    const aoa: (string | number | Date)[][] = [
+      ["FECHA ACTUAL", ymdADate(hoyAR())],
+      headersDe(clave),
+      ...filas.map(toExcelAoa),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates: true });
     XLSX.utils.book_append_sheet(wb, ws, nombre);
   }
-  XLSX.writeFile(wb, `stock_contenedores_${hoyAR()}.xlsx`);
+  XLSX.writeFile(wb, `stock_contenedores_${hoyAR()}.xlsx`, { cellDates: true });
 
   return {
     kind: "ok",
