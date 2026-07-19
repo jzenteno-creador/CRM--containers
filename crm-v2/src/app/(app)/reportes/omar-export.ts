@@ -251,7 +251,10 @@ function buildOmarRows(
     return {
       contenedor: s.numero_contenedor,
       naviera: s.naviera ?? "",
-      retiroDe: d?.deposito?.nombre ?? d?.retiro_de ?? "",
+      // RETIRO DE en MAYÚSCULAS como el Excel de Omar (fidelidad total, John 2026-07-19):
+      // texto crudo primero (los strings exactos de Omar en los datos cargados), catálogo
+      // como fallback; toUpperCase cubre ops futuras creadas desde la app ("Terminal 4").
+      retiroDe: (d?.retiro_de ?? d?.deposito?.nombre ?? "").toUpperCase(),
       planta: s.planta_actual ?? "",
       tipo,
       reforzado: REFORZADO_LABEL[reforzadoEstado] ?? reforzadoEstado,
