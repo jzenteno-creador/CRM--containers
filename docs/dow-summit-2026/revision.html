@@ -30,40 +30,25 @@
   --crit:#A0332A;
   --crit-wash:#F6E1DD;
   --shadow:0 1px 2px rgba(16,30,28,.06), 0 8px 24px -12px rgba(16,30,28,.18);
-  --shadow-lift:0 2px 4px rgba(16,30,28,.08), 0 16px 40px -16px rgba(16,30,28,.28);
 
   --ui:"Segoe UI Variable Display",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
   --read:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
   --data:ui-monospace,"SF Mono","Cascadia Mono",Consolas,"Liberation Mono",monospace;
 
   --t-xs:.6875rem; --t-sm:.8125rem; --t-base:.9375rem;
-  --t-md:1.0625rem; --t-lg:1.3125rem; --t-xl:1.75rem; --t-2xl:2.25rem;
+  --t-md:1.0625rem; --t-lg:1.3125rem; --t-xl:1.75rem; --t-2xl:2.125rem;
 
-  --rail:246px; --bar:56px;
+  --rail:262px; --bar:54px;
 }
 @media (prefers-color-scheme: dark){
   :root{
     color-scheme: dark;
-    --paper:#091416;
-    --surface:#0F1E20;
-    --surface-2:#152729;
-    --surface-3:#1C3134;
-    --line:#203638;
-    --line-2:#2E4A4C;
-    --text:#E3EAE7;
-    --text-2:#9BAEAA;
-    --text-3:#71857F;
-    --accent:#E4762F;
-    --accent-2:#F09553;
-    --accent-wash:#2A1A11;
-    --ok:#5CB088;
-    --ok-wash:#12261D;
-    --warn:#D6A544;
-    --warn-wash:#2A2211;
-    --crit:#E5716A;
-    --crit-wash:#2B1512;
+    --paper:#091416; --surface:#0F1E20; --surface-2:#152729; --surface-3:#1C3134;
+    --line:#203638; --line-2:#2E4A4C; --text:#E3EAE7; --text-2:#9BAEAA; --text-3:#71857F;
+    --accent:#E4762F; --accent-2:#F09553; --accent-wash:#2A1A11;
+    --ok:#5CB088; --ok-wash:#12261D; --warn:#D6A544; --warn-wash:#2A2211;
+    --crit:#E5716A; --crit-wash:#2B1512;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
-    --shadow-lift:0 2px 4px rgba(0,0,0,.5), 0 16px 40px -16px rgba(0,0,0,.8);
   }
 }
 :root[data-theme="dark"]{
@@ -74,7 +59,6 @@
   --ok:#5CB088; --ok-wash:#12261D; --warn:#D6A544; --warn-wash:#2A2211;
   --crit:#E5716A; --crit-wash:#2B1512;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
-  --shadow-lift:0 2px 4px rgba(0,0,0,.5), 0 16px 40px -16px rgba(0,0,0,.8);
 }
 :root[data-theme="light"]{
   color-scheme: light;
@@ -84,10 +68,10 @@
   --ok:#256B49; --ok-wash:#DEEDE4; --warn:#8A5F0C; --warn-wash:#F5EAD2;
   --crit:#A0332A; --crit-wash:#F6E1DD;
   --shadow:0 1px 2px rgba(16,30,28,.06), 0 8px 24px -12px rgba(16,30,28,.18);
-  --shadow-lift:0 2px 4px rgba(16,30,28,.08), 0 16px 40px -16px rgba(16,30,28,.28);
 }
 
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--text);font-family:var(--ui);
   font-size:var(--t-base);line-height:1.55;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
@@ -96,20 +80,21 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 
 /* ── Barra superior ─────────────────────────────────────────── */
 .bar{position:sticky;top:0;z-index:40;height:var(--bar);display:flex;align-items:center;
-  gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line)}
-.bar-id{display:flex;align-items:baseline;gap:10px;min-width:0;overflow:hidden}
+  gap:14px;padding:0 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-id{display:flex;align-items:baseline;gap:9px;min-width:0;overflow:hidden}
 .bar-id b{font-size:var(--t-base);font-weight:650;letter-spacing:-.01em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 .bar-id span{font-size:var(--t-xs);color:var(--text-3);text-transform:uppercase;
   letter-spacing:.09em;white-space:nowrap}
 .bar-spacer{flex:1}
 .meter{display:flex;align-items:center;gap:9px}
-.meter-track{width:104px;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.meter-track{width:98px;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden}
 .meter-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .25s ease}
 .meter-txt{font-family:var(--data);font-size:var(--t-xs);color:var(--text-2);
   font-variant-numeric:tabular-nums;white-space:nowrap}
 .btn{border:1px solid var(--line-2);border-radius:6px;padding:6px 12px;font-size:var(--t-sm);
-  font-weight:550;background:var(--surface);transition:background .12s,border-color .12s}
+  font-weight:550;background:var(--surface);white-space:nowrap;
+  transition:background .12s,border-color .12s}
 .btn:hover{background:var(--surface-2);border-color:var(--text-3)}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
@@ -120,92 +105,72 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .bar-alert:hover{border-color:var(--crit)}
 #burger{display:none}
 
-/* ── Grilla ─────────────────────────────────────────────────── */
+/* ── Grilla: índice fijo + documento continuo ───────────────── */
 .shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);
-  align-items:start;max-width:1560px;margin:0 auto}
+  align-items:start;max-width:1720px;margin:0 auto}
 
-/* ── Riel de preguntas ──────────────────────────────────────── */
+/* ── Índice ─────────────────────────────────────────────────── */
 .rail{position:sticky;top:var(--bar);height:calc(100vh - var(--bar));overflow-y:auto;
-  border-right:1px solid var(--line);background:var(--surface);padding:14px 0 40px}
+  border-right:1px solid var(--line);background:var(--surface);padding:12px 0 40px}
 .rail-grp{padding:14px 18px 3px;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.1em;color:var(--text-3);font-weight:650}
 .rail-item{display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;
   padding:6px 18px;border-left:3px solid transparent;transition:background .1s}
 .rail-item:hover{background:var(--surface-2)}
-.rail-item[aria-current="true"]{background:var(--accent-wash);border-left-color:var(--accent)}
+.rail-item.aqui{background:var(--accent-wash);border-left-color:var(--accent)}
 .rail-n{font-family:var(--data);font-size:var(--t-xs);color:var(--text-3);
   min-width:19px;padding-top:2px;font-variant-numeric:tabular-nums}
-.rail-item[aria-current="true"] .rail-n{color:var(--accent);font-weight:700}
+.rail-item.aqui .rail-n{color:var(--accent);font-weight:700}
 .rail-t{flex:1;font-size:var(--t-sm);line-height:1.35;color:var(--text-2);min-width:0;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rail-item[aria-current="true"] .rail-t{color:var(--text);font-weight:550}
+.rail-item.aqui .rail-t{color:var(--text);font-weight:550}
 .dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:none;background:var(--line-2)}
 .dot.ok{background:var(--ok)} .dot.falta{background:var(--warn)} .dot.decidir{background:var(--crit)}
 .dot.hecho{background:var(--accent)}
-.rail-risk{margin:4px 12px 10px;padding:9px 12px;border-radius:7px;background:var(--crit-wash);
+.rail-risk{margin:4px 12px 8px;padding:9px 12px;border-radius:7px;background:var(--crit-wash);
   color:var(--crit);font-size:var(--t-sm);font-weight:600;display:flex;gap:8px;
   align-items:center;width:calc(100% - 24px);text-align:left}
-.rail-risk[aria-current="true"]{box-shadow:inset 0 0 0 1.5px var(--crit)}
+.rail-risk.aqui{box-shadow:inset 0 0 0 1.5px var(--crit)}
 
-/* ── Panel principal ────────────────────────────────────────── */
-.main{padding:32px 36px 96px;min-width:0}
-.wrap{max-width:1300px;margin:0 auto}
-.q-head{margin-bottom:22px}
-.eyebrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
-.eyebrow .sec{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;
-  color:var(--text-3);font-weight:650}
+/* ── Documento ──────────────────────────────────────────────── */
+.doc{padding:0 36px 120px;min-width:0}
+.wrap{max-width:1420px;margin:0 auto}
+
+/* Separador entre preguntas: la línea que pediste */
+.qb{border-top:2px solid var(--line-2);padding:34px 0 6px;scroll-margin-top:calc(var(--bar) + 14px)}
+.qb:first-of-type{border-top:none}
+.doc-sec{margin:44px 0 0;padding:9px 0 7px;font-size:var(--t-xs);text-transform:uppercase;
+  letter-spacing:.13em;font-weight:750;color:var(--accent);display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--line);scroll-margin-top:calc(var(--bar) + 14px)}
+.doc-sec::after{content:"";flex:1}
+.doc-sec + .qb{border-top:none;padding-top:24px}
+
+.qhead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 18px;align-items:baseline}
+.q-num{font-family:var(--data);font-size:var(--t-2xl);font-weight:600;color:var(--accent);
+  line-height:1;font-variant-numeric:tabular-nums;grid-row:span 2}
+.q-title{margin:0;font-size:var(--t-lg);font-weight:600;line-height:1.3;
+  letter-spacing:-.012em;text-wrap:balance}
+.q-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .chip{font-size:var(--t-xs);font-weight:650;letter-spacing:.05em;text-transform:uppercase;
   padding:3px 8px;border-radius:4px;background:var(--surface-2);color:var(--text-2)}
 .chip.escribir{background:var(--accent-wash);color:var(--accent)}
 .chip.falta{background:var(--warn-wash);color:var(--warn)}
 .chip.decidir{background:var(--crit-wash);color:var(--crit)}
 .chip.ok{background:var(--ok-wash);color:var(--ok)}
-.q-num{font-family:var(--data);font-size:var(--t-2xl);font-weight:600;color:var(--accent);
-  line-height:1;font-variant-numeric:tabular-nums}
-.q-title{display:flex;gap:16px;align-items:baseline}
-.q-title h1{margin:0;font-size:var(--t-xl);font-weight:600;line-height:1.25;
-  letter-spacing:-.015em;text-wrap:balance}
-.q-pt{margin:10px 0 0 0;font-size:var(--t-sm);color:var(--text-3);font-style:italic}
-.q-pt b{font-style:normal;font-weight:650;text-transform:uppercase;font-size:var(--t-xs);
-  letter-spacing:.08em;color:var(--text-3)}
+.q-pt{font-size:var(--t-sm);color:var(--text-3);font-style:italic;margin:0}
 
-.busca{display:flex;gap:12px;margin:0 0 26px;padding:13px 16px;border-radius:8px;
+.busca{display:flex;gap:12px;margin:16px 0 20px;padding:12px 16px;border-radius:8px;
   background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent)}
 .busca-lbl{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;
   font-weight:700;color:var(--accent);white-space:nowrap;padding-top:2px}
 .busca p{margin:0;font-size:var(--t-base);color:var(--text-2);line-height:1.5}
 
-/* ── Barra de vista: comparar las tres / leer una ───────────── */
-.vbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
-.tabs{display:flex;gap:7px;flex:1;flex-wrap:wrap;min-width:0}
-.tab{display:flex;align-items:baseline;gap:9px;padding:7px 13px;border:1px solid var(--line);
-  border-radius:7px;background:var(--surface);transition:border-color .12s,background .12s}
-.tab:hover{border-color:var(--line-2)}
-.tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-wash)}
-.tab-t{font-weight:750;letter-spacing:.09em;text-transform:uppercase;font-size:var(--t-xs)}
-.tab[aria-selected="true"] .tab-t{color:var(--accent)}
-.tab-c{font-family:var(--data);font-size:var(--t-xs);color:var(--text-3);
-  font-variant-numeric:tabular-nums}
-.tab-c.over{color:var(--warn);font-weight:650}
-.tab-ok{font-size:var(--t-xs);color:var(--accent);font-weight:700}
-.modo{display:flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;flex:none}
-.modo button{padding:6px 13px;font-size:var(--t-sm);font-weight:550;color:var(--text-2);
-  transition:background .12s,color .12s}
-.modo button:hover{background:var(--surface-2)}
-.modo button[aria-pressed="true"]{background:var(--accent);color:#fff}
-.modo button[disabled]{opacity:.4;cursor:default}
-.modo button[disabled]:hover{background:none}
-.modo button + button{border-left:1px solid var(--line-2)}
-
-/* ── Tarjetas de variante ───────────────────────────────────── */
+/* ── Las tres respuestas, siempre abiertas ──────────────────── */
 .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
-/* 520px ≈ 66-70 caracteres por línea en la serif de lectura (medido, no estimado). */
-.cards.solo{grid-template-columns:minmax(0,520px)}
-.cards:not(.solo) .card-body{font-size:var(--t-base);line-height:1.58}
 .card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
-  border-radius:10px;overflow:hidden;transition:border-color .15s,box-shadow .15s,transform .15s}
-.card:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
-.card.sel{border-color:var(--accent);box-shadow:var(--shadow-lift)}
+  border-radius:10px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:var(--line-2)}
+.card.sel{border-color:var(--accent);box-shadow:var(--shadow)}
 .card.sel .card-top{background:var(--accent);color:#fff}
 .card.sel .card-top .card-para{color:rgba(255,255,255,.82)}
 .card.sel .card-key{background:rgba(255,255,255,.2);color:#fff;border-color:transparent}
@@ -218,8 +183,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .card-tag{font-size:var(--t-xs);font-weight:750;letter-spacing:.11em;text-transform:uppercase;
   display:block;line-height:1.3}
 .card-para{font-size:var(--t-xs);color:var(--text-3);display:block;line-height:1.3}
-.card-body{flex:1;padding:16px 18px;font-family:var(--read);font-size:var(--t-md);
-  line-height:1.62;color:var(--text)}
+.card-body{flex:1;padding:15px 18px;font-family:var(--read);font-size:var(--t-base);
+  line-height:1.6;color:var(--text)}
 .card-body p{margin:0 0 .78em}
 .card-body p:last-child{margin-bottom:0}
 .card-foot{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
@@ -227,10 +192,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   font-variant-numeric:tabular-nums;flex:1}
 .card-count.over{color:var(--warn);font-weight:650}
 
-/* ── Bloque de opción múltiple ──────────────────────────────── */
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 22px}
-.opts{display:flex;flex-direction:column;gap:2px;margin:0 0 4px}
-.opt{display:flex;align-items:flex-start;gap:11px;padding:8px 10px;border-radius:6px;
+/* ── Opción múltiple y datos ────────────────────────────────── */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:16px 20px;margin-top:14px;max-width:1080px}
+.opts{display:flex;flex-direction:column;gap:2px}
+.opt{display:flex;align-items:flex-start;gap:11px;padding:6px 10px;border-radius:6px;
   font-size:var(--t-base);color:var(--text-3)}
 .opt.on{background:var(--accent-wash);color:var(--text);font-weight:600}
 .radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-2);
@@ -238,44 +204,37 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .opt.on .radio{border-color:var(--accent);border-width:4.5px}
 .opt.multi .radio{border-radius:4px}
 .dato{font-family:var(--data);font-size:var(--t-md);background:var(--surface-2);
-  border:1px solid var(--line);border-radius:7px;padding:12px 15px;display:inline-block}
+  border:1px solid var(--line);border-radius:7px;padding:11px 15px;display:inline-block}
 .dato.vacio{color:var(--warn);background:var(--warn-wash);border-color:transparent;font-style:italic}
-.why{display:flex;gap:11px;margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
-.why + .why{margin-top:11px;padding-top:11px}
+.why{display:flex;gap:11px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+.why + .why{margin-top:10px;padding-top:10px}
 .why-lbl{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;font-weight:700;
   color:var(--text-3);white-space:nowrap;padding-top:2px;min-width:74px}
 .why p{margin:0;color:var(--text-2);font-size:var(--t-base)}
 .why.alt .why-lbl{color:var(--warn)}
 
-/* ── Nota + acciones ────────────────────────────────────────── */
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
-.note{margin-top:18px}
+.acciones{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.note{margin-top:14px;max-width:1080px}
 .note label{display:block;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;
   font-weight:650;color:var(--text-3);margin-bottom:6px}
-.note textarea{width:100%;min-height:62px;resize:vertical;padding:11px 13px;font:inherit;
+.note textarea{width:100%;min-height:54px;resize:vertical;padding:10px 13px;font:inherit;
   font-size:var(--t-base);color:var(--text);background:var(--surface);border:1px solid var(--line);
   border-radius:7px}
 .note textarea:focus{border-color:var(--accent);outline:none}
 .note textarea::placeholder{color:var(--text-3)}
 
-.nav{display:flex;justify-content:space-between;gap:12px;margin-top:34px;
-  padding-top:20px;border-top:1px solid var(--line)}
-.kbd{font-family:var(--data);font-size:var(--t-xs);border:1px solid var(--line-2);
-  border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--text-3)}
-.hint{text-align:center;font-size:var(--t-xs);color:var(--text-3);margin-top:26px;
-  display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center}
-
-/* ── Pantalla de riesgos ────────────────────────────────────── */
-.risk-hero h1{margin:0 0 8px;font-size:var(--t-2xl);font-weight:600;letter-spacing:-.02em;
+/* ── Bloque de pendientes (arriba de todo) ──────────────────── */
+.hero{padding:38px 0 6px;scroll-margin-top:calc(var(--bar) + 14px)}
+.hero h1{margin:0 0 8px;font-size:var(--t-2xl);font-weight:600;letter-spacing:-.02em;
   text-wrap:balance;line-height:1.15}
-.risk-hero p{margin:0 0 30px;font-size:var(--t-md);color:var(--text-2);max-width:66ch;
+.hero > p{margin:0 0 26px;font-size:var(--t-md);color:var(--text-2);max-width:64ch;
   font-family:var(--read);line-height:1.6}
 .risk-grp{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;font-weight:700;
-  color:var(--text-3);margin:32px 0 12px;display:flex;align-items:center;gap:10px}
+  color:var(--text-3);margin:28px 0 12px;display:flex;align-items:center;gap:10px}
 .risk-grp::after{content:"";flex:1;height:1px;background:var(--line)}
-.risks{display:flex;flex-direction:column;gap:10px}
+.risks{display:flex;flex-direction:column;gap:10px;max-width:1080px}
 .risk{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;align-items:start;
-  background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:15px 17px;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px 17px;
   border-left:3px solid var(--line-2)}
 .risk.crit{border-left-color:var(--crit)}
 .risk.warn{border-left-color:var(--warn)}
@@ -291,15 +250,15 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   border:1px solid var(--line);border-radius:5px;padding:3px 7px}
 .risk-go:hover{border-color:var(--accent);color:var(--accent)}
 
-.who{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:26px 0 0;padding:15px 17px;
-  background:var(--surface);border:1px solid var(--line);border-radius:9px}
+.who{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:22px 0 0;padding:14px 17px;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;max-width:1080px}
 .who label{font-size:var(--t-sm);color:var(--text-2);font-weight:550}
 .who input{font:inherit;font-size:var(--t-base);padding:7px 11px;border:1px solid var(--line);
   border-radius:6px;background:var(--paper);color:var(--text);min-width:190px}
 .who input:focus{border-color:var(--accent);outline:none}
 
-.fuente{margin-top:34px;padding:17px 19px;background:var(--surface-2);border-radius:9px;
-  font-size:var(--t-sm);color:var(--text-2)}
+.fuente{margin-top:26px;padding:16px 19px;background:var(--surface-2);border-radius:9px;
+  font-size:var(--t-sm);color:var(--text-2);max-width:1080px}
 .fuente h4{margin:0 0 9px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;
   color:var(--text-3);font-weight:700}
 .fuente table{width:100%;border-collapse:collapse;font-family:var(--data);
@@ -308,62 +267,50 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .fuente td:last-child{text-align:right;font-weight:600;color:var(--text)}
 .fuente tr:last-child td{border-bottom:none}
 
-/* ── Modal de exportación ───────────────────────────────────── */
-.modal{position:fixed;inset:0;z-index:80;background:rgba(9,20,22,.55);display:grid;
-  place-items:center;padding:24px;backdrop-filter:blur(2px)}
-.modal[hidden]{display:none}
-.modal-box{background:var(--surface);border-radius:12px;width:min(820px,100%);
-  max-height:86vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lift);
-  border:1px solid var(--line)}
-.modal-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
-.modal-head h2{margin:0;font-size:var(--t-md);font-weight:650;flex:1}
-.modal-box textarea{flex:1;min-height:320px;margin:0;padding:16px 20px;border:none;
-  background:var(--surface);color:var(--text);font-family:var(--data);font-size:var(--t-sm);
-  line-height:1.6;resize:none}
-.modal-box textarea:focus{outline:none}
-.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;
-  border-top:1px solid var(--line)}
+/* ── Cierre: lo elegido, siempre visible ────────────────────── */
+.cierre{margin-top:52px;padding-top:30px;border-top:2px solid var(--line-2);
+  scroll-margin-top:calc(var(--bar) + 14px);max-width:1080px}
+.cierre h2{margin:0 0 6px;font-size:var(--t-lg);font-weight:600}
+.cierre > p{margin:0 0 16px;color:var(--text-2)}
+.cierre textarea{width:100%;min-height:280px;padding:15px 17px;font-family:var(--data);
+  font-size:var(--t-sm);line-height:1.6;color:var(--text);background:var(--surface);
+  border:1px solid var(--line);border-radius:9px;resize:vertical}
+.cierre textarea:focus{border-color:var(--accent);outline:none}
 
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width:1120px){
-  .cards{grid-template-columns:1fr}
-  .card-body{font-size:var(--t-base)}
+@media (max-width:1300px){
+  /* Tres columnas de prosa dejan de ser legibles: se apilan. */
+  .cards{grid-template-columns:minmax(0,1fr);max-width:760px}
 }
 @media (max-width:900px){
   :root{--rail:0px}
   #burger{display:inline-flex}
   .shell{grid-template-columns:minmax(0,1fr)}
   .rail{position:fixed;top:var(--bar);left:0;width:284px;z-index:35;
-    transform:translateX(-102%);transition:transform .22s ease;box-shadow:var(--shadow-lift)}
+    transform:translateX(-102%);transition:transform .22s ease;
+    box-shadow:0 16px 40px -16px rgba(0,0,0,.45)}
   .rail.open{transform:translateX(0)}
-  .main{padding:24px 18px 80px}
-  .q-title{flex-direction:column;gap:4px}
-  .q-num{font-size:var(--t-xl)}
-  .risk{grid-template-columns:30px minmax(0,1fr);gap:11px}
-  .risk-go{grid-column:2;justify-self:start;margin-top:6px}
+  .doc{padding:0 18px 90px}
   .bar{gap:10px;padding:0 12px}
   .bar-id span{display:none}
-  .meter-track{width:56px}
+  .risk{grid-template-columns:30px minmax(0,1fr);gap:11px}
+  .risk-go{grid-column:2;justify-self:start;margin-top:6px}
+  .qhead{grid-template-columns:minmax(0,1fr);gap:5px}
+  .q-num{grid-row:auto;font-size:var(--t-lg)}
 }
 @media (max-width:620px){
-  /* El medidor es lo primero que sobra: el progreso también está en el riel. */
   .meter{display:none}
   .bar-alert{padding:5px 9px}
   .alert-lbl{display:none}
-  .q-title h1{font-size:var(--t-lg)}
-  .q-num{font-size:var(--t-lg)}
-  .vbar{flex-direction:column;align-items:stretch}
-  .modo{align-self:flex-start}
-}
-@media (max-width:560px){
   .busca{flex-direction:column;gap:5px}
   .why{flex-direction:column;gap:4px}
   .why-lbl{min-width:0}
-  .hint{display:none}
   .card-foot{flex-wrap:wrap}
   .card-count{flex:1 0 100%}
+  .panel{padding:14px 15px}
 }
 @media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
   *{transition:none!important;animation:none!important}
 }
 </style>
@@ -371,13 +318,13 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 <body>
 
 <header class="bar">
-  <button class="btn btn-icon" id="burger" aria-label="Ver lista de preguntas">☰</button>
+  <button class="btn btn-icon" id="burger" aria-label="Ver el índice">☰</button>
   <div class="bar-id">
     <b>Dow Summit 2026</b>
     <span>Sala de revisión</span>
   </div>
   <div class="bar-spacer"></div>
-  <button class="bar-alert" id="go-risk" title="Ir al tablero de pendientes">
+  <button class="bar-alert" id="go-risk" title="Ir a los pendientes">
     ⚠ <span class="mono" id="risk-n">9</span> <span class="alert-lbl">pendientes</span>
   </button>
   <div class="meter" title="Preguntas revisadas">
@@ -385,26 +332,12 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
     <span class="meter-txt" id="meter-txt">0/42</span>
   </div>
   <button class="btn btn-icon" id="theme" aria-label="Cambiar entre claro y oscuro">◐</button>
-  <button class="btn btn-primary" id="export">Exportar</button>
+  <button class="btn btn-primary" id="go-cierre">Lo elegido</button>
 </header>
 
 <div class="shell">
-  <nav class="rail" id="rail" aria-label="Preguntas del formulario"></nav>
-  <main class="main"><div class="wrap" id="view"></div></main>
-</div>
-
-<div class="modal" id="modal" hidden>
-  <div class="modal-box">
-    <div class="modal-head">
-      <h2 id="modal-title">Decisiones de la revisión</h2>
-      <button class="btn" id="modal-x">Cerrar</button>
-    </div>
-    <textarea id="modal-txt" readonly spellcheck="false"></textarea>
-    <div class="modal-foot">
-      <span class="meter-txt" id="copy-msg"></span>
-      <button class="btn btn-primary" id="copy">Copiar al portapapeles</button>
-    </div>
-  </div>
+  <nav class="rail" id="rail" aria-label="Índice del formulario"></nav>
+  <main class="doc"><div class="wrap" id="doc"></div></main>
 </div>
 
 <script>
@@ -991,118 +924,94 @@ Tercero, el compromiso es concreto: piloto en 8 semanas desde la aprobación, si
 /* ═══════════════════════════════════════════════════════════════
    ESTADO
    ═══════════════════════════════════════════════════════════════ */
-const KEY = "dow-summit-2026-revision-v1";
-let S = { sel:{}, notas:{}, ok:{}, tab:{}, quien:"", idx:0, modo:null };
+const KEY = "dow-summit-2026-revision-v2";
+let S = { sel:{}, notas:{}, ok:{}, quien:"" };
 try { const raw = localStorage.getItem(KEY); if (raw) Object.assign(S, JSON.parse(raw)); } catch(e){}
-/* Comparar las tres solo tiene sentido si hay ancho real para leerlas. */
-if (!S.modo) S.modo = innerWidth >= 1400 ? "comparar" : "leer";
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 
+const LETRAS = ["A","B","C"];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const parrafos = t => t.split(/\n\s*\n/).map(p =>
   "<p>" + esc(p).replace(/\n/g, "<br>") + "</p>").join("");
 
-const decidible = it => it.tipo === "texto" || it.tipo === "opcion" || it.tipo === "dato";
-const resuelto = it => {
-  if (it.tipo === "texto") return !!S.sel[it.n];
-  if (it.tipo === "opcion" || it.tipo === "dato") return !!S.ok[it.n];
-  return false;
-};
+const PREGUNTAS = ITEMS.filter(i => i.tipo !== "riesgos");
+const resuelto = it => it.tipo === "texto" ? !!S.sel[it.n] : !!S.ok[it.n];
+const claseDot = it => resuelto(it) ? "hecho"
+  : it.estado === "falta" ? "falta"
+  : it.estado === "decidir" ? "decidir" : "ok";
 
 /* ═══════════════════════════════════════════════════════════════
-   RIEL
+   ÍNDICE (columna izquierda)
    ═══════════════════════════════════════════════════════════════ */
-function pintarRiel(){
-  const partes = [];
-  const act = ITEMS[S.idx];
-  partes.push(`<button class="rail-risk" data-i="0" aria-current="${act.n==="R"}">
-      <span>⚠</span><span>Pendientes y decisiones</span></button>`);
+function construirRiel(){
+  const p = [`<button class="rail-risk" data-ir="pendientes">
+      <span>⚠</span><span>Pendientes y decisiones</span></button>`];
   let sec = null;
-  ITEMS.forEach((it, i) => {
-    if (it.tipo === "riesgos") return;
-    if (it.sec !== sec){ sec = it.sec; partes.push(`<div class="rail-grp">${esc(sec)}</div>`); }
-    let clase = "";
-    if (resuelto(it)) clase = "hecho";
-    else if (it.estado === "falta") clase = "falta";
-    else if (it.estado === "decidir") clase = "decidir";
-    else if (it.estado === "ok") clase = "ok";
-    partes.push(`<button class="rail-item" data-i="${i}" aria-current="${i===S.idx}"
-        title="${esc(it.q || it.titulo)}">
+  PREGUNTAS.forEach(it => {
+    if (it.sec !== sec){ sec = it.sec; p.push(`<div class="rail-grp">${esc(sec)}</div>`); }
+    p.push(`<button class="rail-item" data-ir="q-${it.n}" id="riel-${it.n}" title="${esc(it.q)}">
         <span class="rail-n">${it.n}</span>
-        <span class="dot ${clase}"></span>
-        <span class="rail-t">${esc(it.q || it.titulo)}</span></button>`);
+        <span class="dot ${claseDot(it)}" id="dot-${it.n}"></span>
+        <span class="rail-t">${esc(it.q)}</span></button>`);
   });
-  $("#rail").innerHTML = partes.join("");
+  p.push(`<div class="rail-grp">Cierre</div>
+    <button class="rail-item" data-ir="cierre">
+      <span class="rail-n">↓</span><span class="dot"></span>
+      <span class="rail-t">Lo elegido, para pasarme</span></button>`);
+  $("#rail").innerHTML = p.join("");
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   VISTAS
+   DOCUMENTO (columna derecha, de arriba a abajo)
    ═══════════════════════════════════════════════════════════════ */
-function vistaRiesgos(){
+function bloquePendientes(){
   const fila = r => `<div class="risk ${r.g}">
       <span class="risk-ico">${esc(r.ico)}</span>
       <div><h3>${esc(r.t)}</h3><p>${esc(r.d)}</p></div>
-      ${r.ir ? `<button class="risk-go" data-goto="${r.ir}">ir a ${r.ir} →</button>` : ""}
+      ${r.ir ? `<button class="risk-go" data-ir="q-${r.ir}">ir a ${r.ir} →</button>` : ""}
     </div>`;
-  return `<div class="risk-hero">
+  return `<section class="hero" id="pendientes">
       <h1>Nueve cosas para decidir, no para redactar</h1>
-      <p>Las respuestas ya están escritas y se eligen en las páginas siguientes. Esto es lo otro:
-      lo que ninguna redacción resuelve y que conviene cerrar antes del viernes. Los tres de abajo
-      ya quedaron decididos en esta sesión.</p>
-    </div>
-    <div class="who">
-      <label for="quien">Quién está revisando:</label>
-      <input id="quien" type="text" placeholder="tu nombre" value="${esc(S.quien)}">
-      <span class="meter-txt">Se usa para firmar el archivo que exportes.</span>
-    </div>
-    <div class="risk-grp">Abiertos</div>
-    <div class="risks">${RIESGOS.abiertos.map(fila).join("")}</div>
-    <div class="risk-grp">Cerrados en esta sesión</div>
-    <div class="risks">${RIESGOS.resueltos.map(fila).join("")}</div>
-    <div class="fuente">
-      <h4>De dónde salen los números</h4>
-      <p style="margin:0 0 11px">Planilla <span class="mono">COSTOS POR DETENTION SEMANAL
-      2024-2025-2026</span>, validada con Omar Pérez. Serie mensual por naviera.
-      El total de la ventana del pitch queda marcado como <b>a confirmar</b> hasta que se cierre
-      el pendiente P8.</p>
-      <table>${CIFRAS.map(c => `<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join("")}</table>
-    </div>`;
+      <p>Abajo están las 42 preguntas del formulario, en orden, con las respuestas ya escritas.
+      Esto de acá es lo otro: lo que ninguna redacción resuelve y que conviene cerrar antes
+      del viernes. Los tres del final ya quedaron decididos.</p>
+      <div class="who">
+        <label for="quien">Quién está revisando:</label>
+        <input id="quien" type="text" placeholder="tu nombre" value="${esc(S.quien)}">
+        <span class="meter-txt">Firma el resumen del final.</span>
+      </div>
+      <div class="risk-grp">Abiertos</div>
+      <div class="risks">${RIESGOS.abiertos.map(fila).join("")}</div>
+      <div class="risk-grp">Cerrados en esta sesión</div>
+      <div class="risks">${RIESGOS.resueltos.map(fila).join("")}</div>
+      <div class="fuente">
+        <h4>De dónde salen los números</h4>
+        <p style="margin:0 0 11px">Planilla <span class="mono">COSTOS POR DETENTION SEMANAL
+        2024-2025-2026</span>, validada con Omar Pérez. Serie mensual por naviera. El total de
+        la ventana del pitch queda marcado como <b>a confirmar</b> hasta que se cierre el P8.</p>
+        <table>${CIFRAS.map(c => `<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join("")}</table>
+      </div>
+    </section>`;
 }
 
-function cabecera(it){
-  const chips = [];
-  if (it.tipo === "texto") chips.push('<span class="chip escribir">Texto libre</span>');
-  if (it.tipo === "opcion") chips.push('<span class="chip">Opción</span>');
-  if (it.tipo === "dato" && it.estado !== "falta") chips.push('<span class="chip">Dato</span>');
-  if (it.estado === "falta") chips.push('<span class="chip falta">Falta tu dato</span>');
-  if (it.estado === "decidir") chips.push('<span class="chip decidir">Decisión abierta</span>');
-  if (resuelto(it)) chips.push('<span class="chip ok">Revisada</span>');
-  return `<div class="q-head">
-      <div class="eyebrow"><span class="sec">${esc(it.sec)}</span>${chips.join("")}</div>
-      <div class="q-title"><span class="q-num">${it.n}</span><h1>${esc(it.q)}</h1></div>
-      ${it.qpt ? `<p class="q-pt"><b>Original</b> &nbsp;${esc(it.qpt)}</p>` : ""}
-    </div>
-    ${it.busca ? `<div class="busca"><span class="busca-lbl">Qué busca Dow</span>
-      <p>${esc(it.busca)}</p></div>` : ""}`;
-}
-
-const LETRAS = ["A","B","C"];
-
-/* Qué variante se está mirando en modo "leer": la elegida, o la primera. */
-function verActiva(it){
-  const t = S.tab[it.n];
-  if (t !== undefined) return t;
-  return S.sel[it.n] ? LETRAS.indexOf(S.sel[it.n]) : 0;
+function chips(it){
+  const c = [];
+  if (it.tipo === "texto") c.push('<span class="chip escribir">Texto libre · elegí una</span>');
+  else if (it.tipo === "opcion") c.push('<span class="chip">Opción a marcar</span>');
+  else if (it.estado !== "falta") c.push('<span class="chip">Dato</span>');
+  if (it.estado === "falta") c.push('<span class="chip falta">Falta tu dato</span>');
+  if (it.estado === "decidir") c.push('<span class="chip decidir">Decisión abierta</span>');
+  c.push(`<span class="chip ok" id="chip-ok-${it.n}"
+    style="display:${resuelto(it) ? "inline" : "none"}">Revisada ✓</span>`);
+  return c.join("");
 }
 
 function tarjeta(it, i){
-  const v = it.v[i];
-  const sel = S.sel[it.n] === LETRAS[i];
-  const n = v.txt.length;
-  const over = it.limite && n > it.limite;
-  return `<article class="card ${sel ? "sel" : ""}">
+  const v = it.v[i], sel = S.sel[it.n] === LETRAS[i];
+  const n = v.txt.length, over = it.limite && n > it.limite;
+  return `<article class="card ${sel ? "sel" : ""}" data-letra="${LETRAS[i]}">
       <header class="card-top">
         <span class="card-key">${LETRAS[i]}</span>
         <span class="card-id">
@@ -1120,142 +1029,126 @@ function tarjeta(it, i){
     </article>`;
 }
 
-/* Debajo de 1100px, tres columnas de prosa no se leen: se fuerza una sola. */
-const cabeComparar = () => innerWidth >= 1100;
-
-function vistaTexto(it){
-  const angosto = !cabeComparar();
-  const solo = S.modo === "leer" || angosto;
-  const ver = verActiva(it);
-  const indices = solo ? [ver] : [0, 1, 2];
-
-  const tabs = solo ? it.v.map((v, i) => {
-    const n = v.txt.length;
-    const over = it.limite && n > it.limite;
-    return `<button class="tab" role="tab" aria-selected="${i === ver}" data-tab="${it.n}:${i}">
-        <span class="tab-t">${LETRAS[i]} · ${esc(v.tag)}</span>
-        <span class="tab-c ${over ? "over" : ""}">${n}</span>
-        ${S.sel[it.n] === LETRAS[i] ? '<span class="tab-ok">✓</span>' : ""}
-      </button>`;
-  }).join("") : "";
-
-  return cabecera(it) + `<div class="vbar">
-      <div class="tabs" role="tablist">${tabs}</div>
-      <div class="modo">
-        <button data-modo="leer" aria-pressed="${solo}">Leer una</button>
-        <button data-modo="comparar" aria-pressed="${!solo}"
-          ${angosto ? 'disabled title="Necesita una pantalla más ancha"' : ""}>
-          Comparar las tres</button>
-      </div>
-    </div>
-    <div class="cards ${solo ? "solo" : ""}">${indices.map(i => tarjeta(it, i)).join("")}</div>`
-    + nota(it);
-}
-
-function vistaOpcion(it){
-  const opts = it.opciones.map(o =>
-    `<div class="opt ${o.sel ? "on" : ""} ${it.multi ? "multi" : ""}">
-       <span class="radio"></span><span>${esc(o.t)}</span></div>`).join("");
+function cuerpo(it){
+  if (it.tipo === "texto"){
+    return `<div class="busca"><span class="busca-lbl">Qué busca Dow</span>
+        <p>${esc(it.busca)}</p></div>
+      <div class="cards">${[0,1,2].map(i => tarjeta(it, i)).join("")}</div>`;
+  }
   const ok = !!S.ok[it.n];
-  return cabecera(it) + `<div class="panel">
-      <div class="opts">${opts}</div>
-      <div class="why"><span class="why-lbl">Por qué</span><p>${esc(it.porQue)}</p></div>
-      ${it.alt ? `<div class="why alt"><span class="why-lbl">Ojo</span><p>${esc(it.alt)}</p></div>` : ""}
-      <div class="actions">
-        <button class="btn ${ok ? "" : "btn-primary"}" data-ok="${it.n}">
-          ${ok ? "De acuerdo ✓" : "De acuerdo"}</button>
-        <span class="meter-txt">Si querés cambiarlo, escribilo en la nota.</span>
-      </div>
-    </div>` + nota(it);
-}
-
-function vistaDato(it){
-  const ok = !!S.ok[it.n];
+  const boton = `<button class="btn ${ok ? "" : "btn-primary"}" data-ok="${it.n}">
+      ${ok ? "Revisada ✓" : (it.tipo === "dato" && !it.valor ? "Anotado, lo completo" : "De acuerdo")}
+    </button>`;
+  if (it.tipo === "opcion"){
+    const opts = it.opciones.map(o =>
+      `<div class="opt ${o.sel ? "on" : ""} ${it.multi ? "multi" : ""}">
+         <span class="radio"></span><span>${esc(o.t)}</span></div>`).join("");
+    return `<div class="panel">
+        <div class="opts">${opts}</div>
+        <div class="why"><span class="why-lbl">Por qué</span><p>${esc(it.porQue)}</p></div>
+        ${it.alt ? `<div class="why alt"><span class="why-lbl">Ojo</span><p>${esc(it.alt)}</p></div>` : ""}
+        <div class="acciones">${boton}
+          <span class="meter-txt">Si lo cambiarías, escribilo en la nota.</span></div>
+      </div>`;
+  }
   const vacio = !it.valor;
-  return cabecera(it) + `<div class="panel">
+  return `<div class="panel">
       <span class="dato ${vacio ? "vacio" : ""}">${vacio ? "— pendiente de tu dato —" : esc(it.valor)}</span>
       <div class="why"><span class="why-lbl">Nota</span><p>${esc(it.nota)}</p></div>
-      <div class="actions">
-        <button class="btn ${ok ? "" : "btn-primary"}" data-ok="${it.n}">
-          ${ok ? "Revisada ✓" : (vacio ? "Anotado, lo completo" : "De acuerdo")}</button>
-      </div>
-    </div>` + nota(it);
-}
-
-function nota(it){
-  return `<div class="note">
-      <label for="nota-${it.n}">Nota para la reunión</label>
-      <textarea id="nota-${it.n}" data-nota="${it.n}"
-        placeholder="Qué cambiarías, qué preguntar, qué falta…">${esc(S.notas[it.n] || "")}</textarea>
+      <div class="acciones">${boton}</div>
     </div>`;
 }
 
-function navegacion(){
-  const prev = S.idx > 0, next = S.idx < ITEMS.length - 1;
-  return `<div class="nav">
-      <button class="btn" data-i="${S.idx - 1}" ${prev ? "" : "disabled style=opacity:.35"}>← Anterior</button>
-      <button class="btn" data-i="${S.idx + 1}" ${next ? "" : "disabled style=opacity:.35"}>Siguiente →</button>
-    </div>
-    <p class="hint">
-      <span><span class="kbd">←</span> <span class="kbd">→</span> navegar</span>
-      <span><span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span>
-        ${S.modo === "leer" ? "ver variante" : "elegir variante"}</span>
-      ${S.modo === "leer" ? '<span><span class="kbd">Enter</span> elegir la que estás viendo</span>' : ""}
-      <span><span class="kbd">R</span> pendientes</span>
-    </p>`;
+function bloquePregunta(it){
+  return `<section class="qb" id="q-${it.n}" data-n="${it.n}">
+      <div class="qhead">
+        <span class="q-num">${it.n}</span>
+        <h2 class="q-title">${esc(it.q)}</h2>
+        <div class="q-meta">${chips(it)}
+          ${it.qpt ? `<span class="q-pt">${esc(it.qpt)}</span>` : ""}</div>
+      </div>
+      ${cuerpo(it)}
+      <div class="note">
+        <label for="nota-${it.n}">Nota para la reunión</label>
+        <textarea id="nota-${it.n}" data-nota="${it.n}"
+          placeholder="Qué cambiarías, qué preguntar, qué falta…">${esc(S.notas[it.n] || "")}</textarea>
+      </div>
+    </section>`;
+}
+
+function construirDoc(){
+  const p = [bloquePendientes()];
+  let sec = null;
+  PREGUNTAS.forEach(it => {
+    if (it.sec !== sec){ sec = it.sec; p.push(`<h2 class="doc-sec">${esc(sec)}</h2>`); }
+    p.push(bloquePregunta(it));
+  });
+  p.push(`<section class="cierre" id="cierre">
+      <h2>Lo elegido</h2>
+      <p>Se actualiza solo a medida que vas eligiendo. Copiá esto y pasámelo:
+      con eso redacto la versión final en portugués para pegar en el formulario.</p>
+      <textarea id="salida" readonly spellcheck="false"></textarea>
+      <div class="acciones">
+        <button class="btn btn-primary" id="copiar">Copiar todo</button>
+        <span class="meter-txt" id="copy-msg"></span>
+      </div>
+    </section>`);
+  $("#doc").innerHTML = p.join("");
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RENDER
+   ACTUALIZACIONES PUNTUALES (sin re-render: no se pierde el scroll)
    ═══════════════════════════════════════════════════════════════ */
-function render(){
-  const it = ITEMS[S.idx];
-  let html;
-  if (it.tipo === "riesgos") html = vistaRiesgos();
-  else if (it.tipo === "texto") html = vistaTexto(it);
-  else if (it.tipo === "opcion") html = vistaOpcion(it);
-  else html = vistaDato(it);
-  $("#view").innerHTML = html + navegacion();
-  window.scrollTo({ top:0, behavior:"instant" });
+function refrescarPregunta(n){
+  const it = PREGUNTAS.find(x => String(x.n) === String(n));
+  const bloque = document.getElementById("q-" + n);
+  if (it.tipo === "texto"){
+    bloque.querySelectorAll(".card").forEach(c => {
+      const on = S.sel[n] === c.dataset.letra;
+      c.classList.toggle("sel", on);
+      const b = c.querySelector("[data-pick]");
+      b.textContent = on ? "Elegida ✓" : "Elegir " + c.dataset.letra;
+      b.classList.toggle("btn-primary", !on);
+    });
+  } else {
+    const on = !!S.ok[n];
+    const b = bloque.querySelector("[data-ok]");
+    b.textContent = on ? "Revisada ✓"
+      : (it.tipo === "dato" && !it.valor ? "Anotado, lo completo" : "De acuerdo");
+    b.classList.toggle("btn-primary", !on);
+  }
+  const chip = document.getElementById("chip-ok-" + n);
+  if (chip) chip.style.display = resuelto(it) ? "inline" : "none";
+  const dot = document.getElementById("dot-" + n);
+  if (dot) dot.className = "dot " + claseDot(it);
+  refrescarGlobal();
+}
 
-  const total = ITEMS.filter(decidible).length;
-  const hechas = ITEMS.filter(i => decidible(i) && resuelto(i)).length;
-  $("#meter").style.width = (hechas / total * 100) + "%";
-  $("#meter-txt").textContent = hechas + "/" + total;
+function refrescarGlobal(){
+  const hechas = PREGUNTAS.filter(resuelto).length;
+  $("#meter").style.width = (hechas / PREGUNTAS.length * 100) + "%";
+  $("#meter-txt").textContent = hechas + "/" + PREGUNTAS.length;
   $("#risk-n").textContent = RIESGOS.abiertos.length;
-  pintarRiel();
-  $("#rail").classList.remove("open");
-}
-
-function ir(i){
-  S.idx = Math.max(0, Math.min(ITEMS.length - 1, i));
-  save(); render();
+  const s = $("#salida");
+  if (s) s.value = armarSalida();
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   EXPORTACIÓN
+   SALIDA
    ═══════════════════════════════════════════════════════════════ */
-function armarExport(){
-  const L = [];
-  L.push("DOW SUPPLIER PRODUCTIVITY SUMMIT 2026 — REVISION DEL FORMULARIO");
-  L.push("Revisado por: " + (S.quien || "(sin firmar)"));
-  L.push("");
+function armarSalida(){
+  const L = ["DOW SUPPLIER PRODUCTIVITY SUMMIT 2026 — REVISION DEL FORMULARIO",
+             "Revisado por: " + (S.quien || "(sin firmar)"), ""];
   L.push("PENDIENTES ABIERTOS");
   RIESGOS.abiertos.forEach(r => L.push("  [" + r.ico + "] " + r.t));
-  L.push("");
-  L.push("DECISIONES POR PREGUNTA");
-  L.push("");
-  ITEMS.forEach(it => {
-    if (!decidible(it)) return;
+  L.push("", "DECISIONES POR PREGUNTA", "");
+  PREGUNTAS.forEach(it => {
     const nota = (S.notas[it.n] || "").trim();
-    let linea;
     if (it.tipo === "texto"){
       const s = S.sel[it.n];
       if (!s && !nota) return;
-      const v = s ? it.v[["A","B","C"].indexOf(s)] : null;
-      linea = "P" + it.n + " — " + it.q;
-      L.push(linea);
-      L.push("   Elegida: " + (v ? s + " · " + v.tag : "SIN ELEGIR"));
+      L.push("P" + it.n + " — " + it.q);
+      L.push("   Elegida: " + (s ? s + " · " + it.v[LETRAS.indexOf(s)].tag : "SIN ELEGIR"));
     } else {
       if (!S.ok[it.n] && !nota) return;
       L.push("P" + it.n + " — " + it.q);
@@ -1267,87 +1160,74 @@ function armarExport(){
     if (nota) L.push("   Nota: " + nota);
     L.push("");
   });
-  const sinElegir = ITEMS.filter(i => i.tipo === "texto" && !S.sel[i.n]).map(i => i.n);
-  if (sinElegir.length){
-    L.push("TEXTOS SIN VARIANTE ELEGIDA: " + sinElegir.join(", "));
-    L.push("");
-  }
-  const faltan = ITEMS.filter(i => i.estado === "falta").map(i => "P" + i.n + " " + i.q);
+  const sin = PREGUNTAS.filter(i => i.tipo === "texto" && !S.sel[i.n]).map(i => i.n);
+  if (sin.length) L.push("TEXTOS SIN VARIANTE ELEGIDA: " + sin.join(", "), "");
+  const faltan = PREGUNTAS.filter(i => i.estado === "falta");
   if (faltan.length){
     L.push("DATOS QUE FALTAN");
-    faltan.forEach(f => L.push("  " + f));
+    faltan.forEach(f => L.push("  P" + f.n + " " + f.q));
   }
   return L.join("\n");
-}
-
-function abrirModal(titulo, texto){
-  $("#modal-title").textContent = titulo;
-  $("#modal-txt").value = texto;
-  $("#copy-msg").textContent = "";
-  $("#modal").hidden = false;
-  $("#modal-txt").focus(); $("#modal-txt").select();
 }
 
 /* ═══════════════════════════════════════════════════════════════
    EVENTOS
    ═══════════════════════════════════════════════════════════════ */
+function irA(id){
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ block:"start" });
+  $("#rail").classList.remove("open");
+}
+
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-i],[data-pick],[data-ok],[data-copy],[data-goto],[data-tab],[data-modo]");
+  const t = e.target.closest("[data-ir],[data-pick],[data-ok],[data-copy]");
   if (!t) return;
-  if (t.dataset.modo){ S.modo = t.dataset.modo; save(); render(); return; }
-  if (t.dataset.tab){
-    const [n, i] = t.dataset.tab.split(":");
-    S.tab[n] = +i; save(); render(); return;
-  }
-  if (t.dataset.i !== undefined){ ir(+t.dataset.i); return; }
-  if (t.dataset.goto !== undefined){
-    const i = ITEMS.findIndex(x => String(x.n) === t.dataset.goto);
-    if (i >= 0) ir(i);
-    return;
-  }
+  if (t.dataset.ir){ irA(t.dataset.ir); return; }
   if (t.dataset.pick){
     const [n, letra] = t.dataset.pick.split(":");
     S.sel[n] = S.sel[n] === letra ? null : letra;
-    save(); render(); return;
+    save(); refrescarPregunta(n); return;
   }
   if (t.dataset.ok){
     S.ok[t.dataset.ok] = !S.ok[t.dataset.ok];
-    save(); render(); return;
+    save(); refrescarPregunta(t.dataset.ok); return;
   }
   if (t.dataset.copy){
     const [n, i] = t.dataset.copy.split(":");
-    const it = ITEMS.find(x => String(x.n) === n);
-    abrirModal("Pregunta " + n + " · variante " + ["A","B","C"][i], it.v[+i].txt);
+    const it = PREGUNTAS.find(x => String(x.n) === n);
+    copiar(it.v[+i].txt, t);
   }
 });
 
-document.addEventListener("input", e => {
-  if (e.target.dataset.nota){ S.notas[e.target.dataset.nota] = e.target.value; save(); }
-  if (e.target.id === "quien"){ S.quien = e.target.value; save(); }
-});
-
-$("#export").addEventListener("click", () =>
-  abrirModal("Decisiones de la revisión", armarExport()));
-$("#go-risk").addEventListener("click", () => ir(0));
-$("#burger").addEventListener("click", () => $("#rail").classList.toggle("open"));
-$("#modal-x").addEventListener("click", () => { $("#modal").hidden = true; });
-$("#modal").addEventListener("click", e => { if (e.target.id === "modal") $("#modal").hidden = true; });
-$("#copy").addEventListener("click", async () => {
-  const txt = $("#modal-txt").value;
+async function copiar(txt, boton){
+  const previo = boton.textContent;
   try {
     await navigator.clipboard.writeText(txt);
-    $("#copy-msg").textContent = "Copiado.";
+    boton.textContent = "Copiado ✓";
   } catch(err){
-    $("#modal-txt").focus(); $("#modal-txt").select();
-    try {
-      document.execCommand("copy");
-      $("#copy-msg").textContent = "Copiado.";
-    } catch(e2){
-      $("#copy-msg").textContent = "Copialo a mano: ya está seleccionado.";
-    }
+    const ta = document.createElement("textarea");
+    ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    boton.textContent = document.execCommand("copy") ? "Copiado ✓" : "No se pudo";
+    ta.remove();
+  }
+  setTimeout(() => { boton.textContent = previo; }, 1600);
+}
+
+document.addEventListener("input", e => {
+  if (e.target.dataset.nota){
+    S.notas[e.target.dataset.nota] = e.target.value; save();
+    $("#salida").value = armarSalida();
+  }
+  if (e.target.id === "quien"){
+    S.quien = e.target.value; save();
+    $("#salida").value = armarSalida();
   }
 });
 
+$("#go-risk").addEventListener("click", () => irA("pendientes"));
+$("#go-cierre").addEventListener("click", () => irA("cierre"));
+$("#burger").addEventListener("click", () => $("#rail").classList.toggle("open"));
 $("#theme").addEventListener("click", () => {
   const actual = document.documentElement.getAttribute("data-theme");
   const oscuro = actual ? actual === "dark"
@@ -1355,39 +1235,39 @@ $("#theme").addEventListener("click", () => {
   document.documentElement.setAttribute("data-theme", oscuro ? "light" : "dark");
 });
 
-document.addEventListener("keydown", e => {
-  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
-  if (!$("#modal").hidden){ if (e.key === "Escape") $("#modal").hidden = true; return; }
-  if (e.key === "ArrowRight") ir(S.idx + 1);
-  else if (e.key === "ArrowLeft") ir(S.idx - 1);
-  else if (e.key === "r" || e.key === "R") ir(0);
-  else if (["1","2","3"].includes(e.key)){
-    const it = ITEMS[S.idx];
-    if (it.tipo !== "texto") return;
-    if (S.modo === "leer" || !cabeComparar()) S.tab[it.n] = +e.key - 1;   // ver
-    else {                                                                // elegir
-      const letra = LETRAS[+e.key - 1];
-      S.sel[it.n] = S.sel[it.n] === letra ? null : letra;
+/* ═══════════════════════════════════════════════════════════════
+   ARRANQUE
+   ═══════════════════════════════════════════════════════════════ */
+construirRiel();
+construirDoc();
+refrescarGlobal();
+
+$("#copiar").addEventListener("click", e => copiar($("#salida").value, e.target));
+
+/* El índice sigue al scroll: marca dónde estás sin que tengas que buscarlo. */
+const anclas = [...document.querySelectorAll(".qb, .hero, .cierre")];
+const rielDe = el => el.id === "pendientes" ? $('[data-ir="pendientes"]')
+  : el.id === "cierre" ? $('[data-ir="cierre"]')
+  : document.getElementById("riel-" + el.dataset.n);
+
+let activo = null;
+const obs = new IntersectionObserver(() => {
+  const y = window.scrollY + 90;
+  let cand = anclas[0];
+  for (const el of anclas) if (el.offsetTop <= y) cand = el;
+  const btn = rielDe(cand);
+  if (btn === activo) return;
+  if (activo) activo.classList.remove("aqui");
+  activo = btn;
+  if (btn){
+    btn.classList.add("aqui");
+    const r = btn.getBoundingClientRect(), c = $("#rail").getBoundingClientRect();
+    if (r.top < c.top + 8 || r.bottom > c.bottom - 8){
+      btn.scrollIntoView({ block:"center", behavior:"auto" });
     }
-    save(); render();
   }
-  else if (e.key === "Enter"){
-    const it = ITEMS[S.idx];
-    if (it.tipo !== "texto" || (S.modo !== "leer" && cabeComparar())) return;
-    const letra = LETRAS[verActiva(it)];
-    S.sel[it.n] = S.sel[it.n] === letra ? null : letra;
-    save(); render();
-  }
-});
-
-/* Al girar el teléfono o cambiar el tamaño, el modo efectivo puede cambiar. */
-let anchoPrevio = cabeComparar();
-addEventListener("resize", () => {
-  const ahora = cabeComparar();
-  if (ahora !== anchoPrevio){ anchoPrevio = ahora; render(); }
-});
-
-render();
+}, { rootMargin:"-80px 0px -70% 0px", threshold:0 });
+anclas.forEach(a => obs.observe(a));
 </script>
 </body>
 </html>
