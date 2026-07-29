@@ -364,32 +364,34 @@ const CIFRAS = [
 
 const RIESGOS = {
   abiertos: [
-    { g:"crit", ico:"P1", t:"El business case contradice el framing del formulario",
-      d:"El formulario dice “proyecto nuevo a desarrollar”. Los PDFs y HTMLs de docs/caso-negocio/ están escritos como sistema ya midiendo en producción. Si Dow abre los dos, se contradicen. Hay que alinear ese material o no compartirlo.", ir:null },
-    { g:"warn", ico:"P2", t:"Falta el porcentaje de contenedores Log-In",
-      d:"No generan cargo por estadía, así que no están en la serie de costos ni se les hace seguimiento. Es un argumento fuerte a favor —cerrar la trazabilidad del 100% de la operación— pero necesito el número para poder decirlo con precisión en vez de decir “una porción relevante”.", ir:11 },
-    { g:"warn", ico:"P3", t:"Hace cuánto SSB trabaja con Dow",
-      d:"Pregunta 8. Franjas del formulario: menos de 1 año / 1–3 / 3–5 / 5–10 / más de 10. No lo puedo verificar yo.", ir:8 },
-    { g:"warn", ico:"P4", t:"Nombre del contacto de Compras en Dow",
-      d:"Pregunta 9. Campo obligatorio del formulario.", ir:9 },
-    { g:"warn", ico:"P5", t:"¿Hubo conversación previa con alguien de Dow?",
-      d:"Preguntas 40 y 41. Si hubo, marcar “Sí” y dar área y contacto: suma muchísimo porque muestra alineamiento previo. Si no hubo, va “No” — un alineamiento inventado es verificable con una llamada.", ir:40 },
-    { g:"warn", ico:"P6", t:"¿Marcamos solo Bahía Blanca o toda la región?",
-      d:"Pregunta 13. La pregunta dice “podría ser aplicada”, o sea potencial, así que marcar más sitios es legítimo y refuerza la escalabilidad. Conservador: solo Bahía Blanca.", ir:13 },
-    { g:"warn", ico:"P7", t:"Plazo de 3–6 meses y complejidad media",
-      d:"Preguntas 31 y 32. La versión anterior decía “hasta 30 días” y “baja”. Con cinco módulos eso no se sostiene. Si preferís volver a 30 días, hay que acotar la propuesta solo al módulo de free time de exportación.", ir:31 },
-    { g:"warn", ico:"P8", t:"El total de USD 587.805 queda marcado como “a confirmar”",
-      d:"El documento fuente deja abierto un caveat con la naviera ZIM del handoff del 7 de julio. La planilla de Omar debería resolverlo, pero nadie lo confirmó. Si el número se mueve, se mueven también los USD 118–206 mil.", ir:22 },
-    { g:"warn", ico:"P9", t:"“Sin costo para Dow” y la oportunidad de negocio",
-      d:"El formulario ofrece el sistema sin costo. Si en el pitch preguntan cómo se sostiene en el tiempo, conviene tener la respuesta lista y consistente: hoy es parte del servicio de SSB, no un producto que se licencia.", ir:28 }
+    { g:"warn", ico:"P1", t:"Falta el nombre del contacto de Compras en Dow",
+      d:"Pregunta 9, campo obligatorio. Queda en blanco hasta que lo definas con Mariano. Es lo único que impide enviar el formulario tal como está.", ir:9 },
+    { g:"warn", ico:"P2", t:"¿Cómo se escribe el segundo sitio de Argentina, y a qué localidad del formulario corresponde Brasil?",
+      d:"El formulario ofrece una lista cerrada: São Paulo, Hortolândia, Santos Dumont, Breu Branco, Matarandiba, Aratu, Guarujá, Jacareí, Jundiaí, Bahia Blanca, Cartagena, Cidade do México, Tlaxcala, Querétaro, Lima, Santiago y “Outra”. Bahía Blanca, Lima y Santiago están. Itajaí no, y el segundo sitio argentino tampoco: los dos van por “Outra”, pero necesito la grafía exacta. Si la operación de Brasil sale por el puerto de Santos, quizá corresponda marcar Guarujá o Santos Dumont en vez de “Outra”.", ir:13 },
+    { g:"warn", ico:"P3", t:"Falta el porcentaje de contenedores Log-In",
+      d:"John lo calcula después contra el total de contenedores del año. Mientras tanto el texto dice “una porción relevante”, que funciona pero es más débil que un número. En cuanto lo tengas, entra en las preguntas 11, 22 y 44.", ir:11 },
+    { g:"crit", ico:"P4", t:"Hay que reescribir el business case antes de que salga de SSB",
+      d:"Verificado en el archivo, no es una sospecha: docs/caso-negocio/business-case-en.html tiene una sección titulada “Project status: platform v2 in production” y dice textual “Unlike a proposal yet to be built, this system is deployed to production in its second version”. El español dice lo mismo. Decisión de John: no se comparte así. Queda pendiente reescribirlo al framing de “es posible desarrollarlo”.", ir:null }
   ],
   resueltos: [
     { g:"done", ico:"OK", t:"Framing: proyecto nuevo, a desarrollar en conjunto con Dow",
-      d:"Lo construido internamente fue prueba de factibilidad y no se menciona. Todas las respuestas están escritas como co-desarrollo con Dow, no como SSB entregando algo terminado." },
+      d:"Dow no tiene que saber que ya existe algo funcional, sino que es posible desarrollarlo. Todas las respuestas están escritas como co-desarrollo." },
+    { g:"done", ico:"OK", t:"El origen del dato es el seguimiento manual en Excel",
+      d:"Los números salen de la planilla que lleva a mano una persona del equipo en la operación. Son datos reales de un trabajo humano, no output de ningún sistema. Por eso el formulario es coherente de punta a punta: hay medición, no hay plataforma." },
+    { g:"done", ico:"OK", t:"Relación con Dow: más de 10 años",
+      d:"Más de 10 años de relación comercial, 5 en la operativa de exportación e importación y más años con el sector de MRO. Va en la pregunta 8 y el detalle se usa en la 44." },
+    { g:"done", ico:"OK", t:"Plazo: 1 a 3 meses",
+      d:"Decisión de John: en tres meses debería haber un sistema funcional. El piloto de 8 semanas entra dentro de ese plazo, así que el formulario ofrece resultado medible antes del cierre." },
+    { g:"done", ico:"OK", t:"USD 587.805: cerrado, no se toca",
+      d:"Es el dato de la planilla actualizado hasta hace una semana. Se saca la marca de “a confirmar”." },
+    { g:"done", ico:"OK", t:"Sin conversación previa con Dow",
+      d:"La propuesta es interna de SSB. La pregunta 40 va “No” y la 41 no se muestra." },
     { g:"done", ico:"OK", t:"Se nombra a Maersk explícitamente",
-      d:"El 95% del costo está en un solo armador. Es un dato real, verificable por Dow contra sus propias facturas, y hace el diagnóstico mucho más accionable que decir “un armador”." },
-    { g:"done", ico:"OK", t:"Los contenedores Log-In entran al relato",
-      d:"No como agujero sino como oportunidad: hoy no generan costo pero tampoco control. Aparece en las preguntas 11, 22, 25 y 44, y desactiva la pregunta incómoda de si los números cubren toda la operación." }
+      d:"El 95% del costo está en un solo armador. Dato real, verificable por Dow contra sus propias facturas." },
+    { g:"done", ico:"OK", t:"El foco es el cost saving, no las horas",
+      d:"Quien lleva el seguimiento manual es personal in-house pago por SSB dentro de la operación de Dow. Por eso el argumento no se apoya en ahorrar horas de nadie: se apoya en los USD que se dejan de pagar." },
+    { g:"done", ico:"OK", t:"Reconocimiento de contenedores e importación entran al alcance",
+      d:"Confirmado contra el repo: lectura de siglas por cámara con validación ISO 6346 para ingreso y egreso de planta, ciclo completo de importación (arribo a terminal → retiro → ingreso a planta → devolución del vacío) e incidencias propias de impo (lavado exigido y daño con refacción, con seguimiento del reclamo). Aparecen en las preguntas 11, 17 y 38." }
   ]
 };
 
@@ -425,12 +427,14 @@ const ITEMS = [
 { n:8, tipo:"dato", sec:"Perfil de la empresa", estado:"falta",
   q:"¿Hace cuánto tiempo su empresa atiende o se relaciona comercialmente con Dow?",
   qpt:"Há quanto tempo sua empresa atende ou se relaciona comercialmente com a Dow?",
-  valor:"", nota:"Franjas del formulario: menos de 1 año / 1–3 años / 3–5 años / 5–10 años / más de 10 años / todavía no atiende a Dow. Cuanto más larga sea la relación, más peso tiene el resto del formulario — es de las pocas preguntas donde la antigüedad juega a favor sola." },
+  valor:"Más de 10 años",
+  nota:"Más de 10 años de relación comercial: 5 años en la operativa de exportación e importación, y más años antes con el sector de MRO. Es de las pocas preguntas donde la antigüedad juega a favor sola — el detalle de los 5 años en la operativa se usa en la 44 para respaldar que SSB conoce el problema desde adentro." },
 
 { n:9, tipo:"dato", sec:"Perfil de la empresa", estado:"falta",
   q:"¿Cuál es el nombre de su principal contacto de Compras en Dow?",
   qpt:"Qual é o nome do seu principal contato de Compras na Dow?",
-  valor:"", nota:"Dato tuyo. Es también la persona que probablemente reciba el formulario del otro lado." },
+  valor:"",
+  nota:"Queda en blanco a propósito: se define con Mariano. Es el único campo obligatorio que falta para poder enviar. Tené en cuenta que es también, probablemente, la persona que reciba el formulario del otro lado." },
 
 /* ── El problema ───────────────────────────────────────────── */
 { n:10, tipo:"opcion", sec:"El problema", estado:"ok",
@@ -451,17 +455,21 @@ const ITEMS = [
 
 La causa no es tarifaria sino de visibilidad: el seguimiento del free time se lleva en planillas, sin cálculo diario de días libres restantes por contenedor y por naviera, y sin alerta previa al vencimiento. La demora se detecta cuando llega la factura, es decir cuando ya no se puede evitar.
 
+Tampoco existe aviso de movimiento: la terminal no informa cuándo ingresó ni cuándo salió un contenedor, así que cada fecha del ciclo se reconstruye a mano y siempre después de los hechos.
+
 A esto se suma que una porción relevante de la operación —los contenedores de Log-In, cuyo esquema no genera cargo por estadía— hoy queda fuera de todo seguimiento: no produce costo, pero tampoco deja registro ni trazabilidad. El mismo vacío se repite en bookings y reprogramaciones de embarque, en incidencias de contenedor (lavados exigidos, averías) y en el control de prefijos restringidos que exige Dow, cada uno en su propia planilla y sin un registro único.`},
 {tag:"EJECUTIVA",para:"para entender de un vistazo",txt:`En los últimos 11 meses la exportación de Bahía Blanca pagó USD 587.805 en detention, y el costo mensual se triplicó respecto de 2025.
 
 El problema no es la tarifa: es que nadie ve cuántos días libres le quedan a cada contenedor hasta que llega la factura. El seguimiento se hace en planillas sueltas, y una parte de los contenedores directamente no se sigue porque no genera cargo —no cuesta plata, pero tampoco hay control sobre ellos.
+
+Encima nadie avisa los movimientos: la terminal no informa cuándo entró ni cuándo salió un contenedor, así que las fechas se cargan a mano y siempre tarde.
 
 Lo mismo pasa con los bookings, con las incidencias por lavados y averías, y con el control de prefijos restringidos: cada cosa en su propia planilla, sin un único lugar donde mirar.`},
 {tag:"COMERCIAL",para:"para quien decide por el número",txt:`Agosto/2025 a junio/2026: USD 587.805 de detention en la exportación de Bahía Blanca. El 95% —USD 558.355— concentrado en un solo armador, Maersk.
 
 El costo mensual pasó de USD 25 mil en 2025 a USD 77 mil en 2026, con un pico de USD 117 mil en abril. Al ritmo actual el año cierra por encima de USD 900 mil, contra USD 434 mil en 2024.
 
-Es un costo que se paga todos los meses y que hoy se detecta tarde, cuando ya no se puede evitar: el seguimiento del free time es manual y no hay alerta anticipada. Y es solo la parte que se factura. Los contenedores que no generan cargo tampoco se controlan, así que hoy ni siquiera se conoce el tamaño total del problema.`}]},
+Es un costo que se paga todos los meses y que hoy se detecta tarde, cuando ya no se puede evitar: el seguimiento del free time es manual, no hay alerta anticipada y la terminal no avisa cuándo entra o sale un contenedor. Y es solo la parte que se factura. Los contenedores que no generan cargo tampoco se controlan, así que hoy ni siquiera se conoce el tamaño total del problema.`}]},
 
 /* ── Categoría y alcance ───────────────────────────────────── */
 { n:12, tipo:"opcion", sec:"Categoría y alcance", estado:"ok",
@@ -475,11 +483,14 @@ Es un costo que se paga todos los meses y que hoy se detecta tarde, cuando ya no
 { n:13, tipo:"opcion", sec:"Categoría y alcance", estado:"decidir", multi:true,
   q:"¿Para qué localidad(es) de Dow podría aplicarse la propuesta?",
   qpt:"Para qual(is) localidade(s) da Dow a proposta poderia ser aplicada?",
-  opciones:[{t:"Bahía Blanca — donde SSB ya opera la exportación",sel:true},
-    {t:"Aratu",sel:true},{t:"Guarujá",sel:true},{t:"Santos Dumont",sel:true},{t:"São Paulo",sel:true},
-    {t:"Cartagena",sel:true},{t:"Lima",sel:true},{t:"Santiago",sel:true},{t:"Ciudad de México",sel:true}],
-  porQue:"La pregunta dice “podría ser aplicada” — es potencial, no compromiso. Marcar todos los sitios que mueven contenedores es legítimo y es donde la escalabilidad regional se vuelve concreta en vez de retórica.",
-  alt:"Versión conservadora: solo Bahía Blanca, y la escala regional se sostiene con el “Sí” de la pregunta 14 y con el texto de las 17, 35 y 38. Vos sabés qué sitios mueven contenedores de verdad — ajustá la lista antes de enviar." },
+  opciones:[{t:"Bahia Blanca — donde SSB ya opera",sel:true},
+    {t:"Lima — Dow Perú",sel:true},{t:"Santiago — Petroquímica, Chile",sel:true},
+    {t:"Outra — Itajaí (Brasil, el de mayor movimiento) + el segundo sitio de Argentina",sel:true},
+    {t:"São Paulo"},{t:"Hortolândia"},{t:"Santos Dumont"},{t:"Breu Branco"},{t:"Matarandiba"},
+    {t:"Aratu"},{t:"Guarujá"},{t:"Jacareí"},{t:"Jundiaí"},{t:"Cartagena"},
+    {t:"Cidade do México"},{t:"Tlaxcala"},{t:"Querétaro"}],
+  porQue:"Marcadas solo las que nombraste: los dos sitios de Argentina, Brasil —el de mayor movimiento—, Perú y Chile. La pregunta dice “podría ser aplicada”, o sea potencial, así que declarar los cinco es legítimo y es donde la escalabilidad regional deja de ser retórica.",
+  alt:"Esta es la lista real del formulario, sacada del PDF. Itajaí no figura y el segundo sitio de Argentina tampoco, por eso van en “Outra”. Falta que me pases la grafía exacta del sitio argentino. Y si la operación de Brasil sale por el puerto de Santos, capaz corresponde marcar Guarujá o Santos Dumont en vez de “Outra” — eso lo sabés vos." },
 
 { n:14, tipo:"opcion", sec:"Categoría y alcance", estado:"ok",
   q:"¿La propuesta podría escalarse a otras unidades o países de América Latina?",
@@ -501,7 +512,7 @@ Es un costo que se paga todos los meses y que hoy se detecta tarde, cuando ya no
   qpt:"Resuma sua proposta em até 5 linhas, explicando a solução e o benefício esperado para a Dow.",
   busca:"El filtro real del formulario. Si en cinco líneas no se entiende qué es, cuánto ahorra y qué cuesta, no llega a la ronda de pitch. El formulario pide 5 líneas: pasarse se nota.",
   v:[
-{tag:"TÉCNICA",para:"para quien valida que sea factible",txt:`Proponemos desarrollar junto con Dow una plataforma web que siga cada contenedor desde el retiro hasta la devolución, con un motor que calcule a diario el free time restante según las reglas contractuales de cada naviera —versionadas por fecha de vigencia— y alerte en semáforo antes del primer cargo. Cubre además bookings, incidencias y prefijos restringidos. Navieras, tarifas, plantas e idioma son configuración, no código: replicarla en otro sitio de la región es parametrizar, no desarrollar de nuevo. Beneficio estimado: USD 118 a 206 mil por año en Bahía Blanca. Sin costo para Dow.`},
+{tag:"TÉCNICA",para:"para quien valida que sea factible",txt:`Proponemos desarrollar junto con Dow una plataforma web que siga cada contenedor desde el retiro hasta la devolución, con un motor que calcule a diario el free time restante según las reglas contractuales de cada naviera —versionadas por fecha de vigencia— y alerte en semáforo antes del primer cargo. Cubre el ciclo de importación completo, lectura de la sigla por cámara en el portón de planta, bookings, incidencias y prefijos restringidos. Navieras, tarifas, plantas e idioma son configuración, no código: replicarla en otro sitio de la región es parametrizar, no desarrollar de nuevo. Beneficio estimado: USD 118 a 206 mil por año en Bahía Blanca. Sin costo para Dow.`},
 {tag:"EJECUTIVA",para:"para entender de un vistazo",txt:`Un tablero que muestra todos los días cuántos días libres le quedan a cada contenedor y avisa antes de que la naviera empiece a cobrar. Lo desarrollamos junto con Dow, arranca en Bahía Blanca y el mismo sistema se replica en las demás plantas de la región cambiando parámetros, no código. Beneficio estimado: USD 118 a 206 mil por año. Sin costo para Dow.`},
 {tag:"COMERCIAL",para:"para quien decide por el número",txt:`En 11 meses la exportación de Bahía Blanca pagó USD 587.805 de detention, 95% concentrado en un solo armador. Proponemos desarrollar junto con Dow un sistema de alerta anticipada de free time: evitar entre el 20% y el 35% de ese costo representa USD 118 a 206 mil por año, solo en Bahía Blanca. Sin costo para Dow y con un piloto medible en 8 semanas. El mismo modelo aplica a cada planta de la región que mueve contenedores.`}]},
 
@@ -510,17 +521,21 @@ Es un costo que se paga todos los meses y que hoy se detecta tarde, cuando ya no
   qpt:"Explique como a solução funcionaria na prática. Inclua etapas principais, áreas envolvidas, tecnologia/processo utilizado e como a Dow participaria da implementação.",
   busca:"Acá Dow evalúa si es ejecutable o si es una idea linda. Las tres cosas que buscan: qué tienen que poner ellos, si hay que meter a TI, y en cuánto tiempo ven algo.",
   v:[
-{tag:"TÉCNICA",para:"cinco frentes, con el detalle",txt:`Cinco frentes, entregados en fases.
+{tag:"TÉCNICA",para:"siete frentes, con el detalle",txt:`Siete frentes, entregados en fases.
 
-(1) Free time. Registro por tanda del retiro de vacíos en exportación y de la llegada de llenos en importación: la lista de contenedores se pega tal cual viene, con validación automática del número según ISO 6346. Un cálculo diario cruza cada contenedor con el free time y la tarifa vigente de su naviera y proyecta el costo de no actuar, con alertas en semáforo verde, amarillo y rojo. Incluye los contenedores que hoy no generan cargo de estadía, que quedan trazados aunque no facturen.
+(1) Free time en exportación. Registro por tanda del retiro de vacíos: la lista de contenedores se pega tal cual viene, con validación automática del número según ISO 6346. Un cálculo diario cruza cada contenedor con el free time y la tarifa vigente de su naviera y proyecta el costo de no actuar, con alertas en semáforo verde, amarillo y rojo. Incluye los contenedores que hoy no generan cargo de estadía, que quedan trazados aunque no facturen.
 
-(2) Bookings y roleo. Registro de bookings de retiro, control de ETD, alertas de corte documental y de embarque, y soporte a la reprogramación de contenedores en riesgo de demora.
+(2) Ciclo completo de importación. Arribo a terminal, retiro de terminal con la mercadería, ingreso a planta y devolución del vacío, que es el evento que corta el reloj. Una orden de importación agrupa varios contenedores con arribo común y retiros escalonados, y el free time de destino se calcula con las reglas de demurrage y detention del contrato de cada naviera.
 
-(3) Incidencias y reclamos. Lavados exigidos y averías con fotos y línea de tiempo, y seguimiento del reclamo hasta la resolución: cuánto se cobró y cuánto se recuperó.
+(3) Reconocimiento de contenedores en portón. Lectura de la sigla por cámara al ingreso y al egreso de planta, con validación del dígito verificador ISO 6346 —que descarta automáticamente las lecturas erróneas— y foto del momento como comprobante. Resuelve el punto ciego actual: hoy la terminal no avisa cuándo un contenedor entró o salió, y esas fechas son las que determinan el cargo. Aplica igual en el ingreso de importación y en la devolución del vacío.
 
-(4) Prefijos restringidos. Validación automática de los prefijos definidos por Dow al momento del ingreso, más barrido periódico sobre el stock en operación.
+(4) Bookings y roleo. Registro de bookings de retiro, control de ETD, alertas de corte documental y de embarque, y soporte a la reprogramación de contenedores en riesgo de demora.
 
-(5) Reportes. Exportación a Excel con filtros y resumen periódico automático por correo a la gerencia.
+(5) Incidencias y reclamos. Lavados exigidos al devolver el vacío, daños con costo de refacción y averías, todo con fotos y línea de tiempo, y seguimiento del reclamo hasta la resolución: cuánto se pagó y cuánto se recuperó.
+
+(6) Prefijos restringidos. Validación automática de los prefijos definidos por Dow al momento del ingreso —tanto en exportación como en importación—, más barrido periódico sobre el stock en operación.
+
+(7) Reportes. Exportación a Excel con filtros y resumen periódico automático por correo a la gerencia.
 
 Tecnología: aplicación web en la nube, actualización en tiempo real, perfiles de acceso por rol (operador, supervisor, administrador) y auditoría completa de cambios.
 
@@ -531,7 +546,11 @@ Participación de Dow: validar las reglas de free time y las tarifas negociadas 
 Implementación: piloto de 8 semanas en Bahía Blanca sobre el módulo de mayor impacto financiero, que es free time en exportación. Los demás módulos entran en fases siguientes, priorizados junto con Dow.`},
 {tag:"EJECUTIVA",para:"el mismo flujo, sin jerga",txt:`Cuando se retiran los contenedores vacíos, se pega la lista en el sistema tal cual viene, sin cargar uno por uno. Desde ese momento el sistema cuenta solo: cada día muestra cuántos días libres le quedan a cada contenedor según lo que Dow tenga negociado con esa naviera, y cuánto costaría si se pasa. Verde, amarillo o rojo. Cuando algo se pone amarillo avisa, y el operador reprograma o prioriza antes de que se cobre.
 
-Lo mismo aplica a los contenedores de importación cuando llegan, a los bookings, a las incidencias por lavados y averías, y al control de los prefijos que Dow no acepta.
+En importación es el mismo mecanismo: se registra cuándo llegó el barco, cuándo se retiró el contenedor de la terminal, cuándo entró a planta y cuándo se devolvió el vacío, que es lo que corta el reloj.
+
+Y para no depender de que alguien anote las fechas a mano, una cámara en el portón lee la sigla del contenedor cuando entra y cuando sale, verifica sola que la lectura sea correcta y guarda la foto como respaldo. Hoy la terminal no avisa esos movimientos, y son justo los que definen cuánto se cobra.
+
+Lo mismo con los bookings, con las incidencias por lavados exigidos y daños, y con el control de los prefijos que Dow no acepta.
 
 Qué necesitamos de Dow: que nos confirmen el free time y las tarifas acordadas con cada naviera, la lista de prefijos restringidos, y una persona de logística de referencia. Nada de sistemas y nada de TI: se entra por navegador, como a cualquier página.
 
@@ -540,7 +559,7 @@ Cómo arrancamos: 8 semanas en Bahía Blanca con el módulo de free time de expo
 
 Fase 1 — Piloto. 8 semanas en Bahía Blanca sobre free time de exportación, el módulo donde están los USD 587.805. Se carga el histórico como línea de base, se parametrizan navieras, tarifas y free time, y se opera con alertas en semáforo. Al cierre, reporte con el costo mensual medido contra la línea de base.
 
-Fase 2 — Cobertura completa de la operación. Importación, bookings y roleo, incidencias con seguimiento del reclamo hasta la recuperación, y control de prefijos restringidos. Acá entran también los contenedores que hoy no facturan estadía y por eso nadie sigue: pasan a estar trazados.
+Fase 2 — Cobertura completa de la operación. El ciclo de importación entero, desde el arribo a terminal hasta la devolución del vacío. Bookings y roleo. Incidencias con seguimiento del reclamo hasta la recuperación. Control de prefijos restringidos. Y reconocimiento de la sigla del contenedor por cámara en el portón de planta, que elimina la dependencia de que alguien registre a mano las fechas de ingreso y egreso —las mismas que hoy la terminal no informa y que son las que definen el cargo. Acá entran también los contenedores que hoy no facturan estadía y por eso nadie sigue: pasan a estar trazados.
 
 Fase 3 — Réplica regional. Navieras, tarifas, plantas e idioma son parámetros, no código. Llevarlo a otra planta de Dow en la región es una configuración, no un proyecto nuevo.
 
@@ -725,26 +744,26 @@ Referencia de magnitud: evitar dos contenedores en demora por mes cubre el costo
 { n:31, tipo:"opcion", sec:"Costo e implementación", estado:"decidir",
   q:"¿Cuál es el tiempo estimado para la implementación completa de la propuesta, considerando desde la aprobación hasta que la solución esté operativa en Dow?",
   qpt:"Qual é o tempo estimado para implementação completa da proposta, considerando desde a aprovação até a solução estar operacional na Dow?",
-  opciones:[{t:"Hasta 30 días"},{t:"1–3 meses"},{t:"3–6 meses",sel:true},
+  opciones:[{t:"Hasta 30 días"},{t:"1–3 meses",sel:true},{t:"3–6 meses"},
     {t:"6–12 meses"},{t:"Más de 12 meses"}],
-  porQue:"Con cinco módulos y réplica regional, prometer 30 días desde cero no se sostiene si alguien pregunta el detalle. El piloto sí es de 8 semanas, y eso se explica en la pregunta 35 — así el formulario ofrece las dos cosas: resultado rápido y plazo creíble.",
-  alt:"Decisión abierta. Si preferís “hasta 30 días” por impacto, hay que acotar toda la propuesta al módulo de free time de exportación y sacar los otros cuatro módulos del texto. No se puede tener las dos." },
+  porQue:"Decisión tuya: en tres meses debería haber un sistema funcional. Encaja justo en esta franja y es más agresivo que el 3–6 que tenía antes, sin dejar de ser creíble. El piloto de 8 semanas entra dentro del plazo, así que Dow ve resultado medido antes de que termine la implementación.",
+  alt:"Es el número que va a quedar registrado. Si Dow selecciona la propuesta, tres meses desde la aprobación es lo que se firma — asegurate de que el equipo pueda sostenerlo con los cinco módulos, o acotá el alcance de la 17." },
 
-{ n:32, tipo:"opcion", sec:"Costo e implementación", estado:"decidir",
+{ n:32, tipo:"opcion", sec:"Costo e implementación", estado:"ok",
   q:"¿Cuál es la complejidad de implementación de la propuesta?",
   qpt:"Qual é a complexidade de implementação da proposta?",
   opciones:[{t:"Baja — no exige cambios estructurales"},
     {t:"Media — exige coordinación entre áreas, ajustes operativos o validaciones técnicas",sel:true},
     {t:"Alta — exige cambios estructurales o inversión relevante"}],
   porQue:"Coordina la operación de SSB, logística y supply de Dow, y validación de reglas comerciales por naviera. Marcar “Baja” con ese alcance suena a que no se dimensionó el trabajo.",
-  alt:"Decisión abierta, y va de la mano con la 31. “Media” es más creíble; “Baja” es más vendedor. Si elegís “Baja”, achicá el alcance en las preguntas 16, 17 y 33 para que sea coherente." },
+  alt:"Va de la mano con los tres meses de la 31: complejidad media y plazo corto se leen como equipo que sabe lo que hace. Complejidad baja con cinco módulos se leería como que no se midió." },
 
 { n:33, tipo:"texto", sec:"Costo e implementación", estado:"ok",
   q:"¿Cuáles son las principales dependencias, riesgos o restricciones para implementar la propuesta?",
   qpt:"Quais são as principais dependências, riscos ou restrições para implementar a proposta?",
   busca:"La pregunta que separa una propuesta seria de un folleto. Nombrar riesgos con su mitigación genera más confianza que decir que no hay ninguno. Lo que Dow más quiere leer acá: que no depende de su área de TI.",
   v:[
-{tag:"TÉCNICA",para:"cinco riesgos con mitigación",txt:`(1) Alcance y plazo. La propuesta cubre cinco módulos: free time en exportación e importación, bookings, incidencias y prefijos restringidos. Mitigación: entrega en fases, con un piloto acotado de 8 semanas sobre el módulo de mayor impacto financiero.
+{tag:"TÉCNICA",para:"cinco riesgos con mitigación",txt:`(1) Alcance y plazo. La propuesta cubre siete frentes: free time en exportación, ciclo de importación, reconocimiento de contenedores en portón, bookings, incidencias, prefijos restringidos y reportes. Mitigación: entrega en fases dentro de los tres meses comprometidos, con un piloto acotado de 8 semanas sobre el frente de mayor impacto financiero.
 
 (2) Adopción. Riesgo de doble registro, con la planilla existente conviviendo con el sistema nuevo. Mitigación: puesta en marcha acompañada y designación del sistema como registro único apenas validada la primera parametrización.
 
@@ -755,7 +774,7 @@ Referencia de magnitud: evitar dos contenedores en demora por mes cubre el costo
 (5) Cobertura parcial de la línea de base. Los contenedores cuyo esquema no genera cargo de estadía no figuran en la serie histórica de costos, por lo que su volumen real se conoce recién al incorporarlos al sistema.
 
 No hay dependencia del área de TI de Dow: la solución es autónoma y se accede por navegador.`},
-{tag:"EJECUTIVA",para:"cuatro riesgos, en criollo",txt:`El alcance es grande. Lo cortamos en fases y arrancamos por donde está la plata.
+{tag:"EJECUTIVA",para:"cuatro riesgos, en criollo",txt:`El alcance es grande: siete frentes en tres meses. Lo cortamos en fases y arrancamos por donde está la plata.
 
 Que el equipo siga usando la planilla vieja en paralelo. Se resuelve acompañando la puesta en marcha y declarando el sistema como el único registro válido.
 
@@ -768,7 +787,7 @@ Y una aclaración importante: no dependemos del área de TI de Dow para nada.`},
 
 Lo único que necesitamos: que Dow confirme el free time y las tarifas negociadas con cada naviera, y la lista de prefijos restringidos. Es la única entrada crítica del sistema, y es información que Dow ya tiene.
 
-Riesgo de plazo: el alcance completo son cinco módulos. Se mitiga entregando en fases, con un piloto de 8 semanas que produce resultado medible antes de comprometer el resto.
+Riesgo de plazo: el alcance completo son siete frentes en tres meses. Se mitiga entregando en fases, con un piloto de 8 semanas que produce resultado medible antes de comprometer el resto.
 
 Riesgo de adopción: que convivan la planilla vieja y el sistema nuevo. Se mitiga con puesta en marcha acompañada y un único registro válido.
 
@@ -843,6 +862,8 @@ El núcleo es un motor de cálculo diario que cruza cada contenedor con las regl
 
 Automatización de ingreso: carga por tanda con validación del número de contenedor según ISO 6346, que corta el error de tipeo en el origen.
 
+Visión por computadora en portón: lectura de la sigla del contenedor por cámara al ingreso y al egreso de planta. El dígito verificador del estándar ISO 6346 —una comprobación aritmética sobre los propios caracteres— permite descartar automáticamente las lecturas erróneas, de modo que solo se registra lo que se validó, con la foto del momento como comprobante. Es la pieza que cierra el punto ciego de las fechas de movimiento, que hoy la terminal no informa.
+
 Control de acceso por rol —operador, supervisor, administrador— con trazabilidad de quién cambió qué y cuándo.
 
 Registro de waivers con neto facturable, exportación a Excel configurable y reporte gerencial automático por correo.
@@ -852,6 +873,8 @@ Arquitectura 100% parametrizada: navieras, tarifas, plantas, depósitos, prefijo
 
 Lo que hace por dentro: todos los días revisa contenedor por contenedor cuántos días libres quedan según lo acordado con esa naviera, y calcula cuánto costaría si se pasa.
 
+Y usa la cámara del portón para leer sola la sigla del contenedor cuando entra y cuando sale de planta. El número de contenedor tiene un dígito de control, así que el sistema se da cuenta solo si leyó mal y descarta la lectura. Queda la foto como respaldo.
+
 Cada persona ve lo que le corresponde según su rol, y queda registrado quién cambió qué.
 
 Y lo más importante para Dow: las navieras, las tarifas, las plantas y hasta el idioma son configuración. Poner el sistema en otra planta es cargar los datos de esa planta, no volver a programar.`},
@@ -859,7 +882,7 @@ Y lo más importante para Dow: las navieras, las tarifas, las plantas y hasta el
 
 El motor cruza a diario cada contenedor con el free time y la tarifa que Dow tiene negociada con esa naviera, y proyecta cuánto cuesta no actuar. De ahí sale la alerta en semáforo, que es lo que convierte un costo detectado tarde en un costo evitado.
 
-Sobre confiabilidad: cada número de contenedor se valida al ingresar, cada cambio queda auditado y cada usuario ve solo lo que le corresponde.
+Sobre confiabilidad: cada número de contenedor se valida al ingresar, cada cambio queda auditado y cada usuario ve solo lo que le corresponde. Y una cámara en el portón lee la sigla al entrar y al salir de planta, con la foto como comprobante: las fechas de movimiento dejan de depender de que alguien las anote, que es hoy el eslabón más frágil porque la terminal no las informa.
 
 Sobre escala: navieras, tarifas, plantas e idioma —español, portugués e inglés— son parámetros. Llevar el sistema a otra planta de Dow en la región no es un proyecto nuevo, es una configuración. Por eso el costo marginal de escalar es prácticamente cero, y por eso lo que se valide en Bahía Blanca sirve para toda la región.`}]},
 
@@ -873,17 +896,17 @@ Sobre escala: navieras, tarifas, plantas e idioma —español, portugués e ingl
   porQue:"Gobernanza y reducción de riesgo salen de la auditoría y del registro único. Confiabilidad de supply, de las alertas de corte documental y de embarque. Calidad se agregó por el módulo de prefijos restringidos, que es un control de cumplimiento sobre qué contenedores entran a operar con Dow.",
   alt:"“Sustentabilidad” es tentador —menos movimientos vacíos, menos reposicionamiento— pero sin dato que lo respalde es la clase de check que un evaluador atento castiga. Lo dejé afuera." },
 
-{ n:40, tipo:"dato", sec:"Otros impactos", estado:"falta",
+{ n:40, tipo:"dato", sec:"Otros impactos", estado:"ok",
   q:"¿La propuesta está alineada con algún desafío u oportunidad ya discutida con equipos de Dow?",
   qpt:"A proposta está alinhada a algum desafio ou oportunidade já discutida com times da Dow?",
-  valor:"",
-  nota:"Si ya lo hablaste con alguien de logística en Bahía Blanca o con Compras, va “Sí” y la 41 se completa con área y contacto: es de las cosas que más peso le dan a una propuesta de proveedor, porque muestra que no salió de la nada. Si no hubo conversación formal, va “No”. Un alineamiento inventado se verifica con una llamada." },
+  valor:"No",
+  nota:"La propuesta es interna de SSB: no se conversó con nadie de Dow. Va “No” y punto. Un alineamiento inventado se verifica con una llamada, y el costo de que se caiga es mucho mayor que el punto que suma." },
 
-{ n:41, tipo:"dato", sec:"Otros impactos", estado:"falta",
+{ n:41, tipo:"dato", sec:"Otros impactos", estado:"ok",
   q:"Si es así, informe el área, localidad, contacto de Dow o contexto ya discutido.",
   qpt:"Se sim, informe a área, localidade, contato Dow ou contexto já discutido.",
-  valor:"",
-  nota:"Condicional a la 40. Si la respuesta de la 40 es “No”, esta no se muestra." },
+  valor:"No se muestra",
+  nota:"Condicional a la 40. Con “No” seleccionado en la 40, el formulario no despliega esta pregunta." },
 
 /* ── Pitch ─────────────────────────────────────────────────── */
 { n:42, tipo:"opcion", sec:"Pitch", estado:"ok",
@@ -896,25 +919,29 @@ Sobre escala: navieras, tarifas, plantas e idioma —español, portugués e ingl
   q:"Nombre y e-mail de la persona que presentaría la propuesta, en caso de ser seleccionada.",
   qpt:"Nome e e-mail da pessoa que apresentaria a proposta, caso selecionada.",
   valor:"Jonathan Ezequiel Zenteno Parrado — jzenteno@ssbint.com",
-  nota:"Son 15 minutos más 10 de preguntas. Las tres preguntas más probables: de dónde salen los USD 587.805, por qué el 20–35% y no otro número, y quién paga esto en dos años. Las tres están contestadas en las preguntas 22, 29 y 33 de este formulario." },
+  nota:"Son 15 minutos más 10 de preguntas. Tres preguntas casi seguras, con la respuesta lista. (1) “¿De dónde salen los USD 587.805?” → De la planilla de costos que el equipo lleva en la operación, mes a mes y por naviera, cruzable contra las facturas de Dow. (2) “¿Por qué 20% y 35% y no otro número?” → Son escenarios declarados, no una medición; el piloto de 8 semanas los valida o los corrige contra la línea de base real. (3) “¿Cómo se sostiene el sin costo?” → El costo de operar el sistema es marginal contra el ahorro: evitar dos contenedores en demora por mes ya lo cubre. SSB lo absorbe porque el foco de la propuesta es el cost saving sobre los números medidos, no un cambio en el esquema comercial." },
 
 { n:44, tipo:"texto", sec:"Pitch", estado:"ok",
   q:"Comentarios adicionales", qpt:"Comentários adicionais",
   busca:"Campo libre, y por eso el más desperdiciado. Es el último lugar para dejar una impresión: o se usa para dar credibilidad a los números, o para comprometerse con algo concreto. Repetir lo ya dicho no suma.",
   v:[
-{tag:"TÉCNICA",para:"trazabilidad y alcance declarado",txt:`Las cifras de este formulario provienen de la planilla de costos de detention de la operación —serie mensual por naviera, 2024 a 2026—, verificable contra las facturas de cada armador. La ventana de 11 meses, de agosto/2025 a junio/2026, se eligió por ser el período con datos cerrados; julio a diciembre de 2026 todavía no está consolidado.
+{tag:"TÉCNICA",para:"trazabilidad y alcance declarado",txt:`SSB mantiene relación comercial con Dow desde hace más de 10 años, de los cuales los últimos 5 en la operativa de exportación e importación. El diagnóstico de esta propuesta no viene de un análisis externo: viene de operar el proceso todos los días.
+
+Las cifras de este formulario provienen de la planilla de costos de detention que el equipo de SSB lleva en la operación —serie mensual por naviera, 2024 a 2026—, verificable contra las facturas de cada armador. La ventana de 11 meses, de agosto/2025 a junio/2026, se eligió por ser el período con datos cerrados; julio a diciembre de 2026 todavía no está consolidado.
 
 Aclaración de alcance: el costo declarado corresponde a las navieras que facturan estadía. Una porción relevante de la operación se mueve con esquemas que no generan ese cargo y por lo tanto no figura en la serie de costos. Incorporarla al sistema no agrega ahorro directo, pero completa la trazabilidad de la operación.
 
 SSB está en condiciones de entregar el piloto del módulo de free time en 8 semanas desde la aprobación, sin costo para Dow, con reporte de resultado medido al cierre.`},
-{tag:"EJECUTIVA",para:"corto y honesto",txt:`Los números salen de la planilla de costos de la operación, mes a mes y naviera por naviera, y se pueden cruzar contra las facturas.
+{tag:"EJECUTIVA",para:"corto y honesto",txt:`SSB trabaja con Dow hace más de 10 años, los últimos 5 en la operativa de exportación e importación. Esto no lo pensó alguien de afuera: sale de operar el proceso todos los días.
+
+Los números salen de la planilla de costos que lleva el equipo en la operación, mes a mes y naviera por naviera, y se pueden cruzar contra las facturas.
 
 Una aclaración honesta: el costo que informamos es el de las navieras que cobran estadía. Hay una parte de la operación que no genera ese cargo y por eso hoy no se sigue. Incorporarla no suma ahorro, pero completa el control.
 
 Si la propuesta avanza, SSB entrega el piloto en 8 semanas desde la aprobación, sin costo para Dow y con resultado medido al final.`},
 {tag:"COMERCIAL",para:"cierra con el compromiso",txt:`Tres cosas que queremos dejar dichas.
 
-Primero, los números son verificables. Salen de la planilla de costos de la operación, mes a mes y por naviera, y Dow puede cruzarlos contra sus propias facturas.
+Primero, los números son verificables y salen de adentro. SSB opera para Dow hace más de 10 años, los últimos 5 en exportación e importación, y la planilla de costos la lleva el propio equipo en la operación: mes a mes, naviera por naviera, cruzable contra las facturas de Dow.
 
 Segundo, el número declarado es conservador. Cubre solo la exportación de Bahía Blanca y solo las navieras que facturan estadía. No incluye importación, bookings, incidencias, ni los contenedores que hoy no generan cargo y por eso nadie controla.
 
@@ -972,11 +999,13 @@ function bloquePendientes(){
       <div><h3>${esc(r.t)}</h3><p>${esc(r.d)}</p></div>
       ${r.ir ? `<button class="risk-go" data-ir="q-${r.ir}">ir a ${r.ir} →</button>` : ""}
     </div>`;
+  const n = RIESGOS.abiertos.length, m = RIESGOS.resueltos.length;
+  const palabra = ["cero","una","dos","tres","cuatro","cinco","seis","siete","ocho","nueve"][n] || n;
   return `<section class="hero" id="pendientes">
-      <h1>Nueve cosas para decidir, no para redactar</h1>
+      <h1>Quedan ${palabra} ${n === 1 ? "cosa" : "cosas"} para decidir</h1>
       <p>Abajo están las 42 preguntas del formulario, en orden, con las respuestas ya escritas.
-      Esto de acá es lo otro: lo que ninguna redacción resuelve y que conviene cerrar antes
-      del viernes. Los tres del final ya quedaron decididos.</p>
+      Esto de acá es lo otro: lo que ninguna redacción resuelve. ${m} de estos puntos ya se
+      cerraron y quedan listados al final para que veas en qué se decidió cada uno.</p>
       <div class="who">
         <label for="quien">Quién está revisando:</label>
         <input id="quien" type="text" placeholder="tu nombre" value="${esc(S.quien)}">
@@ -989,8 +1018,8 @@ function bloquePendientes(){
       <div class="fuente">
         <h4>De dónde salen los números</h4>
         <p style="margin:0 0 11px">Planilla <span class="mono">COSTOS POR DETENTION SEMANAL
-        2024-2025-2026</span>, validada con Omar Pérez. Serie mensual por naviera. El total de
-        la ventana del pitch queda marcado como <b>a confirmar</b> hasta que se cierre el P8.</p>
+        2024-2025-2026</span>, que lleva a mano el equipo en la operación. Serie mensual por
+        naviera, actualizada hasta hace una semana. <b>Cerrada: estos números no se tocan.</b></p>
         <table>${CIFRAS.map(c => `<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join("")}</table>
       </div>
     </section>`;
