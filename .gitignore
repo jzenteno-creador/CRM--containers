@@ -12,3 +12,6 @@ node_modules/
 
 # lockfile generado por tooling de skills (no es del CRM)
 skills-lock.json
+
+# generado por docs/dow-summit-2026/build-artifact.py
+docs/dow-summit-2026/revision-artifact.html
