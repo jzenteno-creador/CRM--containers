@@ -37,8 +37,11 @@ jobs:
       - name: Instalar pg_dump 17 (PGDG, matchea Postgres 17 del proyecto)
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
+          # --batch --yes: el runner ya trae este keyring preinstalado y gpg sin tty
+          # muere preguntando si sobreescribir — ESTA línea tuvo el backup roto 25 días
+          # (0 éxitos desde el 2026-07-07, descubierto 2026-07-31).
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | sudo gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+            | sudo gpg --batch --yes --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
