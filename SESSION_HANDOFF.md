@@ -1,97 +1,101 @@
-# Handoff de sesión — 2026-07-31 · CRM Detention v2 · rama v2-rebuild
+# Handoff de sesión — 2026-07-31 (maratón) · CRM Detention v2 · rama v2-rebuild
 
 ## Resumen
-Sesión **de orden**: cerrado el capítulo Dow Summit (presentación enviada por John) y
-limpieza completa del repo — baja del prototipo v1, consolidación de 8 borradores del
-formulario en 1 entregable, 20 documentos de proceso cerrado a `docs/historico/`, y baja de
-9 ramas locales + 5 remotas. Cero código de la app tocado. En el camino apareció un **P1
-real que no era limpieza**: el backup diario respaldaba la base muerta.
+UNA sesión, cuatro capítulos: (1) limpieza integral del repo + P1 del backup que respaldaba
+el schema muerto; (2) **auditoría integral con 6 agentes** (informe:
+`docs/auditoria-integral-2026-07-31.md`) + cruce contra el PDF enviado a Dow; (3) John
+aprobó TODO el plan → **implementación autónoma de los 4 bloques** (migraciones 037-040
+aplicadas con harness, 3 deploys a prod, CI nuevo verde, 101 tests); (4) descubrimiento y
+reparación de que **el backup JAMÁS había funcionado** (25/25 corridas fallidas desde el
+07/07) → hoy existe el primer backup real del proyecto.
+(El handoff de la limpieza matutina quedó en la historia git de este archivo.)
 
-## ✅ HECHO
+## ✅ EN PRODUCCIÓN (deploys verificados con URL 200)
 
-### P1 — el backup respaldaba el schema equivocado (`b621d17`)
-`.github/workflows/backup-detention.yml` hacía `pg_dump --schema=detention`: el schema del
-prototipo v1. Los datos vivos del v2 —**2.959 operaciones cargadas en M6**— están en el
-schema `crm` del mismo proyecto `cctuowthpnstvdgjuomq` y **no tenían ninguna copia
-recuperable** (plan free: sin PITR, sin backups descargables). Corregido a
-`--schema=crm --schema=detention`, con guardrail que hace fallar el job si el `.sql` no
-contiene `CREATE TABLE crm.` — un backup vacío en verde es peor que no tener backup.
-Renombrado a `backup-db.yml`; runbook reescrito en `docs/backup-db.md`.
-Cherry-pickeado a `master` (`34bc6b5`) para que el cron lo tome — ver más abajo. **Nunca
-corrió contra el runner real: lo valida el disparo manual de John (Próximos pasos #1).**
+**Bloque 1 — higiene**: Next 16.2.12 (3 CVEs cerrados) · engines Node fijado · rail con
+scroll (1366×768) · pegado con tabs · compresión de fotos de incidencias · AbortController
+en modo vivo · /design solo admin · aviso "peligrosa = dato informativo" en Admin→Tarifas.
 
-### Limpieza (`3c2df3d`) — 105 archivos, −20.468 líneas
-- **Baja del v1**: `crm-detention/` (59 archivos) y `db/schema/` (10). Rescate en el tag
-  **`v1-prototipo`** (pusheado): `git checkout v1-prototipo -- crm-detention db`.
-  Mató un footgun real: `crm-detention/.vercel/project.json` apuntaba **al mismo proyecto
-  Vercel que crm-v2** (`prj_xRmLlZJ3...`) — un `vercel deploy --prod` parado en la carpeta
-  equivocada pisaba producción con el prototipo. Hoy hay un solo `.vercel/` en el repo.
-- **Dow Summit**: queda `docs/dow-summit-2026/` con `presentacion-final.pdf` (la enviada) y
-  `formulario-final.md` (su texto fuente). 8 borradores fuera del repo.
-- **Caso de negocio**: `docs/caso-negocio/` con los 2 PDF finales (ES + EN).
-- **Planillas**: las 4 xlsx con datos reales de cliente salieron del repo. `.gitignore`
-  ahora corta `/*.xlsx|docx|pdf|html` **en la raíz** (no alcanza `docs/m5/fuentes/`).
-- **Histórico**: 20 docs de proceso cerrado a `docs/historico/` con README que explica cada
-  uno. Planes de M5 a `docs/m5/` (M5 tiene deuda abierta, no es histórico).
-- **Referencias**: reapuntadas en `crm-v2/AGENTS.md`, `docs/v2/CONTEXT.md` y los 2 planes de
-  M5. Verificado por grep: cero referencias rotas fuera de `docs/historico/`.
-- **Ramas**: 9 locales + 5 remotas borradas. **Las 9 estaban contenidas en `v2-rebuild`**
-  (verificado con `git merge-base --is-ancestor` una por una) — cero commits huérfanos.
+**Bloque 2 — importación completa**: migración **038** (operador NO crea órdenes en otra
+planta; 2 RPCs con guard rol+planta — la RLS del SELECT previo es el candado real, medido;
+3 CHECKs de fechas; semáforo split honesto: exceso devengado ⇒ rojo) + migración **039**
+(waiver acumulativo impo espejo de 021 CON advisory lock anti-TOCTOU, anulación, corrección
+de cerradas whitelist 3 fechas, views con costo NETO + costo_bruto + dias_waiver al final,
+CHECK de eventos con 'waiver'). Harness T1-T10 y T1-T9 PASS pre-apply, smoke post-apply.
+Front: dashboard combinado expo+impo + pestaña Importación en /reportes.
 
-### Archivo externo (nada se borró)
-`/home/jzenteno/projects/_archivo-crm-containers/2026-07-31/` — 4,0 MB en 16 archivos:
-`dow-summit-borradores/`, `caso-negocio-fuentes/`, `fuentes-xlsx/`, `handoffs/`.
+**Bloque 4 — red de seguridad**: **101 tests** (ISO 6346 con ancla canónica, fechas AR,
+43 golden de plata con oráculo TS) · **CI verde** en primera corrida (lint+tsc+test+build,
+push y PR) · rate limit 50/min por usuario en /api/vision/scan · **BACKUP FUNCIONANDO**:
+3 causas apiladas cazadas en validación end-to-end (gpg sin tty desde el día 1 → secret
+SUPABASE_DB_URL que nunca existió (John lo cargó hoy) → wrapper pg_dump 16 vs server 17)
+→ run 30672413156 SUCCESS, artifact `crm-db-backup-20260731-2316` (2.0 MB, crm+detention).
+Aviso de fallo por mail vía n8n ya activo (probado en vivo). Todo cherry-pickeado a master.
 
-## Decisiones tomadas
-- Lo untracked se **archiva fuera del repo**, no se borra (decisión de John): era lo único
-  irrecuperable. Lo tracked se borra sin miedo — vive en la historia y en el tag.
-- El schema `detention` **sigue vivo en la DB**: hoy se dio de baja solo el código del v1.
-  Por eso el backup lo sigue dumpeando.
-- `docs/fix-p1/025_fix_p1_rpc_executor.sql` borrado sin archivar: era duplicado **byte a
-  byte** de `crm-v2/supabase/migrations/025_fix_p1_rpc_executor.sql`, que está aplicada en
-  prod (registrada `20260713160000`, y le siguieron 11 migraciones más).
-- `master` recibió **un solo commit**, el hotfix del backup (`34bc6b5`), con GO explícito de
-  John y amparado en "master libre para hotfixes" de `docs/v2/CONTEXT.md`.
-  `git diff 33ad084 master` = 1 archivo. **El cutover sigue pendiente**: en todo lo demás
-  master sigue siendo el v1.
+**Bloque 3 — pitch**: migración **040** `vista_kpi_piloto_mensual` (KPIs 2-3-4 del
+formulario Dow; calibrada ANTES de crear: 54,4% dentro del free time vs 56% del PDF —
+delta = CMA 14vs18 días de M6 + activas en el denominador del PDF, documentado en la
+migración) · sección "KPIs del piloto" en /inicio (4 cards + tabla 12 meses) · refresco
+automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conectado de verdad
+(expo abiertas/cerradas + impo).
 
-## Estado actual
-- `v2-rebuild` local == origin == `4a48c92`; `master` == origin == `34bc6b5`. Working tree
-  **limpio**. Tag `v1-prototipo` pusheado. Solo quedan 2 ramas.
-- Raíz del repo: `spec.md`, `SESSION_HANDOFF.md` y nada más suelto.
-- **Cero cambios** en `crm-v2/src`, `crm-v2/supabase` y `package.json` → el build no puede
-  haberse roto. No se corrió build ni deploy; prod sigue en el deploy del 18/07.
+## ⏸ BLOQUEADO EN JOHN (lo único que falta del plan aprobado)
+1. **Correo diario 7AM**: workflow n8n `hdDDj5BLJt5wNESm` ("CRM Detention — Resumen diario
+   7AM") creado y probado — falla SOLO por credencial: en n8n no existe ninguna credencial
+   del proyecto cctuowthpnstvdgjuomq (todas apuntan a xkppk; verificado barriendo los 36
+   workflows). John: Supabase→crm-containers→Settings→API Keys→copiar `service_role` →
+   n8n→Credentials→Add→"Supabase API"→Host `https://cctuowthpnstvdgjuomq.supabase.co` +
+   la key → nombre `supabase-crm-containers-service`. Después: reasignar la cred en los 3
+   nodos HTTP (MCP update_workflow), re-ejecutar prueba, **publish** (hoy está en draft,
+   el cron NO corre hasta publicar).
+2. **Snapshot mensual del backup a Drive**: pendiente — requiere workflow n8n con un GH PAT
+   como credencial (John) para bajar el artifact. Diseñar cuando el mail esté vivo.
+3. Decisión **carga peligrosa**: sigue abierta (contrato: ¿tarifa/free time distinto para
+   peligrosa?). Mientras: flag marcado "no usado por el motor" en Admin. Si se confirma
+   diferenciación → desarrollo real (columna en contenedores + filtro en motor).
+4. HIBP toggle en Supabase Auth (1 click, John ya tiene acceso al dashboard).
+5. Bucket viejo `incidencias`: quedó privado e inerte; baja física desde dashboard.
 
-## Próximos pasos
-1. **John**: disparar el workflow a mano (Actions → *Backup DB CRM* → Run workflow) y
-   confirmar que el artifact `crm-db-*` trae tablas de `crm`. **Es lo único que valida el
-   fix** — nunca corrió contra el runner real.
-2. **John**: test con foto real del escaneo OCR en prod (pendiente desde el 18/07).
-3. **John**: smoke de M5 con roles reales en prod (pendiente desde el cierre de M5).
+## Pendientes de trabajo (no bloqueados)
+- **UI de waiver/corrección impo** (task #9): RPCs verificadas sin pantalla. Diseñar punto
+  de entrada (¿ficha impo?) con el patrón de contenedores/[id]/acciones.tsx.
+- **Verificación visual** de todo lo deployado hoy (rail, KPIs, ⌘K, tabs de reportes):
+  análisis estático solamente — browsers MCP rotos en WSL; pase de agent-browser o smoke
+  de John.
+- Deudas P2/P3 del informe no incluidas en los bloques (fetch caps, prorrateo KPI,
+  tarifa por tramos MOTOR↔NAVIERA, i18n, Realtime real, importador Excel de tarifas):
+  ver `docs/auditoria-integral-2026-07-31.md` §3/§7 fase 2.
 
-### ✅ Resuelto en la misma sesión (GO de John)
-El fix del backup vivía solo en `v2-rebuild`, y GitHub Actions ejecuta los triggers
-`schedule:` **solo desde la rama default** — que es `master`, congelada en el v1. Cherry-pick
-de `b621d17` a `master` (`34bc6b5`, pusheado): master recibió **únicamente** el workflow,
-`git diff 33ad084 master` = 1 archivo. El cron de las 03:00 ya corre la versión corregida.
+## Decisiones de John HOY (todas ejecutadas)
+- GO a todo el plan de la auditoría; trabajo autónomo con multiagentes y modelos baratos.
+- Migraciones y deploys a prod autorizados ("autorizado todo").
+- Prefijos: supervisor+admin RATIFICADO → AGENTS.md actualizado (cierra D4).
+- Correo diario: a jzenteno@ solo, destinatarios configurables después.
+- Vercel Node 22.x fijado (dashboard) · secret SUPABASE_DB_URL cargado · proyecto Supabase
+  renombrado a `crm-containers` · `gate-019-sandbox` identificado como borrable (~USD 10/mes).
 
-## Deudas abiertas (con tier del próximo paso)
-| Deuda | Próximo paso | Tier |
-|---|---|---|
-| Restore nunca ensayado (D-02). Además el dump usa `--no-privileges`: no trae los GRANT, y el modelo de seguridad del v2 vive en los grants | Ensayo end-to-end contra proyecto vacío + reaplicar grants desde migrations; verificar si las policies RLS vienen en el dump | **Sonnet** con guardrails |
-| `scan_pruebas` es DESECHABLE + cuentas no-activas acceden | Dropear tabla al terminar las pruebas OCR | db-hardening (**Opus**) — DDL prod |
-| Filtro de sigla: confusiones OCR en el serial (O→0/B→8/I→1) | Implementar en `extraerSigla` con vectores de test | **Sonnet** |
-| M5: MOTOR↔NAVIERA (expo) + primera liquidación impo | Diseño + ejecución con gates | **Fable/Opus** — lógica de plata |
-| Cutover de `master` (sigue en v1, 10+ commits atrás) | Decisión de John | Decisión → cualquiera |
-| M5: reviewer estricto B2-UI/B7/033/034 sin resultado | Correr los reviews pendientes | **Opus/Fable** high |
+## Estado técnico exacto
+- `v2-rebuild` == origin (HEAD tras docs de ratificación); `master` == origin con los 3
+  cherry-picks del backup (b621d17→34bc6b5, aviso n8n, fix pg_dump 17). Working tree limpio
+  salvo untracked de John (`docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx` — sin clasificar,
+  John no explicó qué es).
+- DB prod: migraciones **hasta 040** aplicadas y verificadas. Front prod: deploy del Bloque
+  3 (alineados). CI: verde. Backup: cron diario 03:00 AR operativo con alerta.
+- n8n: workflow del mail en DRAFT (id hdDDj5BLJt5wNESm), sin publicar.
 
-## Contexto no obvio
-- **GitHub Actions `schedule:` solo corre desde la rama default.** Un workflow arreglado en
-  una rama de trabajo no tiene ningún efecto sobre el cron hasta que llega a `master`.
-  Vale para cualquier workflow futuro de este repo mientras master siga congelada.
-- El tag `v1-prototipo` apunta a `b621d17`, que **está en la rama** `v2-rebuild` (no es un
-  commit huérfano). Contiene los 69 archivos del v1.
-- Los assets del design system Flight Deck (`design_handoff_crm_detention/`) ya estaban
-  portados a `crm-v2/src/app/globals.css` — la baja del v1 no perdió nada vivo.
-- La presentación al Dow Summit **ya fue enviada** por John (31/07). Ahora se espera
-  respuesta; el caveat ZIM quedó sin resolver pero el documento ya salió.
+## Contexto no obvio (lecciones del día)
+- **El fix sugerido por un auditor puede romper prod**: el DROP de las policies huérfanas
+  (004) habría matado las RPCs — el rebind (`ALTER POLICY ... TO crm_rpc_executor`) fue el
+  fix correcto. Verificar SIEMPRE contra pg_policies + harness antes de aplicar fixes de
+  terceros (incluidos agentes propios).
+- **perfil() matchea por `auth_user_id`, no por `usuarios.id`** — simular contexto en
+  harness requiere el uuid de auth.users.
+- **`create or replace view` NO permite intercalar columnas** — las nuevas van AL FINAL.
+- **Los runners de GH ya traen keyring PGDG y pg_dump 16**: gpg necesita `--batch --yes` y
+  pg_dump 17 ruta explícita `/usr/lib/postgresql/17/bin/pg_dump`.
+- **GHA `schedule:` corre solo desde la rama default (master)** — todo fix de workflow
+  necesita cherry-pick; el dispatch manual desde otra rama da verde y engaña.
+- El rechazo cross-planta en RPCs impo sale como `estado_no_valido` (RLS oculta la fila),
+  no `fuera_de_alcance` — es deseable (no filtra existencia) y está documentado en la 038.
+- n8n: NINGUNA credencial existente apunta al proyecto del CRM — "supabase-ssb-inbox-service"
+  es xkppk (schema inbox_triage no existe en cctuowth, verificado).
