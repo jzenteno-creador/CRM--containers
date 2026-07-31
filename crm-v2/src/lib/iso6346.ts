@@ -99,11 +99,14 @@ export function extraerSigla(candidatos: string[]): SiglaExtraida | null {
   return primera;
 }
 
-/** Parsea una lista pegada (uno por línea, o separados por coma/espacio). */
+/** Parsea una lista pegada (uno por línea, o separados por coma/espacio/tab — spec
+ * §6.3.2). El tab entra en la clase de separadores porque una fila copiada de Excel
+ * llega con las celdas separadas por \t: sin esto los números quedaban pegados entre sí
+ * y el parseo daba "formato inválido" (bug real, P2). */
 export function parsearListaContenedores(texto: string): ParsedContainer[] {
   const vistos = new Set<string>();
   const out: ParsedContainer[] = [];
-  for (const tok of texto.split(/[\n,;]+/)) {
+  for (const tok of texto.split(/[\n,;\t]+/)) {
     const raw = tok.trim();
     if (!raw) continue;
     const numero = normalizarNumero(raw);

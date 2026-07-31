@@ -235,6 +235,9 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
   position: fixed; top: 0; bottom: 0; left: 0; width: 60px; z-index: 40;
   background: var(--color-bg-rail); border-right: 1px solid var(--color-border-subtle);
   display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px;
+  /* P1 UX: con 13 solapas el contenido mínimo (~714px) supera laptops 1366×768 sin esto
+     — las últimas solapas y el toggle de colapsar quedaban inalcanzables. */
+  overflow-y: auto; scrollbar-width: thin;
 }
 .fd-rail-logo { margin-bottom: 10px; }
 .fd-rail a {
