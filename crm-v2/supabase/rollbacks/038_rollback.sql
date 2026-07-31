@@ -1,0 +1,18 @@
+-- Rollback neutralizador de la 038 — NUNCA destructivo. Correr solo con GO de John.
+--
+-- Revertir la 038 significa REABRIR dos huecos de autorización (P1-A/P1-B de la
+-- auditoría 2026-07-31) y volver al semáforo que muestra verde con plata devengada.
+-- Por eso este rollback NO restaura los cuerpos viejos de las funciones: los cuerpos
+-- de la 038 son estrictamente más seguros y compatibles (mismo shape de retorno).
+-- Lo único reversible sin reabrir huecos son los CHECKs:
+--
+-- alter table crm.operaciones_impo
+--   drop constraint if exists ck_impo_ingreso_post_retiro,
+--   drop constraint if exists ck_impo_devolucion_post_retiro,
+--   drop constraint if exists ck_impo_cerrado_tiene_devolucion;
+--
+-- Si de verdad hiciera falta volver a los cuerpos pre-038 (no recomendado), están
+-- textuales en crm-v2/supabase/migrations/032_importacion.sql (líneas 475-773) y en
+-- el reporte de extracción de la sesión 2026-07-31. La view pre-038 está en la 032
+-- líneas 1110-1230 (única diferencia: el CASE del semáforo sin `exceso_total > 0`).
+select 'rollback 038: intencionalmente vacío — ver comentario' as nota;
