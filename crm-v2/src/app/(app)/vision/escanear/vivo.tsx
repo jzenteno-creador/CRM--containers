@@ -46,14 +46,22 @@ export function ScanVivo({ onRegistrado }: { onRegistrado: () => void }) {
   const sesionRef = useRef(0);
   const facingRef = useRef<Facing>("environment");
   const fallosRef = useRef(0); // fallas consecutivas del endpoint — 3 seguidas cortan el loop
+  // fetch en vuelo hacia /api/vision/scan: parar() lo aborta además de cortar timer/cámara
+  // (P2 — sin esto el POST seguía viajando y podía llegar tarde después de Detener/unmount).
+  // El check de generación (sesion !== sesionRef.current) sigue siendo la 2ª línea de
+  // defensa, sin tocar — esto solo evita el request de más.
+  const abortRef = useRef<AbortController | null>(null);
 
-  /** Corta loop + stream. Idempotente; sesion++ mata cualquier ciclo en vuelo. */
+  /** Corta loop + stream + fetch en vuelo. Idempotente; sesion++ mata cualquier ciclo en
+   * vuelo (y el abort() dispara el AbortError que el catch de ciclo() silencia). */
   function parar() {
     sesionRef.current += 1;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    abortRef.current?.abort();
+    abortRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
@@ -74,6 +82,10 @@ export function ScanVivo({ onRegistrado }: { onRegistrado: () => void }) {
     const frame = video ? capturarFrame(video) : null;
     if (frame) {
       setLeyendo(true);
+      // controlador de este fetch en particular: parar() lo aborta si el ciclo sigue en
+      // vuelo (P2 del review — sin esto el POST seguía viajando después de Detener/unmount)
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
         const { data } = await getSupabase().auth.getSession();
         // getSession puede awaitear red (refresh de token en vuelo): sin este check un
@@ -87,6 +99,7 @@ export function ScanVivo({ onRegistrado }: { onRegistrado: () => void }) {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ imageBase64: frame, modo: "vivo" }),
+            signal: controller.signal,
           });
           const json = (await res.json()) as ScanRespuesta;
           if (sesion !== sesionRef.current) return;
@@ -108,10 +121,15 @@ export function ScanVivo({ onRegistrado }: { onRegistrado: () => void }) {
           }
         }
       } catch (e) {
+        // abort disparado por parar() (Detener/toggle de cámara/unmount): silencio, NO
+        // cuenta como falla del endpoint — primera línea de defensa, independiente del
+        // chequeo de generación de abajo (que queda intacto como segunda línea).
+        if (e instanceof DOMException && e.name === "AbortError") return;
         if (sesion !== sesionRef.current) return;
         fallo = e instanceof Error ? e.message : "Error de red al enviar el frame.";
         setUltima({ ok: false, error: "red", detalle: fallo });
       } finally {
+        if (abortRef.current === controller) abortRef.current = null;
         if (sesion === sesionRef.current) setLeyendo(false);
       }
     }
