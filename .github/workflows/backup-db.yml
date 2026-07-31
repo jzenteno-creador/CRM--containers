@@ -55,15 +55,20 @@ jobs:
             echo "::error::Falta el secret SUPABASE_DB_URL. Ver header de este workflow."
             exit 1
           fi
+          # Ruta explícita al binario 17: el wrapper pg_dump del runner resuelve al 16
+          # preinstalado y v16 aborta contra un server v17 ("server version mismatch",
+          # tercera causa de fallo encontrada en la validación end-to-end del 2026-07-31).
+          PGDUMP17=/usr/lib/postgresql/17/bin/pg_dump
+          "$PGDUMP17" --version
           STAMP=$(date -u +%Y%m%d-%H%M)
           # Custom format comprimido (restore selectivo con pg_restore), datos + DDL:
-          pg_dump "$SUPABASE_DB_URL" \
+          "$PGDUMP17" "$SUPABASE_DB_URL" \
             --schema=crm --schema=detention \
             --no-owner --no-privileges \
             --format=custom \
             --file="crm-db-${STAMP}.dump"
           # Copia plain-SQL legible para diff/inspección rápida:
-          pg_dump "$SUPABASE_DB_URL" \
+          "$PGDUMP17" "$SUPABASE_DB_URL" \
             --schema=crm --schema=detention \
             --no-owner --no-privileges \
             --format=plain \
