@@ -45,6 +45,17 @@ y NUNCA escribe directo sobre tablas de plata.
   UPDATE. Las policies usan SOLO `auth.uid()` — sin gate de `estado_cuenta='activo'`: una
   cuenta pendiente/rechazada con JWT vigente puede leer/insertar en ESTA tabla (aceptado
   para fase de prueba; ratificación pendiente de John en checkpoint). NO volcar PII acá.
+- **`prefijos_restringidos` RATIFICADA en la lista sancionada (decisión explícita de John,
+  2026-07-31).** Escritura directa INSERT/UPDATE para `supervisor` Y `administrador` (la
+  RLS de la 031 gatea por `crm.perfil()`). Esto cierra el pendiente del desvío D4 del plan
+  M5 (la letra original decía admin-only; la 031 lo abrió a supervisor+ como desvío
+  documentado, y la auditoría 2026-07-31 detectó que el código citaba una sección "B6"
+  inexistente de este archivo — esta entrada es la sanción formal que faltaba).
+- **`operacion_impo_waivers` es RPC-only (migración 039, 2026-07-31)**: espejo de
+  `operacion_waivers` — SELECT para authenticated, escritura SOLO vía
+  `crm_registrar_waiver_impo`/`crm_anular_waiver_impo` (DEFINER owner=postgres, guard
+  supervisor+, evento auditado — el patrón de las 4 DEFINER auditadas). La corrección de
+  impo cerradas es `crm_corregir_operacion_impo_cerrada` (whitelist: solo las 3 fechas).
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
 - **Enforcement a nivel DB (fix P1 de CP3, migración 025 — APLICADA en prod 2026-07-13,

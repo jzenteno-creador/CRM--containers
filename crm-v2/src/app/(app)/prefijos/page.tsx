@@ -10,7 +10,7 @@
 //      restringido DESPUÉS de su alta (nadie lo veía entre julio y diciembre). La view
 //      es derivada, siempre actual — sin snapshot que se pudra. SELECT libre.
 //   B) Lista de prefijos (crm.prefijos_restringidos) — catálogo administrable. Escritura
-//      DIRECTA sancionada (AGENTS.md B6, migración 031): INSERT/UPDATE permitidos SOLO
+//      DIRECTA sancionada (AGENTS.md lista sancionada — ratificación John 2026-07-31, migración 031): INSERT/UPDATE permitidos SOLO
 //      sobre esta tabla; RLS ya exige supervisor+ (decisión explícita de John: la opera
 //      Omar, que es supervisor, no admin). La UI gatea los botones de escritura por rol
 //      SOLO para evitar frustración — el gate real es la RLS.
@@ -123,7 +123,7 @@ function PrefijoModal({
     setSending(true);
     const supabase = getSupabase();
     const notaVal = nota.trim() === "" ? null : nota.trim();
-    // Escritura DIRECTA sancionada (AGENTS.md B6, migración 031) — SOLO sobre
+    // Escritura DIRECTA sancionada (AGENTS.md lista sancionada — ratificación John 2026-07-31, migración 031) — SOLO sobre
     // crm.prefijos_restringidos, detrás de la RLS supervisor+.
     const { data, error } = target
       ? await supabase.from("prefijos_restringidos").update({ nota: notaVal, activo }).eq("id", target.id).select("id")
