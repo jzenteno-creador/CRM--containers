@@ -2,16 +2,17 @@
 
 // Shell Flight Deck (plan 1.4): rail izquierdo fijo 60px (desktop ≥900px) con íconos
 // Tabler + tooltip + ítem activo cyan; bottom-nav en móvil. Header 58px: título
-// contextual, búsqueda global (placeholder — wiring M5), campana con badge
-// (placeholder — wiring M6), "?" contextual (contenido M10), reloj mono y menú de
-// usuario con sesión real (M2): nombre/correo/rol + logout. La solapa Admin solo
-// aparece para rol administrador (§8) — RLS sigue siendo la compuerta real.
+// contextual, búsqueda global ⌘K (P2, auditoría 2026-07-31 — cableada contra
+// src/lib/busqueda.ts), campana con badge (M6), "?" contextual (contenido M10), reloj
+// mono y menú de usuario con sesión real (M2): nombre/correo/rol + logout. La solapa
+// Admin solo aparece para rol administrador (§8) — RLS sigue siendo la compuerta real.
 // En móvil el header colapsa a título + campana + menú (búsqueda y "?" van al menú).
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { interpolarAyuda, type AyudaValores } from "@/lib/ayuda";
+import { buscarContenedoresGlobal } from "@/lib/busqueda";
 import { isRouteBuilt } from "@/lib/nav";
 import { ROL_LABELS, useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
@@ -455,7 +456,7 @@ export function FdShell({
 
   return (
     <div className="fd-shell" data-sidebar={sidebar}>
-      <CommandPalette />
+      <CommandPalette search={buscarContenedoresGlobal} />
       <HelpPanel
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
@@ -517,8 +518,10 @@ export function FdShell({
       <div className="fd-main">
         <header className="fd-header">
           <span className="fd-title fd-display">{title}</span>
+          {/* respaldo real (P2, auditoría 2026-07-31): /inicio auto-refresca cada 60s
+              (useAutoRefresh) — el badge ya no es solo cosmético por ruta. */}
           {pathname.startsWith("/inicio") && (
-            <span className="fd-live hide-md">
+            <span className="fd-live hide-md" title="Se actualiza solo cada 60 segundos">
               <i aria-hidden /> EN VIVO
             </span>
           )}

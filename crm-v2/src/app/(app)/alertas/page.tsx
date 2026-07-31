@@ -27,6 +27,7 @@ import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
+import { useAutoRefresh } from "@/components/fd/use-auto-refresh";
 import { fmtFecha, fmtFechaDia, fmtUSD } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
@@ -515,6 +516,11 @@ function AlertasPageContent() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
+
+  // auto-refresco cada 60s (P2, auditoría 2026-07-31): Alertas es la otra pantalla de
+  // monitoreo continuo (freetime vencido = plata) — mismo patrón que /inicio y que la
+  // campana de notificaciones, se pausa solo con la pestaña oculta (useAutoRefresh).
+  useAutoRefresh(load, 60_000);
 
   const loading = rows === null && !loadError;
 

@@ -24,6 +24,7 @@ import { KpiCard } from "@/components/fd/kpi-card";
 import { PageHeader } from "@/components/fd/page-header";
 import { QuickLink } from "@/components/fd/quick-link";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
+import { useAutoRefresh } from "@/components/fd/use-auto-refresh";
 import { fmtUSDCompact } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 
@@ -365,6 +366,12 @@ export default function InicioPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
+
+  // auto-refresco cada 60s (P2, auditoría 2026-07-31): este dashboard es el que respalda
+  // el badge "EN VIVO" del header (shell.tsx) — sin esto quedaba stale horas en un
+  // monitor de pared. Mismo patrón que la campana de notificaciones: se pausa solo con
+  // la pestaña oculta (ver useAutoRefresh).
+  useAutoRefresh(load, 60_000);
 
   const loading = data === null && !loadError;
 
