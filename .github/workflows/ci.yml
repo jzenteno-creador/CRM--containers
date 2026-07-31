@@ -1,0 +1,51 @@
+name: CI
+
+# Red de seguridad del rebuild v2 (auditoría 2026-07-31, Bloque 4). Antes de esto,
+# cero verificación automática en push/PR — todo dependía de que alguien corriera
+# lint/tsc/tests a mano antes de mergear. Un solo job: lint → tipos → tests → build,
+# en ese orden (más barato primero, falla rápido antes de gastar tiempo en el build).
+#
+# Sin secrets: crm-v2/src/lib/supabase.ts instancia el cliente de Supabase LAZY (solo
+# al llamar getSupabase(), nunca a nivel de módulo) y ninguna página del repo llama
+# esa función durante el build (sin generateStaticParams/force-static que la evalúen
+# en build-time) — verificado leyendo el código, `next build` no exige
+# NEXT_PUBLIC_SUPABASE_URL/ANON_KEY. Si en el futuro algo cambia eso, el build va a
+# fallar acá con un error de "Faltan NEXT_PUBLIC_SUPABASE_URL..." — señal clara de que
+# este comentario quedó desactualizado y hay que agregar env dummy al step de build.
+
+on:
+  push:
+    branches: [v2-rebuild, master]
+  pull_request: {}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crm-v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: crm-v2/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Chequeo de tipos
+        run: npx tsc --noEmit
+
+      - name: Tests (vitest)
+        run: npm run test
+
+      - name: Build
+        run: npm run build
