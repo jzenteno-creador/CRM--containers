@@ -13,5 +13,11 @@ node_modules/
 # lockfile generado por tooling de skills (no es del CRM)
 skills-lock.json
 
-# generado por docs/dow-summit-2026/build-artifact.py
-docs/dow-summit-2026/revision-artifact.html
+# planillas y documentos de negocio sueltos en la raíz: son insumo, no código.
+# Los datos reales de cliente viven fuera del repo, en
+# /home/jzenteno/projects/_archivo-crm-containers/. Las fuentes que SÍ se versionan
+# (reglas de free time de M5) están en docs/m5/fuentes/ y no las alcanza este patrón.
+/*.xlsx
+/*.docx
+/*.pdf
+/*.html

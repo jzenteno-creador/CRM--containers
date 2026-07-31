@@ -48,11 +48,11 @@ y NUNCA escribe directo sobre tablas de plata.
 - Agregar una tabla a la lista sancionada requiere decisión explícita de John — un PASS
   de verifier no crea excepciones.
 - **Enforcement a nivel DB (fix P1 de CP3, migración 025 — APLICADA en prod 2026-07-13,
-  registrada `20260713160000`, verificada por 3 verifiers — docs/GATE-025.md):** la regla
+  registrada `20260713160000`, verificada por 3 verifiers — docs/historico/GATE-025.md):** la regla
   "PROHIBIDO" de arriba ya no vive solo en el front. La 025 hace `REVOKE INSERT/UPDATE` de
   `authenticated` sobre `operaciones`/`movimientos_planta`/`contenedores` y pasa las 6 RPCs
   operativas a `SECURITY DEFINER owner = crm_rpc_executor` (rol sin BYPASSRLS → la RLS sigue
-  scopeando por planta). Un PATCH crudo de la anon key → `42501`. Ver docs/FIX-P1-BAKEOFF.md.
+  scopeando por planta). Un PATCH crudo de la anon key → `42501`. Ver docs/historico/FIX-P1-BAKEOFF.md.
   La migración 030 (registrada `20260714180000`) extiende el mismo enforcement a
   `incidencias`/`incidencia_fotos`: `REVOKE INSERT/UPDATE` de `authenticated`, policies de
   escritura scopeadas a `crm_rpc_executor`, 3 RPCs nuevas DEFINER owner=executor. Verificado
@@ -63,7 +63,7 @@ y NUNCA escribe directo sobre tablas de plata.
 
 La view `crm.usuarios_publicos` (proyecta SOLO `id, nombre`) es **SECURITY DEFINER, NO
 security_invoker**, como excepción documentada a §14.8 ("views siempre security_invoker").
-**RAZÓN MEDIDA** (CP3, harness — docs/GATE-025.md §2.5): con `security_invoker=true` un operador
+**RAZÓN MEDIDA** (CP3, harness — docs/historico/GATE-025.md §2.5): con `security_invoker=true` un operador
 ve SOLO su propia fila (n=1 vs n=4) → los nombres de otros usuarios quedan en blanco y el join
 de la UI (`"por {nombre}"`, `confirmado_por`) se **ROMPE**. Column-grants `(id,nombre)` tampoco
 sirven: el panel Admin lee `email/rol/estado_cuenta` de `usuarios` directo (solicitudes/page.tsx:300).
@@ -79,7 +79,7 @@ Los roles `supervisor` y `administrador` NO son planta-scoped: ven y operan sobr
 `p.rol in ('supervisor','administrador')` SIN condición de planta). Razón: SSB tiene 2 plantas y un
 supervisor necesita ver las dos. Los operadores SÍ son planta-scoped.
 
-Consecuencia (auditada en CP3, `docs/AUDIT-4-DEFINER-RPCS.md`): las 4 RPCs de más plata que corren
+Consecuencia (auditada en CP3, `docs/historico/AUDIT-4-DEFINER-RPCS.md`): las 4 RPCs de más plata que corren
 como DEFINER owner=postgres (waiver, corrección de cerradas, validar_reforzado, versionado de tarifas)
 dejan a un supervisor operar cross-planta. **NO es un bug, es el diseño.** El control del waiver/corrección
 NO es la RLS, es la **AUDITORÍA**: motivo obligatorio + evento en el timeline + quién y cuándo. Un waiver
