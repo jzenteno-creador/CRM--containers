@@ -3,8 +3,18 @@
 // Command palette ⌘K (spec artboard 2e): modal 640px top 72px, apertura scale(.98)→1
 // + fade 200ms out-expo. ↑↓ navega, ↵ abre, ESC cierra. Se abre con ⌘K/Ctrl+K o el
 // evento window "fd-palette" (botón del header).
-// M0 = shell SIN datasource: la búsqueda se inyecta por prop `search` (la conectan
-// M5/M6 contra vista_alertas + operaciones cerradas); sin prop muestra solo Acciones.
+// La búsqueda se inyecta por prop `search` — shell.tsx la cablea contra
+// src/lib/busqueda.ts (P2, auditoría 2026-07-31: vista_alertas + operaciones cerradas +
+// vista_alertas_impo). Sin prop `search` (consumidor defensivo/tests) muestra solo
+// Acciones, sin fingir un buscador que no está conectado.
+// Adaptación mínima al contrato original para soportar el datasource real (documentada
+// acá, no en shell.tsx): (1) gate de mínimo 3 caracteres ANTES de llamar a `search` —
+// evita pegarle a la DB por cada tecla de un término de 1-2 letras y evita mostrar
+// "sin resultados" para algo que nunca se buscó; (2) reqId anti-carrera alrededor de la
+// llamada a `search` — el debounce de 250ms ya evita dos timers en vuelo, pero no evita
+// que dos *llamadas ya disparadas* (debounce ya vencido en ambas) resuelvan fuera de
+// orden con latencia de red variable; mismo patrón que /contenedores y /alertas
+// (reqIdRef descartando respuestas tardías).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +24,11 @@ import { Kbd } from "./kbd";
 import type { EstadoSemaforo } from "./status-badge";
 
 const MAX_SEL_RESET = 0;
+
+/** Mínimo de caracteres para disparar `search` (espeja MIN_QUERY_LEN de
+ * src/lib/busqueda.ts — duplicado a propósito: este componente no debe depender del
+ * datasource concreto, solo de un número acordado). */
+const MIN_QUERY_LEN = 3;
 
 export type PaletteResult = {
   id: string;
@@ -47,7 +62,8 @@ export function CommandPalette({
   search,
   actions = DEFAULT_ACTIONS,
 }: {
-  /** Datasource inyectado (M5/M6). Sin él, la palette ofrece solo acciones. */
+  /** Datasource inyectado (shell.tsx → src/lib/busqueda.ts). Sin él, la palette ofrece
+   * solo acciones — nunca finge un buscador conectado que no está. */
   search?: (term: string) => Promise<PaletteResult[]>;
   actions?: PaletteAction[];
 }) {
@@ -61,6 +77,9 @@ export function CommandPalette({
   const [searching, setSearching] = useState(false);
   const [sel, setSel] = useState(MAX_SEL_RESET);
   const inputRef = useRef<HTMLInputElement>(null);
+  // anti-carrera: descarta una respuesta de `search` que llega después de que ya se
+  // disparó otra búsqueda más nueva (mismo criterio que /contenedores y /alertas).
+  const reqIdRef = useRef(0);
 
   // apertura: ⌘K / Ctrl+K global + evento fd-palette (botón del header)
   useEffect(() => {
@@ -82,6 +101,7 @@ export function CommandPalette({
   // el reset se hace al CERRAR, así abrir siempre encuentra estado limpio y el
   // effect solo sincroniza con el DOM (focus) — regla react-hooks/set-state-in-effect
   const close = useCallback(() => {
+    reqIdRef.current++; // invalida cualquier búsqueda en vuelo (no debe pisar el reset)
     setIsOpen(false);
     setQ("");
     setResults([]);
@@ -100,18 +120,21 @@ export function CommandPalette({
     if (!isOpen || !search) return;
     const term = q.trim().replace(/[,()]/g, " ").trim();
     const t = setTimeout(async () => {
-      if (!term) {
+      if (term.length < MIN_QUERY_LEN) {
         setResults([]);
         setSearching(false);
         return;
       }
+      const rid = ++reqIdRef.current;
       setSearching(true);
+      let rs: PaletteResult[];
       try {
-        const rs = await search(term);
-        setResults(rs);
+        rs = await search(term);
       } catch {
-        setResults([]);
+        rs = [];
       }
+      if (rid !== reqIdRef.current) return; // llegó tarde: hay otra búsqueda en vuelo
+      setResults(rs);
       setSel(0);
       setSearching(false);
     }, 250);
@@ -224,14 +247,20 @@ export function CommandPalette({
           <Kbd>ESC</Kbd>
         </div>
 
-        {/* resultados agrupados */}
+        {/* resultados agrupados — estados reales: buscando / hint de largo mínimo / sin
+            resultados / resultados (nunca la promesa vacía "se conecta con M5"). */}
         {search ? (
           (groups.length > 0 || searching || q.trim()) && (
             <div style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
               {searching && (
                 <div style={{ padding: "10px 16px", fontSize: 12.5, color: "var(--color-text-muted)" }}>buscando…</div>
               )}
-              {!searching && q.trim() && results.length === 0 && (
+              {!searching && q.trim() && q.trim().length < MIN_QUERY_LEN && (
+                <div style={{ padding: "10px 16px", fontSize: 12.5, color: "var(--color-text-faint)" }}>
+                  escribí al menos {MIN_QUERY_LEN} caracteres para buscar
+                </div>
+              )}
+              {!searching && q.trim().length >= MIN_QUERY_LEN && results.length === 0 && (
                 <div style={{ padding: "10px 16px", fontSize: 12.5, color: "var(--color-text-muted)" }}>
                   sin resultados para “{q.trim()}”
                 </div>
@@ -303,7 +332,7 @@ export function CommandPalette({
                 borderBottom: "1px solid var(--color-border-subtle)",
               }}
             >
-              la búsqueda de contenedores se conecta con el módulo de operaciones (M5)
+              buscador de contenedores no disponible en esta pantalla
             </div>
           )
         )}
