@@ -1,6 +1,13 @@
-name: Backup DB detention
+name: Backup DB CRM
 
-# Backup diario del schema `detention` (datos + DDL) — ítem 0.2 / finding D-02.
+# Backup diario de los schemas `crm` (v2, PRODUCCIÓN) y `detention` (v1, legacy)
+# — datos + DDL. Ítem 0.2 / finding D-02.
+#
+# 2026-07-31: hasta hoy este workflow dumpeaba SOLO `detention`, el schema del
+# prototipo v1. Los datos vivos del v2 (2.959 operaciones cargadas en M6) están en
+# el schema `crm` del mismo proyecto y NO tenían ninguna copia. Se agrega `crm` como
+# schema primario; `detention` se mantiene mientras el v1 no esté dado de baja en la DB.
+#
 # El proyecto Supabase está en plan FREE: sin PITR ni backups descargables, y se
 # pausa tras 7 días de inactividad. Este workflow es la única copia recuperable del
 # historial (2.900+ contenedores, 11.669 eventos, la lógica de plata) y además
@@ -19,7 +26,7 @@ on:
   workflow_dispatch: {}     # permite dispararlo a mano desde la pestaña Actions
 
 concurrency:
-  group: backup-detention
+  group: backup-crm-db
   cancel-in-progress: false
 
 jobs:
@@ -37,7 +44,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
 
-      - name: Dump del schema detention
+      - name: Dump de los schemas crm (prod) y detention (legacy)
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
@@ -48,25 +55,30 @@ jobs:
           STAMP=$(date -u +%Y%m%d-%H%M)
           # Custom format comprimido (restore selectivo con pg_restore), datos + DDL:
           pg_dump "$SUPABASE_DB_URL" \
-            --schema=detention \
+            --schema=crm --schema=detention \
             --no-owner --no-privileges \
             --format=custom \
-            --file="detention-${STAMP}.dump"
+            --file="crm-db-${STAMP}.dump"
           # Copia plain-SQL legible para diff/inspección rápida:
           pg_dump "$SUPABASE_DB_URL" \
-            --schema=detention \
+            --schema=crm --schema=detention \
             --no-owner --no-privileges \
             --format=plain \
-            --file="detention-${STAMP}.sql"
-          ls -lh detention-${STAMP}.*
+            --file="crm-db-${STAMP}.sql"
+          ls -lh crm-db-${STAMP}.*
+          # Guardrail: si el dump de crm sale vacío, el backup no sirve — fallar fuerte.
+          if ! grep -q "CREATE TABLE crm\." "crm-db-${STAMP}.sql"; then
+            echo "::error::El dump no contiene tablas del schema crm. Revisar SUPABASE_DB_URL."
+            exit 1
+          fi
           echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
 
       - name: Subir artifact (retención 90 días)
         uses: actions/upload-artifact@v4
         with:
-          name: detention-backup-${{ env.STAMP }}
+          name: crm-db-backup-${{ env.STAMP }}
           path: |
-            detention-*.dump
-            detention-*.sql
+            crm-db-*.dump
+            crm-db-*.sql
           retention-days: 90
           if-no-files-found: error
