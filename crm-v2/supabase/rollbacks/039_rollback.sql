@@ -1,0 +1,19 @@
+-- Rollback neutralizador de la 039 — NUNCA destructivo. Correr solo con GO de John.
+--
+-- Neutraliza sin destruir: las RPCs quedan inertes (sin EXECUTE), la tabla queda
+-- ilegible (sin policy) pero CON sus datos. No se dropea nada.
+--
+-- revoke execute on function crm.crm_registrar_waiver_impo(uuid, integer, text, text) from authenticated;
+-- revoke execute on function crm.crm_anular_waiver_impo(uuid, text) from authenticated;
+-- revoke execute on function crm.crm_corregir_operacion_impo_cerrada(uuid, text, text, text) from authenticated;
+-- revoke execute on function crm.exceso_actual_impo(uuid) from authenticated;
+-- revoke execute on function crm.waiver_impo_total_vigente(uuid) from authenticated;
+-- drop policy if exists waivers_impo_select on crm.operacion_impo_waivers;
+-- revoke select on crm.operacion_impo_waivers from authenticated;
+--
+-- Las views NO se revierten a su versión pre-039: si hay waivers cargados, volver al
+-- costo bruto MENTIRÍA el neto ya comunicado. Si hiciera falta, la versión pre-039 de
+-- ambas views está en la migración 038 (alertas) y 032 líneas 1232-1326 (cerradas).
+-- El CHECK de tipo_evento conserva 'waiver' (dato ya escrito posible — quitar el valor
+-- del CHECK con eventos existentes rompería el constraint).
+select 'rollback 039: neutralizador comentado — ver cabecera' as nota;
