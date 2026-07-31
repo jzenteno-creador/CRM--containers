@@ -26,6 +26,70 @@ const MAX_STRING_RAW = 10_000;
 // usuarios: un contenedor físico = un registro) no se re-inserta
 const DEDUP_MS = 5 * 60_000;
 
+// ─── Rate limit en memoria, por instancia (P2 auditoría 2026-07-31) ────────
+// Antes de esto no había ningún límite server-side: cualquier cuenta autenticada
+// podía loopear este endpoint y quemar créditos pagos de Roboflow sin control (el
+// front no es una barrera — cualquiera puede pegarle directo con el Bearer token).
+// Ventana deslizante de 60s, 50 requests/usuario: el modo vivo legítimo pega a
+// ~40/min (cadencia de 1500ms del polling) — 50 da margen a la operación real y
+// corta los loops descontrolados, que es el objetivo (no frenar el uso normal).
+//
+// LIMITACIÓN CONOCIDA (asumida a propósito, no un descuido): este Map vive en la
+// memoria del proceso. En un runtime serverless con varias instancias corriendo en
+// paralelo, cada una tiene su propio contador — el tope real efectivo es
+// (N instancias × 50/min), no 50/min global estricto. Un límite global de verdad
+// requeriría un store compartido entre instancias (KV/Redis/Upstash), que hoy no
+// existe en la infra del proyecto. Esto es un dampener contra loops descontrolados,
+// no una garantía dura por usuario — suficiente para el objetivo de la auditoría.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 50;
+// cap de usuarios distintos trackeados a la vez — sin esto, un ataque con muchos
+// usuario_id distintos (o una fuga que nunca purga) haría crecer el Map sin límite
+const RATE_LIMIT_MAX_USUARIOS = 5_000;
+
+const requestTimestampsPorUsuario = new Map<string, number[]>();
+
+/** Chequea (y registra) un intento del usuario contra la ventana deslizante.
+ * Purga los timestamps vencidos de la propia entrada en cada llamada — así el
+ * Map nunca acumula historial viejo de un usuario activo. Si el intento pasa el
+ * límite, se registra (cuenta para la ventana); si NO pasa, no se registra (un
+ * usuario rechazado en loop no debe seguir empujando su propia ventana hacia
+ * adelante). */
+function chequearRateLimit(usuarioId: string): { limitado: boolean; retryAfterS: number } {
+  const ahora = Date.now();
+  const desde = ahora - RATE_LIMIT_WINDOW_MS;
+  const previos = requestTimestampsPorUsuario.get(usuarioId) ?? [];
+  const vigentes = previos.filter((t) => t > desde);
+
+  if (vigentes.length >= RATE_LIMIT_MAX_REQUESTS) {
+    requestTimestampsPorUsuario.set(usuarioId, vigentes); // guarda la purga igual
+    const msHastaLibre = vigentes[0] + RATE_LIMIT_WINDOW_MS - ahora;
+    return { limitado: true, retryAfterS: Math.max(1, Math.ceil(msHastaLibre / 1000)) };
+  }
+
+  vigentes.push(ahora);
+  requestTimestampsPorUsuario.set(usuarioId, vigentes);
+
+  // cap de entradas del Map: si creció de más, primero purga vigentes de todos
+  // (usuarios que ya no pegan hace >60s quedan en 0 y se borran) y si aun así
+  // sigue por encima del cap, tira las entradas más viejas (orden de inserción
+  // del Map = las primeras en tocarse desde el último ciclo de purga).
+  if (requestTimestampsPorUsuario.size > RATE_LIMIT_MAX_USUARIOS) {
+    for (const [uid, ts] of requestTimestampsPorUsuario) {
+      const vivos = ts.filter((t) => t > desde);
+      if (vivos.length === 0) requestTimestampsPorUsuario.delete(uid);
+      else if (vivos.length !== ts.length) requestTimestampsPorUsuario.set(uid, vivos);
+    }
+    while (requestTimestampsPorUsuario.size > RATE_LIMIT_MAX_USUARIOS) {
+      const masVieja = requestTimestampsPorUsuario.keys().next().value;
+      if (masVieja === undefined) break;
+      requestTimestampsPorUsuario.delete(masVieja);
+    }
+  }
+
+  return { limitado: false, retryAfterS: 0 };
+}
+
 type Fragmento = { texto: string; confianza: number | null; x: number | null; y: number | null };
 
 /** Junta todos los valores bajo `key` en cualquier nivel del JSON del workflow — el
@@ -134,8 +198,8 @@ function buscarImagenAnotada(raw: unknown): string | null {
   return null;
 }
 
-function respError(status: number, error: string, detalle: string) {
-  return NextResponse.json({ ok: false as const, error, detalle }, { status });
+function respError(status: number, error: string, detalle: string, headers?: HeadersInit) {
+  return NextResponse.json({ ok: false as const, error, detalle }, { status, headers });
 }
 
 export async function POST(req: NextRequest) {
@@ -164,6 +228,18 @@ export async function POST(req: NextRequest) {
   );
   if (userError || !userData?.user) {
     return respError(401, "sin_autenticacion", "Token de sesión inválido o vencido — volvé a iniciar sesión.");
+  }
+
+  // Rate limit (P2 auditoría 2026-07-31): DESPUÉS de validar el token (usa el user id
+  // real, no lo que diga el request) y ANTES de gastar nada en Roboflow.
+  const { limitado, retryAfterS } = chequearRateLimit(userData.user.id);
+  if (limitado) {
+    return respError(
+      429,
+      "limite_excedido",
+      `Superaste el límite de ${RATE_LIMIT_MAX_REQUESTS} escaneos por minuto — esperá ${retryAfterS}s y volvé a intentar.`,
+      { "Retry-After": String(retryAfterS) },
+    );
   }
 
   const apiKey = process.env.ROBOFLOW_API_KEY;
