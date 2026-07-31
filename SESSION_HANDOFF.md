@@ -59,20 +59,21 @@ Renombrado a `backup-db.yml`; runbook reescrito en `docs/backup-db.md`.
   haberse roto. No se corrió build ni deploy; prod sigue en el deploy del 18/07.
 
 ## Próximos pasos
-1. 🔴 **El fix del backup NO está corriendo todavía.** GitHub Actions ejecuta los triggers
-   `schedule:` **solo desde la rama default**, y la default del repo es `master`, congelada
-   en el v1 con el workflow viejo. Hasta que el fix llegue a `master`, el cron diario sigue
-   dumpeando `detention`. Camino mínimo sancionado: cherry-pick de `b621d17` a `master`
-   (`docs/v2/CONTEXT.md` dice "master libre para hotfixes"). **Pendiente de GO de John.**
-2. **John**: disparar el workflow a mano (Actions → *Backup DB CRM* → Run workflow) y
-   confirmar que el artifact `crm-db-*` trae tablas de `crm`. Es lo único que valida el fix.
-3. **John**: test con foto real del escaneo OCR en prod (pendiente desde el 18/07).
-4. **John**: smoke de M5 con roles reales en prod (pendiente desde el cierre de M5).
+1. **John**: disparar el workflow a mano (Actions → *Backup DB CRM* → Run workflow) y
+   confirmar que el artifact `crm-db-*` trae tablas de `crm`. **Es lo único que valida el
+   fix** — nunca corrió contra el runner real.
+2. **John**: test con foto real del escaneo OCR en prod (pendiente desde el 18/07).
+3. **John**: smoke de M5 con roles reales en prod (pendiente desde el cierre de M5).
+
+### ✅ Resuelto en la misma sesión (GO de John)
+El fix del backup vivía solo en `v2-rebuild`, y GitHub Actions ejecuta los triggers
+`schedule:` **solo desde la rama default** — que es `master`, congelada en el v1. Cherry-pick
+de `b621d17` a `master` (`34bc6b5`, pusheado): master recibió **únicamente** el workflow,
+`git diff 33ad084 master` = 1 archivo. El cron de las 03:00 ya corre la versión corregida.
 
 ## Deudas abiertas (con tier del próximo paso)
 | Deuda | Próximo paso | Tier |
 |---|---|---|
-| Backup: el cron corre desde `master`, que tiene el workflow viejo | Cherry-pick `b621d17` a master | Decisión John → trivial |
 | Restore nunca ensayado (D-02). Además el dump usa `--no-privileges`: no trae los GRANT, y el modelo de seguridad del v2 vive en los grants | Ensayo end-to-end contra proyecto vacío + reaplicar grants desde migrations; verificar si las policies RLS vienen en el dump | **Sonnet** con guardrails |
 | `scan_pruebas` es DESECHABLE + cuentas no-activas acceden | Dropear tabla al terminar las pruebas OCR | db-hardening (**Opus**) — DDL prod |
 | Filtro de sigla: confusiones OCR en el serial (O→0/B→8/I→1) | Implementar en `extraerSigla` con vectores de test | **Sonnet** |
