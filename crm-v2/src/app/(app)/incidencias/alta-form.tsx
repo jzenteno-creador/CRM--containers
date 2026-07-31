@@ -37,6 +37,7 @@ import { PhotoUpload, type PhotoItem } from "@/components/fd/photo-upload";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useToast } from "@/components/fd/toast";
 import { hoyAR } from "@/lib/format";
+import { comprimirImagen } from "@/lib/imagen";
 import { normalizarNumero } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
 import { EstadoOperacionBadge } from "../contenedores/estado-operacion";
@@ -271,10 +272,31 @@ export function AltaIncidenciaForm({ onCreated }: { onCreated: () => void }) {
         continue;
       }
       setPhotos((list) => list.map((x) => (x.id === p.id ? { ...x, status: "subiendo", error: undefined } : x)));
-      const path = `${incidenciaId}/${crypto.randomUUID()}${fileExt(p.file)}`;
+
+      // compresión antes de subir (fix P1 longevidad — el bucket no tiene límite de tamaño
+      // y una foto de celu pesa 8-15MB). Si falla, degradación no bloqueo: se sube el
+      // original tal cual, nunca se corta el alta por esto.
+      let uploadBlob: Blob = p.file;
+      let uploadType = p.file.type || undefined;
+      let uploadExt = fileExt(p.file);
+      try {
+        const comprimido = await comprimirImagen(p.file);
+        if (comprimido !== p.file) {
+          // hubo recodificación real (no fue el atajo "ya es chica") → siempre sale JPEG
+          uploadBlob = comprimido;
+          uploadType = "image/jpeg";
+          uploadExt = ".jpg";
+        }
+      } catch {
+        uploadBlob = p.file;
+        uploadType = p.file.type || undefined;
+        uploadExt = fileExt(p.file);
+      }
+
+      const path = `${incidenciaId}/${crypto.randomUUID()}${uploadExt}`;
       const up = await getSupabase()
         .storage.from(BUCKET_INCIDENCIAS)
-        .upload(path, p.file, { contentType: p.file.type || undefined, upsert: false });
+        .upload(path, uploadBlob, { contentType: uploadType, upsert: false });
       if (up.error) {
         const msg = up.error.message;
         failed.push(p.name);
