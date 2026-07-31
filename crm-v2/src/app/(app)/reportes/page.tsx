@@ -23,6 +23,7 @@ import { Checkbox, DateField, Field, Select } from "@/components/fd/fields";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { PageHeader } from "@/components/fd/page-header";
+import { Tabs, type TabDef } from "@/components/fd/tabs";
 import { useToast } from "@/components/fd/toast";
 import {
   ESTADO_LABELS,
@@ -36,7 +37,16 @@ import {
 } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { ESTADO_CARGA_LABELS, EstadoCargaBadge, EstadoOperacionBadge } from "../contenedores/estado-operacion";
+import { ImpoSection } from "./impo-section";
 import { generarExcelOmar, type OmarResult } from "./omar-export";
+
+// Selector de dataset (P1-F, auditoría 2026-07-31): EXPO es el reporte histórico de la
+// pantalla (sin tocar), IMPO es el espejo nuevo — ver impo-section.tsx. Mismo componente
+// <Tabs> que ya usa Admin › Tarifas para "Origen"/"Destino" (dos datasets, una pantalla).
+const DATASET_TABS: TabDef[] = [
+  { id: "expo", label: "Exportación" },
+  { id: "impo", label: "Importación" },
+];
 
 // ── contratos de datos ──────────────────────────────────────────────────────
 
@@ -348,6 +358,10 @@ async function fetchCargaActual(ids: string[]): Promise<Map<string, CargaActualN
 export default function ReportesPage() {
   const toast = useToast();
 
+  // dataset activo (P1-F): EXPO es el default histórico — el estado/carga/export de abajo
+  // sigue siendo 100% del dataset EXPO, IMPO vive entero en <ImpoSection/>.
+  const [dataset, setDataset] = useState<"expo" | "impo">("expo");
+
   // catálogos (una vez)
   const [navieras, setNavieras] = useState<Catalogo[]>([]);
   const [plantas, setPlantas] = useState<Catalogo[]>([]);
@@ -592,7 +606,7 @@ export default function ReportesPage() {
       <PageHeader
         title="Reportes"
         counters={
-          rows != null ? (
+          dataset === "expo" && rows != null ? (
             <>
               <Badge tone="neutro" mono icon="ti-report-analytics">
                 {rows.length} fila{rows.length === 1 ? "" : "s"}
@@ -606,18 +620,27 @@ export default function ReportesPage() {
           ) : undefined
         }
         action={
-          <Button
-            variant="primary"
-            icon="ti-file-spreadsheet"
-            onClick={() => void handleExport()}
-            loading={exporting}
-            disabled={!rows || rows.length === 0 || selectedCols.length === 0}
-          >
-            Exportar a Excel
-          </Button>
+          dataset === "expo" ? (
+            <Button
+              variant="primary"
+              icon="ti-file-spreadsheet"
+              onClick={() => void handleExport()}
+              loading={exporting}
+              disabled={!rows || rows.length === 0 || selectedCols.length === 0}
+            >
+              Exportar a Excel
+            </Button>
+          ) : undefined
         }
       />
 
+      <Tabs tabs={DATASET_TABS} active={dataset} onChange={(id) => setDataset(id as "expo" | "impo")} />
+
+      <div style={{ marginTop: 16 }}>
+        {dataset === "impo" ? (
+          <ImpoSection />
+        ) : (
+          <>
       {/* ── B7: Excel formato Omar — acción fija, independiente de los filtros de abajo ── */}
       <div className="fd-panel" style={{ marginBottom: 16 }}>
         <div className="fd-panel-title">
@@ -811,6 +834,9 @@ export default function ReportesPage() {
               </EmptyState>
             }
           />
+        )}
+      </div>
+          </>
         )}
       </div>
     </>

@@ -157,6 +157,14 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
   const amarillo = toNum(r.en_riesgo_amarillo) + (ri ? toNum(ri.en_riesgo_amarillo) : 0);
   const totalCombinado = proyectado + proyectadoImpo;
 
+  // Costo realizado combinado EXPO+IMPO (P1-F, auditoría 2026-07-31): mismo patrón
+  // presentacional que "total combinado" de arriba — suma de dos numeric ya calculados
+  // por cada view, el desglose solo se muestra si impo > 0 (todavía no opera).
+  const costoMesImpo = ri ? toNum(ri.costo_mes) : 0;
+  const costoYtdImpo = ri ? toNum(ri.costo_ytd) : 0;
+  const costoMesTotal = costoMes + costoMesImpo;
+  const costoYtdTotal = costoYtd + costoYtdImpo;
+
   // Datos de charts: filtro >0 y top 8 son presentación; los montos vienen de la DB.
   // (EXPO-only: no hay vista de "por naviera" ni "tendencia mensual" para importación.)
   const barData: ChartDatum[] = data.porNaviera
@@ -172,8 +180,8 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
   // ¿Hay señal en la tendencia? (cerradas>0 con costo 0 — ej. todo sin cargo — ES dato)
   const hayTendencia = data.tendencia.some((row) => toNum(row.costo_realizado) > 0 || toNum(row.cerradas) > 0);
   const resumenEnCero =
-    costoMes === 0 &&
-    costoYtd === 0 &&
+    costoMesTotal === 0 &&
+    costoYtdTotal === 0 &&
     proyectado === 0 &&
     proyectadoImpo === 0 &&
     rojo === 0 &&
@@ -186,8 +194,26 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
     <>
       {/* KPIs — siempre visibles, también en cero (decisión de balance del vacío) */}
       <div style={KPI_GRID}>
-        <KpiCard label="costo · mes" value={costoMes} prefix="USD " sub="cerradas este mes" />
-        <KpiCard label="costo · ytd" value={costoYtd} prefix="USD " sub="cerradas en el año" />
+        <KpiCard
+          label="costo · mes"
+          value={costoMesTotal}
+          prefix="USD "
+          sub={
+            costoMesImpo > 0
+              ? `expo ${fmtUSDCompact(costoMes)} · impo ${fmtUSDCompact(costoMesImpo)}`
+              : "cerradas este mes"
+          }
+        />
+        <KpiCard
+          label="costo · ytd"
+          value={costoYtdTotal}
+          prefix="USD "
+          sub={
+            costoYtdImpo > 0
+              ? `expo ${fmtUSDCompact(costoYtd)} · impo ${fmtUSDCompact(costoYtdImpo)}`
+              : "cerradas en el año"
+          }
+        />
         <KpiCard
           label="proyectado abierto"
           value={proyectado}
