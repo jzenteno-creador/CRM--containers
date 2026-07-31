@@ -17,7 +17,8 @@ recuperable** (plan free: sin PITR, sin backups descargables). Corregido a
 `--schema=crm --schema=detention`, con guardrail que hace fallar el job si el `.sql` no
 contiene `CREATE TABLE crm.` — un backup vacío en verde es peor que no tener backup.
 Renombrado a `backup-db.yml`; runbook reescrito en `docs/backup-db.md`.
-**⚠️ TODAVÍA NO ESTÁ EFECTIVO — ver Próximos pasos #1.**
+Cherry-pickeado a `master` (`34bc6b5`) para que el cron lo tome — ver más abajo. **Nunca
+corrió contra el runner real: lo valida el disparo manual de John (Próximos pasos #1).**
 
 ### Limpieza (`3c2df3d`) — 105 archivos, −20.468 líneas
 - **Baja del v1**: `crm-detention/` (59 archivos) y `db/schema/` (10). Rescate en el tag
@@ -49,11 +50,14 @@ Renombrado a `backup-db.yml`; runbook reescrito en `docs/backup-db.md`.
 - `docs/fix-p1/025_fix_p1_rpc_executor.sql` borrado sin archivar: era duplicado **byte a
   byte** de `crm-v2/supabase/migrations/025_fix_p1_rpc_executor.sql`, que está aplicada en
   prod (registrada `20260713160000`, y le siguieron 11 migraciones más).
-- `master` **no se tocó**: sigue congelada en `33ad084` (v1), el cutover sigue pendiente.
+- `master` recibió **un solo commit**, el hotfix del backup (`34bc6b5`), con GO explícito de
+  John y amparado en "master libre para hotfixes" de `docs/v2/CONTEXT.md`.
+  `git diff 33ad084 master` = 1 archivo. **El cutover sigue pendiente**: en todo lo demás
+  master sigue siendo el v1.
 
 ## Estado actual
-- `v2-rebuild` local == origin == `3c2df3d`. Working tree **limpio**. Tag `v1-prototipo`
-  pusheado. Solo quedan 2 ramas: `master` y `v2-rebuild`.
+- `v2-rebuild` local == origin == `4a48c92`; `master` == origin == `34bc6b5`. Working tree
+  **limpio**. Tag `v1-prototipo` pusheado. Solo quedan 2 ramas.
 - Raíz del repo: `spec.md`, `SESSION_HANDOFF.md` y nada más suelto.
 - **Cero cambios** en `crm-v2/src`, `crm-v2/supabase` y `package.json` → el build no puede
   haberse roto. No se corrió build ni deploy; prod sigue en el deploy del 18/07.
