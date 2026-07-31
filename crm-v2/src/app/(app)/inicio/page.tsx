@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/fd/button";
 import { BarChart, TrendLine, type ChartDatum } from "@/components/fd/charts";
+import { CollapsibleSection } from "@/components/fd/collapsible-section";
+import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { KpiCard } from "@/components/fd/kpi-card";
@@ -25,7 +27,7 @@ import { PageHeader } from "@/components/fd/page-header";
 import { QuickLink } from "@/components/fd/quick-link";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useAutoRefresh } from "@/components/fd/use-auto-refresh";
-import { fmtUSDCompact } from "@/lib/format";
+import { fmtUSD, fmtUSDCompact } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 
 // Contrato real de las views 018 (verificado en vivo): los numeric llegan como STRING
@@ -67,6 +69,23 @@ type TendenciaRow = {
   cerradas: NumLike;
 };
 
+// Contrato real de crm.vista_kpi_piloto_mensual (migración 040, auditoría 2026-07-31
+// Bloque 3): los 3 KPIs del piloto Dow que faltaban además de costo/naviera (018) —
+// % dentro del free time, estadía/demora (promedio + mediana) y trazabilidad, por mes
+// de devolución. mes = date "YYYY-MM-01", mismo formato que TendenciaRow.mes.
+type PilotoMensualRow = {
+  mes: string;
+  cerradas: NumLike;
+  dentro_freetime: NumLike;
+  pct_dentro_freetime: NumLike;
+  estadia_promedio: NumLike;
+  estadia_mediana: NumLike;
+  demora_promedio: NumLike;
+  demora_mediana: NumLike;
+  trazados_sin_cargo: NumLike;
+  costo_neto_mes: NumLike;
+};
+
 type DashboardData = {
   resumen: ResumenRow;
   // null = vista_kpi_resumen_impo falló (tolerante — no tumba el dashboard, los KPIs de
@@ -89,6 +108,28 @@ const TOP_NAVIERAS = 8;
 /** Trunca el nombre de naviera para el eje del BarChart (slot ~75px con 8 barras). */
 function truncLabel(s: string): string {
   return s.length > 12 ? s.slice(0, 11).trimEnd() + "…" : s;
+}
+
+/**
+ * Mes 'YYYY-MM-01' (date de vista_kpi_piloto_mensual) → 'jul 2026' es-AR, SIN pasar por
+ * Date: new Date("YYYY-MM-01") parsea UTC medianoche y en AR (UTC-3) retrocede al mes
+ * anterior — mismo motivo por el que MES_CORTO de arriba indexa directo el "MM" del
+ * string en vez de parsear la fecha (y el mismo bug que fmtFechaDia documenta en
+ * lib/format.ts para columnas DATE).
+ */
+function fmtMesAnio(ymd: string): string {
+  const mm = Number(ymd.slice(5, 7));
+  return `${MES_CORTO[mm - 1] ?? ymd.slice(5, 7)} ${ymd.slice(0, 4)}`;
+}
+
+/** Días con 1 decimal es-AR (estadía/demora del piloto — la view ya redondea a 1). */
+function fmtDias(n: number): string {
+  return n.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+/** Porcentaje con 1 decimal es-AR + símbolo (pct_dentro_freetime de la view). */
+function fmtPct(v: NumLike): string {
+  return fmtDias(toNum(v)) + "%";
 }
 
 // Grillas compartidas entre skeleton y contenido real (cero layout shift).
@@ -318,26 +359,192 @@ function DashboardContent({ data, onPrimeraTanda }: { data: DashboardData; onPri
   );
 }
 
+// ---------------------------------------------------------------------------
+// KPIs del piloto (auditoría 2026-07-31, Bloque 3): los 4 KPIs comprometidos con Dow
+// con medición mensual — el de costo por naviera ya vive en "Costo por naviera" de
+// arriba (018); acá van los otros 3 sobre vista_kpi_piloto_mensual (040): % dentro
+// del free time, estadía/demora (promedio + mediana) y cerradas del mes.
+// Tri-estado PROPIO (undefined=carga · null=error · []=vacío · array=poblado),
+// INDEPENDIENTE del contrato data/loadError del resto de la página — mismo patrón
+// que /vision/escanear (rows: T[] | null | undefined): esta sección puede mostrar
+// datos aunque vista_kpi_resumen falle, y viceversa (tolerancia mutua entre las dos
+// fuentes, sin acoplar sus cargas).
+// ---------------------------------------------------------------------------
+
+const PILOTO_COLUMNS: Column<PilotoMensualRow>[] = [
+  { key: "mes", header: "mes", render: (r) => fmtMesAnio(r.mes), sortValue: (r) => r.mes, width: "90px" },
+  {
+    key: "cerradas",
+    header: "cerradas",
+    numeric: true,
+    render: (r) => toNum(r.cerradas),
+    sortValue: (r) => toNum(r.cerradas),
+    width: "85px",
+  },
+  {
+    key: "pct_dentro_freetime",
+    header: "% dentro",
+    numeric: true,
+    render: (r) => fmtPct(r.pct_dentro_freetime),
+    sortValue: (r) => toNum(r.pct_dentro_freetime),
+    width: "90px",
+  },
+  {
+    key: "estadia_promedio",
+    header: "estadía x̄",
+    numeric: true,
+    render: (r) => fmtDias(toNum(r.estadia_promedio)),
+    sortValue: (r) => toNum(r.estadia_promedio),
+    width: "95px",
+  },
+  {
+    key: "demora_promedio",
+    header: "demora x̄",
+    numeric: true,
+    render: (r) => fmtDias(toNum(r.demora_promedio)),
+    sortValue: (r) => toNum(r.demora_promedio),
+    width: "95px",
+  },
+  {
+    key: "costo_neto_mes",
+    header: "costo neto",
+    numeric: true,
+    render: (r) => <span className="fd-usd">{fmtUSD(toNum(r.costo_neto_mes))}</span>,
+    sortValue: (r) => toNum(r.costo_neto_mes),
+    width: "110px",
+  },
+];
+
+/** Skeleton de las 4 KpiCards del piloto — misma grilla que DashboardSkeleton, 4 celdas. */
+function PilotoKpiSkeleton() {
+  return (
+    <div style={{ ...KPI_GRID, marginBottom: 16 }} aria-hidden>
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} style={{ padding: "14px 18px" }}>
+          <SkeletonBlock width={92} height={10} delay={i * 150} />
+          <SkeletonBlock width={100} height={30} delay={i * 150} style={{ marginTop: 10 }} />
+          <SkeletonBlock width={70} height={9} delay={i * 150} style={{ marginTop: 8 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PilotoSection({
+  piloto,
+  onRetry,
+}: {
+  piloto: PilotoMensualRow[] | null | undefined;
+  onRetry: () => void;
+}) {
+  // La view ya llega ordenada desc por mes (load() pide .limit(13)); la tabla muestra
+  // los últimos 12 y las KpiCards toman el más reciente de esos 12 — el 13º fetcheado
+  // es margen defensivo, nunca se lo muestra.
+  const ultimos12 = (piloto ?? []).slice(0, 12);
+  const latest = ultimos12[0] ?? null;
+
+  return (
+    <CollapsibleSection title="KPIs del piloto" icon="ti-flag-check" count={piloto == null ? null : ultimos12.length}>
+      <p style={{ fontSize: 11.5, color: "var(--color-text-muted)", margin: "0 0 12px", lineHeight: 1.5 }}>
+        Los 4 KPIs comprometidos con Dow — medidos sobre operaciones cerradas por mes de devolución.
+      </p>
+
+      {piloto === undefined ? (
+        <PilotoKpiSkeleton />
+      ) : (
+        latest && (
+          <div style={{ ...KPI_GRID, marginBottom: 16 }}>
+            <KpiCard
+              label="% dentro del free time"
+              value={toNum(latest.pct_dentro_freetime)}
+              suffix="%"
+              decimals={1}
+              sub={`${toNum(latest.dentro_freetime)} de ${toNum(latest.cerradas)} cerradas · ${fmtMesAnio(latest.mes)}`}
+            />
+            <KpiCard
+              label="estadía promedio"
+              value={toNum(latest.estadia_promedio)}
+              suffix=" días"
+              decimals={1}
+              sub={`mediana ${fmtDias(toNum(latest.estadia_mediana))} días`}
+            />
+            <KpiCard
+              label="demora promedio"
+              value={toNum(latest.demora_promedio)}
+              suffix=" días"
+              decimals={1}
+              sub={`mediana ${fmtDias(toNum(latest.demora_mediana))} días`}
+            />
+            <KpiCard label="cerradas del mes" value={toNum(latest.cerradas)} sub={fmtMesAnio(latest.mes)} />
+          </div>
+        )
+      )}
+
+      <div className="fd-panel">
+        <div className="fd-panel-title">
+          <i className="ti ti-table" aria-hidden style={{ color: "var(--color-accent-500)" }} />
+          Últimos 12 meses
+          <span className="fd-count">mes de devolución</span>
+        </div>
+        <div className="fd-panel-body">
+          <DataTable<PilotoMensualRow>
+            columns={PILOTO_COLUMNS}
+            rows={ultimos12}
+            rowKey={(r) => r.mes}
+            loading={piloto === undefined}
+            defaultSort={{ key: "mes", dir: "desc" }}
+            maxHeight={360}
+            emptyState={
+              <EmptyState icon="ti-flag-check" title="Sin cierres del piloto todavía">
+                Estos KPIs se calculan sobre operaciones de exportación cerradas por devolución. Aparecen apenas
+                haya el primer cierre registrado desde <strong>Egreso</strong>.
+              </EmptyState>
+            }
+            errorState={
+              piloto === null ? (
+                <ErrorState
+                  title="No se pudieron cargar los KPIs del piloto"
+                  detail="Revisá la conexión o reintentá."
+                  onRetry={onRetry}
+                />
+              ) : undefined
+            }
+          />
+        </div>
+      </div>
+    </CollapsibleSection>
+  );
+}
+
 export default function InicioPage() {
   const router = useRouter();
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // KPIs del piloto: tri-estado propio (undefined=carga · null=error · array=poblado),
+  // independiente de data/loadError — ver comentario de PilotoSection.
+  const [piloto, setPiloto] = useState<PilotoMensualRow[] | null | undefined>(undefined);
   // anti-carrera: descarta respuestas que llegan después de un load más nuevo
   const reqIdRef = useRef(0);
 
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
     const supabase = getSupabase();
-    const [resumen, resumenImpo, porNaviera, tendencia] = await Promise.all([
+    const [resumen, resumenImpo, porNaviera, tendencia, pilotoRes] = await Promise.all([
       supabase.from("vista_kpi_resumen").select("*").single(),
       // TOLERANTE (M5 B2): si falla, el dashboard sigue con los KPIs de importación en
       // cero — no tumba el resto (mismo criterio que vista_alertas_impo en /alertas).
       supabase.from("vista_kpi_resumen_impo").select("*").single(),
       supabase.from("vista_kpi_costo_naviera").select("*").order("costo_total", { ascending: false }),
       supabase.from("vista_kpi_tendencia_mensual").select("*").order("mes", { ascending: true }),
+      // KPIs del piloto (040) — 13 para dar margen defensivo a la tabla de 12 meses.
+      supabase.from("vista_kpi_piloto_mensual").select("*").order("mes", { ascending: false }).limit(13),
     ]);
     if (rid !== reqIdRef.current) return; // llegó tarde: hay otro load en vuelo
+
+    // TOLERANTE (mismo criterio que resumenImpo): se resuelve ANTES del early-return de
+    // abajo para que un fallo en vista_kpi_resumen no tumbe la sección del piloto.
+    setPiloto(pilotoRes.error ? null : ((pilotoRes.data ?? []) as unknown as PilotoMensualRow[]));
 
     const error = resumen.error ?? porNaviera.error ?? tendencia.error;
     if (error) {
@@ -395,6 +602,12 @@ export default function InicioPage() {
       ) : (
         <DashboardContent data={data!} onPrimeraTanda={() => router.push("/ingreso")} />
       )}
+
+      {/* KPIs del piloto (auditoría 2026-07-31, Bloque 3) — tri-estado propio, no
+          gateado por loadError/loading del resto del dashboard (ver PilotoSection). */}
+      <div style={{ marginTop: 20 }}>
+        <PilotoSection piloto={piloto} onRetry={() => void load()} />
+      </div>
 
       {/* Accesos rápidos §8 — navegación estática, visible en los 4 estados */}
       <div className="fd-label" style={{ margin: "20px 0 8px" }}>
