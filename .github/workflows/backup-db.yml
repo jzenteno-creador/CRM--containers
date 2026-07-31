@@ -82,3 +82,14 @@ jobs:
             crm-db-*.sql
           retention-days: 90
           if-no-files-found: error
+
+      # Aviso ACTIVO de fallo (auditoría 2026-07-31): sin esto, una rotación de la
+      # password de la DB mataba el backup en silencio hasta que alguien mirara
+      # Actions. El webhook n8n de John guarda el aviso en Drive y manda mail.
+      - name: Avisar fallo por n8n
+        if: failure()
+        run: |
+          curl -s -X POST https://jzenteno.app.n8n.cloud/webhook/claude-handoff \
+            -H "Content-Type: application/json" \
+            -d "{\"chatInput\": \"🔴 BACKUP DB CRM FALLÓ — run ${{ github.run_id }} del $(date -u +%Y-%m-%d\ %H:%M) UTC. Causa más probable: SUPABASE_DB_URL inválido (¿rotó la password de la DB?) o el dump no contiene tablas crm. Ver: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            || echo "::warning::No se pudo notificar a n8n (el fallo del backup sigue siendo real)"
