@@ -213,14 +213,22 @@ function NumOrDash({ n }: { n: number | null }) {
   return n == null ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : <>{n}</>;
 }
 
+// El title recuerda que el flag es informativo: el motor de costos no lo usa (auditoría
+// 2026-07-31) — sin esto la tabla sugiere una diferenciación de tarifa que no existe.
+const PELIGROSA_TITLE = "Dato del contrato — el motor de costos hoy no distingue por carga peligrosa";
+
 function PeligrosaBadge({ v }: { v: boolean | null }) {
   if (v == null) return <span style={{ color: "var(--color-text-faint)" }}>—</span>;
   return v ? (
-    <Badge tone="amarillo" icon="ti-alert-triangle">
-      aplica
-    </Badge>
+    <span title={PELIGROSA_TITLE}>
+      <Badge tone="amarillo" icon="ti-alert-triangle">
+        aplica
+      </Badge>
+    </span>
   ) : (
-    <Badge tone="neutro">no aplica</Badge>
+    <span title={PELIGROSA_TITLE}>
+      <Badge tone="neutro">no aplica</Badge>
+    </span>
   );
 }
 
@@ -451,6 +459,11 @@ function OrigenVersionModal({
         </Field>
 
         <Toggle id="of-peligrosa" checked={peligrosa} onChange={setPeligrosa} label="aplica a carga peligrosa" />
+        <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-faint)", lineHeight: 1.5 }}>
+          ⚠ Dato informativo del contrato: el motor de costos HOY no distingue por carga peligrosa —
+          la tarifa vigente se aplica a todos los contenedores de la naviera por igual (auditoría
+          2026-07-31, pendiente de decisión de negocio).
+        </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
           <Field
@@ -773,6 +786,10 @@ function DestinoVersionModal({
               </option>
             ))}
           </Select>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--color-text-faint)", lineHeight: 1.5 }}>
+            ⚠ Dato informativo del contrato: el motor de costos HOY no distingue por carga peligrosa
+            (auditoría 2026-07-31, pendiente de decisión de negocio).
+          </p>
         </Field>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
