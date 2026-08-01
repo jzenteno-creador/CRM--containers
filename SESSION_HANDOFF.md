@@ -65,15 +65,36 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 - **README de crm-v2 real** (era el boilerplate de create-next-app).
 - `_archivo/` movida ADENTRO del repo y versionada (pedido de John).
 
-## ⏸ BLOQUEADO EN JOHN (lo único que falta del plan aprobado)
-1. **Correo diario 7AM**: workflow n8n `hdDDj5BLJt5wNESm` ("CRM Detention — Resumen diario
-   7AM") creado y probado — falla SOLO por credencial: en n8n no existe ninguna credencial
-   del proyecto cctuowthpnstvdgjuomq (todas apuntan a xkppk; verificado barriendo los 36
-   workflows). John: Supabase→crm-containers→Settings→API Keys→copiar `service_role` →
-   n8n→Credentials→Add→"Supabase API"→Host `https://cctuowthpnstvdgjuomq.supabase.co` +
-   la key → nombre `supabase-crm-containers-service`. Después: reasignar la cred en los 3
-   nodos HTTP (MCP update_workflow), re-ejecutar prueba, **publish** (hoy está en draft,
-   el cron NO corre hasta publicar).
+## ✅ TERCERA TANDA (2026-08-01, "seguí trabajando")
+- **CORREO DIARIO VIVO Y PUBLICADO** — n8n `NvpzO39XqZrTU6UD`, proyecto *export proyect*
+  (ahí viven las 2 credenciales), timezone AR fijado, 7AM. Primer envío real verificado:
+  "37 en rojo, 0 en amarillo · USD 21.280 proyectado". El draft viejo (`hdDDj5BLJt5wNESm`,
+  proyecto personal) quedó ARCHIVADO. John creó la credencial `supabase-crm-containers`.
+- **Migración 042 (+042b/c) APLICADA — hallazgo de seguridad serio**: al conectar el mail
+  salió `permission denied for schema crm` (service_role nunca tuvo USAGE). Al ir a
+  otorgarlo apareció que service_role **SÍ tenía INSERT/UPDATE/DELETE sobre 14 objetos,
+  incluidas operaciones/contenedores/freetime_origin** — grants fantasma del default-ACL
+  (misma clase que barrió la 033), inertes solo por faltar la USAGE. Otorgar USAGE a secas
+  los habría ACTIVADO: escritura cruda a plata bypassando RLS con la service key.
+  Orden deliberado: revoke total → USAGE → SELECT mínimo. Las vistas son security_invoker,
+  así que hizo falta además SELECT sobre las 11 tablas base + EXECUTE sobre
+  dias_con_convencion/hoy_ar, todo enumerado por dependencia real (pg_depend), no a ojo.
+  Verificación 12/12: LEE lo del resumen, NO ESCRIBE NADA, NO EJECUTA RPCs de plata.
+- **Migración 043 APLICADA** (higiene P3, harness T1-T2 PASS): monto_usd → numeric(12,2);
+  CHECK fecha_corte ≤ etd en bookings; índices por país en freetime_origin/destino;
+  **trigger guard en el borrado de usuarios** — antes tiraba un error de FK ilegible, ahora
+  nombra tabla y cantidad de referencias y explica que la baja es lógica. El chequeo
+  recorre pg_constraint: cubre las 20 FKs actuales y las futuras solo.
+- **2 P2 más cerrados**: el "5" del Excel de Omar ahora interpola el umbral real (con el
+  valor de hoy el archivo sale IDÉNTICO al de Omar — la fidelidad que pidió John se
+  conserva; si cambia, el rótulo sigue al dato); los regímenes `cargados`/`sin_uso` quedan
+  deshabilitados en Admin→Tarifas con el motivo a la vista (el motor usa 'vacios' fijo).
+- **gate-019-sandbox BORRADO** por John (verificado vacío antes: 0 tablas de usuario, 0
+  usuarios, 0 migraciones) · bucket viejo `incidencias` BORRADO por John.
+
+## ⏸ BLOQUEADO EN JOHN (queda muy poco)
+1. **HIBP** — Authentication → **Attack Protection** → "Prevent use of leaked passwords"
+   (NO está en Policies ni Sign In; requiere plan Pro, que la org tiene).
 2. Decisión **carga peligrosa**: sigue abierta (contrato: ¿tarifa/free time distinto para
    peligrosa?). Mientras: flag marcado "no usado por el motor" en Admin. Si se confirma
    diferenciación → desarrollo real (columna en contenedores + filtro en motor).
@@ -83,9 +104,9 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 ## Pendientes de trabajo (no bloqueados)
 - **UI de waiver/corrección impo** (task #9): RPCs verificadas sin pantalla. Diseñar punto
   de entrada (¿ficha impo?) con el patrón de contenedores/[id]/acciones.tsx.
-- **Verificación visual** de todo lo deployado hoy (rail, KPIs, ⌘K, tabs de reportes):
-  análisis estático solamente — browsers MCP rotos en WSL; pase de agent-browser o smoke
-  de John.
+- **Verificación visual**: John la hace él (dicho 2026-08-01). Nada de lo deployado se vio
+  en pantalla real — todo el análisis fue estático. Mirar especialmente: rail en laptop
+  1366×768, sección KPIs del piloto en /inicio, ⌘K, pestaña Importación en /reportes.
 - Deudas P2/P3 del informe no incluidas en los bloques (fetch caps, prorrateo KPI,
   tarifa por tramos MOTOR↔NAVIERA, i18n, Realtime real, importador Excel de tarifas):
   ver `docs/auditoria-integral-2026-07-31.md` §3/§7 fase 2.
@@ -103,9 +124,10 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   cherry-picks de infra (fix schema crm, aviso n8n, fix pg_dump 17, restore-drill). Working tree limpio
   salvo untracked de John (`docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx` — sin clasificar,
   John no explicó qué es).
-- DB prod: migraciones **hasta 041** aplicadas y verificadas. Front prod: deploy del Bloque
+- DB prod: migraciones **hasta 043** aplicadas y verificadas. Front prod: deploy del Bloque
   3 (alineados). CI: verde. Backup: cron diario 03:00 AR operativo con alerta.
-- n8n: workflow del mail en DRAFT (id hdDDj5BLJt5wNESm), sin publicar.
+- n8n: 2 workflows ACTIVOS del CRM — mail diario `NvpzO39XqZrTU6UD` (7AM, proyecto
+  *export proyect*) y snapshot mensual `zTQW5xdg2CEYSmG3` (día 1, 4AM). Draft viejo archivado.
 
 ## Contexto no obvio (lecciones del día)
 - **El fix sugerido por un auditor puede romper prod**: el DROP de las policies huérfanas
