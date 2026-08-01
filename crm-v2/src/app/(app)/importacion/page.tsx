@@ -35,6 +35,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { AccionesPlataImpo, type OperacionPlataImpo } from "./acciones-plata";
 import { OrdenImpoForm, type Naviera, type Planta } from "./orden-form";
 
 type PendienteImpoRow = {
@@ -404,6 +405,7 @@ function TablaGrupo({
   fechaValue,
   canAnular,
   onAnular,
+  onAccionesPlata,
   emptyIcon,
   emptyTitle,
   emptyBody,
@@ -414,8 +416,11 @@ function TablaGrupo({
   onSelectedChange: (s: Set<string>) => void;
   fechaHeader: string;
   fechaValue: (r: PendienteImpoRow) => string | null;
+  // Mismo gate para las dos acciones privilegiadas de la columna (anular + acciones de
+  // plata): supervisor/administrador (ver canAnular en ImportacionPage).
   canAnular: boolean;
   onAnular: (target: { id: string; label: string }) => void;
+  onAccionesPlata: (target: PendienteImpoRow) => void;
   emptyIcon: string;
   emptyTitle: string;
   emptyBody: React.ReactNode;
@@ -469,15 +474,26 @@ function TablaGrupo({
             align: "right" as const,
             width: "1%",
             render: (r: PendienteImpoRow) => (
-              <Button
-                variant="ghost"
-                icon="ti-ban"
-                onClick={() => onAnular({ id: r.id, label: etiquetaFila(r) })}
-                style={{ minHeight: 0, padding: "4px 8px", fontSize: 12 }}
-                aria-label={`anular ${etiquetaFila(r)}`}
-              >
-                Anular
-              </Button>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                <Button
+                  variant="ghost"
+                  icon="ti-cash"
+                  onClick={() => onAccionesPlata(r)}
+                  style={{ minHeight: 0, padding: "4px 8px", fontSize: 12 }}
+                  aria-label={`acciones de plata ${etiquetaFila(r)}`}
+                >
+                  Plata
+                </Button>
+                <Button
+                  variant="ghost"
+                  icon="ti-ban"
+                  onClick={() => onAnular({ id: r.id, label: etiquetaFila(r) })}
+                  style={{ minHeight: 0, padding: "4px 8px", fontSize: 12 }}
+                  aria-label={`anular ${etiquetaFila(r)}`}
+                >
+                  Anular
+                </Button>
+              </div>
             ),
           },
         ] satisfies Column<PendienteImpoRow>[])
@@ -553,6 +569,16 @@ export default function ImportacionPage() {
 
   const [modalRetiro, setModalRetiro] = useState<PendienteImpoRow[] | null>(null);
   const [anularTarget, setAnularTarget] = useState<{ id: string; label: string } | null>(null);
+  const [accionesPlataTarget, setAccionesPlataTarget] = useState<OperacionPlataImpo | null>(null);
+
+  const abrirAccionesPlata = (r: PendienteImpoRow) => {
+    setAccionesPlataTarget({
+      id: r.id,
+      estado: r.estado,
+      numeroContenedor: r.contenedor?.numero_contenedor ?? "—",
+      numeroOrden: r.orden?.numero_orden ?? "—",
+    });
+  };
 
   const loadPendientes = useCallback(async () => {
     const { data, error } = await getSupabase()
@@ -703,6 +729,7 @@ export default function ImportacionPage() {
               fechaValue={(r) => r.orden?.fecha_arribo_terminal ?? null}
               canAnular={canAnular}
               onAnular={setAnularTarget}
+              onAccionesPlata={abrirAccionesPlata}
               emptyIcon="ti-anchor"
               emptyTitle="Sin contenedores en terminal"
               emptyBody={
@@ -739,6 +766,7 @@ export default function ImportacionPage() {
               fechaValue={(r) => r.fecha_retiro_terminal}
               canAnular={canAnular}
               onAnular={setAnularTarget}
+              onAccionesPlata={abrirAccionesPlata}
               emptyIcon="ti-truck"
               emptyTitle="Sin contenedores en tránsito a planta"
               emptyBody={
@@ -775,6 +803,7 @@ export default function ImportacionPage() {
               fechaValue={(r) => r.fecha_ingreso_planta}
               canAnular={canAnular}
               onAnular={setAnularTarget}
+              onAccionesPlata={abrirAccionesPlata}
               emptyIcon="ti-building-warehouse"
               emptyTitle="Sin contenedores en planta"
               emptyBody={
@@ -811,6 +840,7 @@ export default function ImportacionPage() {
               fechaValue={(r) => r.fecha_ingreso_planta}
               canAnular={canAnular}
               onAnular={setAnularTarget}
+              onAccionesPlata={abrirAccionesPlata}
               emptyIcon="ti-flag-check"
               emptyTitle="Sin contenedores en tránsito a devolución"
               emptyBody={
@@ -838,6 +868,14 @@ export default function ImportacionPage() {
       )}
 
       {anularTarget && <AnularImpoModal target={anularTarget} onClose={() => setAnularTarget(null)} onDone={onAnularDone} />}
+
+      {accionesPlataTarget && (
+        <AccionesPlataImpo
+          operacion={accionesPlataTarget}
+          onClose={() => setAccionesPlataTarget(null)}
+          onDone={() => void loadPendientes()}
+        />
+      )}
     </>
   );
 }
