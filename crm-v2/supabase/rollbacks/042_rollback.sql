@@ -1,0 +1,11 @@
+-- Rollback de la 042 — NO se provee revertir a lo anterior: el estado previo tenía
+-- INSERT/UPDATE/DELETE de service_role sobre 14 objetos de crm incluidas las tablas de
+-- plata (grants fantasma del default-ACL, letra muerta solo porque faltaba USAGE).
+-- Volver a eso sería reintroducir un camino de escritura cruda que bypassa RLS.
+--
+-- Para dejar a service_role SIN acceso a crm (revierte el efecto del mail diario, que
+-- dejará de funcionar):
+--   revoke all on all tables    in schema crm from service_role;
+--   revoke all on all functions in schema crm from service_role;
+--   revoke usage on schema crm  from service_role;
+select 'rollback 042: ver cabecera — revertir literal reabriría escritura cruda' as nota;
