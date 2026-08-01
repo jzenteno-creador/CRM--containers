@@ -1,0 +1,1292 @@
+<title>Dow Summit 2026 · Sala de revisión</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — "Puerto": petróleo/teal + naranja de señal.
+   Los semánticos (semáforo) son independientes del acento.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  color-scheme: light;
+  --paper:#EBEFEC;
+  --surface:#FFFFFF;
+  --surface-2:#E2E8E4;
+  --surface-3:#D7DFDA;
+  --line:#CFD8D3;
+  --line-2:#B3C0B9;
+  --text:#101E1C;
+  --text-2:#465854;
+  --text-3:#74857F;
+  --accent:#B8460F;
+  --accent-2:#8C3308;
+  --accent-wash:#F8E8DF;
+  --ok:#256B49;
+  --ok-wash:#DEEDE4;
+  --warn:#8A5F0C;
+  --warn-wash:#F5EAD2;
+  --crit:#A0332A;
+  --crit-wash:#F6E1DD;
+  --shadow:0 1px 2px rgba(16,30,28,.06), 0 8px 24px -12px rgba(16,30,28,.18);
+
+  --ui:"Segoe UI Variable Display",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --read:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  --data:ui-monospace,"SF Mono","Cascadia Mono",Consolas,"Liberation Mono",monospace;
+
+  --t-xs:.6875rem; --t-sm:.8125rem; --t-base:.9375rem;
+  --t-md:1.0625rem; --t-lg:1.3125rem; --t-xl:1.75rem; --t-2xl:2.125rem;
+
+  --rail:262px; --bar:54px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --paper:#091416; --surface:#0F1E20; --surface-2:#152729; --surface-3:#1C3134;
+    --line:#203638; --line-2:#2E4A4C; --text:#E3EAE7; --text-2:#9BAEAA; --text-3:#71857F;
+    --accent:#E4762F; --accent-2:#F09553; --accent-wash:#2A1A11;
+    --ok:#5CB088; --ok-wash:#12261D; --warn:#D6A544; --warn-wash:#2A2211;
+    --crit:#E5716A; --crit-wash:#2B1512;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#091416; --surface:#0F1E20; --surface-2:#152729; --surface-3:#1C3134;
+  --line:#203638; --line-2:#2E4A4C; --text:#E3EAE7; --text-2:#9BAEAA; --text-3:#71857F;
+  --accent:#E4762F; --accent-2:#F09553; --accent-wash:#2A1A11;
+  --ok:#5CB088; --ok-wash:#12261D; --warn:#D6A544; --warn-wash:#2A2211;
+  --crit:#E5716A; --crit-wash:#2B1512;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --paper:#EBEFEC; --surface:#FFFFFF; --surface-2:#E2E8E4; --surface-3:#D7DFDA;
+  --line:#CFD8D3; --line-2:#B3C0B9; --text:#101E1C; --text-2:#465854; --text-3:#74857F;
+  --accent:#B8460F; --accent-2:#8C3308; --accent-wash:#F8E8DF;
+  --ok:#256B49; --ok-wash:#DEEDE4; --warn:#8A5F0C; --warn-wash:#F5EAD2;
+  --crit:#A0332A; --crit-wash:#F6E1DD;
+  --shadow:0 1px 2px rgba(16,30,28,.06), 0 8px 24px -12px rgba(16,30,28,.18);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--text);font-family:var(--ui);
+  font-size:var(--t-base);line-height:1.55;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.mono{font-family:var(--data);font-variant-numeric:tabular-nums}
+
+/* ── Barra superior ─────────────────────────────────────────── */
+.bar{position:sticky;top:0;z-index:40;height:var(--bar);display:flex;align-items:center;
+  gap:14px;padding:0 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-id{display:flex;align-items:baseline;gap:9px;min-width:0;overflow:hidden}
+.bar-id b{font-size:var(--t-base);font-weight:650;letter-spacing:-.01em;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.bar-id span{font-size:var(--t-xs);color:var(--text-3);text-transform:uppercase;
+  letter-spacing:.09em;white-space:nowrap}
+.bar-spacer{flex:1}
+.meter{display:flex;align-items:center;gap:9px}
+.meter-track{width:98px;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.meter-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .25s ease}
+.meter-txt{font-family:var(--data);font-size:var(--t-xs);color:var(--text-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.btn{border:1px solid var(--line-2);border-radius:6px;padding:6px 12px;font-size:var(--t-sm);
+  font-weight:550;background:var(--surface);white-space:nowrap;
+  transition:background .12s,border-color .12s}
+.btn:hover{background:var(--surface-2);border-color:var(--text-3)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn-icon{padding:6px 9px}
+.bar-alert{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);font-weight:550;
+  color:var(--crit);background:var(--crit-wash);border:1px solid transparent;
+  border-radius:6px;padding:5px 10px}
+.bar-alert:hover{border-color:var(--crit)}
+#burger{display:none}
+
+/* ── Grilla: índice fijo + documento continuo ───────────────── */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);
+  align-items:start;max-width:1720px;margin:0 auto}
+
+/* ── Índice ─────────────────────────────────────────────────── */
+.rail{position:sticky;top:var(--bar);height:calc(100vh - var(--bar));overflow-y:auto;
+  border-right:1px solid var(--line);background:var(--surface);padding:12px 0 40px}
+.rail-grp{padding:14px 18px 3px;font-size:var(--t-xs);text-transform:uppercase;
+  letter-spacing:.1em;color:var(--text-3);font-weight:650}
+.rail-item{display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;
+  padding:6px 18px;border-left:3px solid transparent;transition:background .1s}
+.rail-item:hover{background:var(--surface-2)}
+.rail-item.aqui{background:var(--accent-wash);border-left-color:var(--accent)}
+.rail-n{font-family:var(--data);font-size:var(--t-xs);color:var(--text-3);
+  min-width:19px;padding-top:2px;font-variant-numeric:tabular-nums}
+.rail-item.aqui .rail-n{color:var(--accent);font-weight:700}
+.rail-t{flex:1;font-size:var(--t-sm);line-height:1.35;color:var(--text-2);min-width:0;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rail-item.aqui .rail-t{color:var(--text);font-weight:550}
+.dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:none;background:var(--line-2)}
+.dot.ok{background:var(--ok)} .dot.falta{background:var(--warn)} .dot.decidir{background:var(--crit)}
+.dot.hecho{background:var(--accent)}
+.rail-risk{margin:4px 12px 8px;padding:9px 12px;border-radius:7px;background:var(--crit-wash);
+  color:var(--crit);font-size:var(--t-sm);font-weight:600;display:flex;gap:8px;
+  align-items:center;width:calc(100% - 24px);text-align:left}
+.rail-risk.aqui{box-shadow:inset 0 0 0 1.5px var(--crit)}
+
+/* ── Documento ──────────────────────────────────────────────── */
+.doc{padding:0 36px 120px;min-width:0}
+.wrap{max-width:1420px;margin:0 auto}
+
+/* Separador entre preguntas: la línea que pediste */
+.qb{border-top:2px solid var(--line-2);padding:34px 0 6px;scroll-margin-top:calc(var(--bar) + 14px)}
+.qb:first-of-type{border-top:none}
+.doc-sec{margin:44px 0 0;padding:9px 0 7px;font-size:var(--t-xs);text-transform:uppercase;
+  letter-spacing:.13em;font-weight:750;color:var(--accent);display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--line);scroll-margin-top:calc(var(--bar) + 14px)}
+.doc-sec::after{content:"";flex:1}
+.doc-sec + .qb{border-top:none;padding-top:24px}
+
+.qhead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 18px;align-items:baseline}
+.q-num{font-family:var(--data);font-size:var(--t-2xl);font-weight:600;color:var(--accent);
+  line-height:1;font-variant-numeric:tabular-nums;grid-row:span 2}
+.q-title{margin:0;font-size:var(--t-lg);font-weight:600;line-height:1.3;
+  letter-spacing:-.012em;text-wrap:balance}
+.q-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.chip{font-size:var(--t-xs);font-weight:650;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:4px;background:var(--surface-2);color:var(--text-2)}
+.chip.escribir{background:var(--accent-wash);color:var(--accent)}
+.chip.falta{background:var(--warn-wash);color:var(--warn)}
+.chip.decidir{background:var(--crit-wash);color:var(--crit)}
+.chip.ok{background:var(--ok-wash);color:var(--ok)}
+.q-pt{font-size:var(--t-sm);color:var(--text-3);font-style:italic;margin:0}
+
+.busca{display:flex;gap:12px;margin:16px 0 20px;padding:12px 16px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent)}
+.busca-lbl{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;
+  font-weight:700;color:var(--accent);white-space:nowrap;padding-top:2px}
+.busca p{margin:0;font-size:var(--t-base);color:var(--text-2);line-height:1.5}
+
+/* ── Las tres respuestas, siempre abiertas ──────────────────── */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:var(--line-2)}
+.card.sel{border-color:var(--accent);box-shadow:var(--shadow)}
+.card.sel .card-top{background:var(--accent);color:#fff}
+.card.sel .card-top .card-para{color:rgba(255,255,255,.82)}
+.card.sel .card-key{background:rgba(255,255,255,.2);color:#fff;border-color:transparent}
+.card-top{display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(--surface-2);
+  border-bottom:1px solid var(--line);transition:background .15s,color .15s}
+.card-key{font-family:var(--data);font-size:var(--t-xs);font-weight:700;width:19px;height:19px;
+  display:grid;place-items:center;border:1px solid var(--line-2);border-radius:4px;
+  color:var(--text-3);flex:none}
+.card-id{min-width:0;flex:1}
+.card-tag{font-size:var(--t-xs);font-weight:750;letter-spacing:.11em;text-transform:uppercase;
+  display:block;line-height:1.3}
+.card-para{font-size:var(--t-xs);color:var(--text-3);display:block;line-height:1.3}
+.card-body{flex:1;padding:15px 18px;font-family:var(--read);font-size:var(--t-base);
+  line-height:1.6;color:var(--text)}
+.card-body p{margin:0 0 .78em}
+.card-body p:last-child{margin-bottom:0}
+.card-foot{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+.card-count{font-family:var(--data);font-size:var(--t-xs);color:var(--text-3);
+  font-variant-numeric:tabular-nums;flex:1}
+.card-count.over{color:var(--warn);font-weight:650}
+
+/* ── Opción múltiple y datos ────────────────────────────────── */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:16px 20px;margin-top:14px;max-width:1080px}
+.opts{display:flex;flex-direction:column;gap:2px}
+.opt{display:flex;align-items:flex-start;gap:11px;padding:6px 10px;border-radius:6px;
+  font-size:var(--t-base);color:var(--text-3)}
+.opt.on{background:var(--accent-wash);color:var(--text);font-weight:600}
+.radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-2);
+  flex:none;margin-top:4px}
+.opt.on .radio{border-color:var(--accent);border-width:4.5px}
+.opt.multi .radio{border-radius:4px}
+.dato{font-family:var(--data);font-size:var(--t-md);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:7px;padding:11px 15px;display:inline-block}
+.dato.vacio{color:var(--warn);background:var(--warn-wash);border-color:transparent;font-style:italic}
+.why{display:flex;gap:11px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+.why + .why{margin-top:10px;padding-top:10px}
+.why-lbl{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;font-weight:700;
+  color:var(--text-3);white-space:nowrap;padding-top:2px;min-width:74px}
+.why p{margin:0;color:var(--text-2);font-size:var(--t-base)}
+.why.alt .why-lbl{color:var(--warn)}
+
+.acciones{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.note{margin-top:14px;max-width:1080px}
+.note label{display:block;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;
+  font-weight:650;color:var(--text-3);margin-bottom:6px}
+.note textarea{width:100%;min-height:54px;resize:vertical;padding:10px 13px;font:inherit;
+  font-size:var(--t-base);color:var(--text);background:var(--surface);border:1px solid var(--line);
+  border-radius:7px}
+.note textarea:focus{border-color:var(--accent);outline:none}
+.note textarea::placeholder{color:var(--text-3)}
+
+/* ── Bloque de pendientes (arriba de todo) ──────────────────── */
+.hero{padding:38px 0 6px;scroll-margin-top:calc(var(--bar) + 14px)}
+.hero h1{margin:0 0 8px;font-size:var(--t-2xl);font-weight:600;letter-spacing:-.02em;
+  text-wrap:balance;line-height:1.15}
+.hero > p{margin:0 0 26px;font-size:var(--t-md);color:var(--text-2);max-width:64ch;
+  font-family:var(--read);line-height:1.6}
+.risk-grp{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.1em;font-weight:700;
+  color:var(--text-3);margin:28px 0 12px;display:flex;align-items:center;gap:10px}
+.risk-grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.risks{display:flex;flex-direction:column;gap:10px;max-width:1080px}
+.risk{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;align-items:start;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px 17px;
+  border-left:3px solid var(--line-2)}
+.risk.crit{border-left-color:var(--crit)}
+.risk.warn{border-left-color:var(--warn)}
+.risk.done{border-left-color:var(--ok);opacity:.82}
+.risk-ico{font-family:var(--data);font-size:var(--t-xs);font-weight:700;letter-spacing:.04em;
+  padding:3px 0;text-align:center;border-radius:4px}
+.risk.crit .risk-ico{background:var(--crit-wash);color:var(--crit)}
+.risk.warn .risk-ico{background:var(--warn-wash);color:var(--warn)}
+.risk.done .risk-ico{background:var(--ok-wash);color:var(--ok)}
+.risk h3{margin:0 0 4px;font-size:var(--t-base);font-weight:650;line-height:1.35}
+.risk p{margin:0;font-size:var(--t-base);color:var(--text-2);line-height:1.5}
+.risk-go{font-size:var(--t-xs);font-family:var(--data);color:var(--text-3);white-space:nowrap;
+  border:1px solid var(--line);border-radius:5px;padding:3px 7px}
+.risk-go:hover{border-color:var(--accent);color:var(--accent)}
+
+.who{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:22px 0 0;padding:14px 17px;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;max-width:1080px}
+.who label{font-size:var(--t-sm);color:var(--text-2);font-weight:550}
+.who input{font:inherit;font-size:var(--t-base);padding:7px 11px;border:1px solid var(--line);
+  border-radius:6px;background:var(--paper);color:var(--text);min-width:190px}
+.who input:focus{border-color:var(--accent);outline:none}
+
+.fuente{margin-top:26px;padding:16px 19px;background:var(--surface-2);border-radius:9px;
+  font-size:var(--t-sm);color:var(--text-2);max-width:1080px}
+.fuente h4{margin:0 0 9px;font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.09em;
+  color:var(--text-3);font-weight:700}
+.fuente table{width:100%;border-collapse:collapse;font-family:var(--data);
+  font-size:var(--t-sm);font-variant-numeric:tabular-nums}
+.fuente td{padding:3px 0;border-bottom:1px solid var(--line)}
+.fuente td:last-child{text-align:right;font-weight:600;color:var(--text)}
+.fuente tr:last-child td{border-bottom:none}
+
+/* ── Cierre: lo elegido, siempre visible ────────────────────── */
+.cierre{margin-top:52px;padding-top:30px;border-top:2px solid var(--line-2);
+  scroll-margin-top:calc(var(--bar) + 14px);max-width:1080px}
+.cierre h2{margin:0 0 6px;font-size:var(--t-lg);font-weight:600}
+.cierre > p{margin:0 0 16px;color:var(--text-2)}
+.cierre textarea{width:100%;min-height:280px;padding:15px 17px;font-family:var(--data);
+  font-size:var(--t-sm);line-height:1.6;color:var(--text);background:var(--surface);
+  border:1px solid var(--line);border-radius:9px;resize:vertical}
+.cierre textarea:focus{border-color:var(--accent);outline:none}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width:1300px){
+  /* Tres columnas de prosa dejan de ser legibles: se apilan. */
+  .cards{grid-template-columns:minmax(0,1fr);max-width:760px}
+}
+@media (max-width:900px){
+  :root{--rail:0px}
+  #burger{display:inline-flex}
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{position:fixed;top:var(--bar);left:0;width:284px;z-index:35;
+    transform:translateX(-102%);transition:transform .22s ease;
+    box-shadow:0 16px 40px -16px rgba(0,0,0,.45)}
+  .rail.open{transform:translateX(0)}
+  .doc{padding:0 18px 90px}
+  .bar{gap:10px;padding:0 12px}
+  .bar-id span{display:none}
+  .risk{grid-template-columns:30px minmax(0,1fr);gap:11px}
+  .risk-go{grid-column:2;justify-self:start;margin-top:6px}
+  .qhead{grid-template-columns:minmax(0,1fr);gap:5px}
+  .q-num{grid-row:auto;font-size:var(--t-lg)}
+}
+@media (max-width:620px){
+  .meter{display:none}
+  .bar-alert{padding:5px 9px}
+  .alert-lbl{display:none}
+  .busca{flex-direction:column;gap:5px}
+  .why{flex-direction:column;gap:4px}
+  .why-lbl{min-width:0}
+  .card-foot{flex-wrap:wrap}
+  .card-count{flex:1 0 100%}
+  .panel{padding:14px 15px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+<header class="bar">
+  <button class="btn btn-icon" id="burger" aria-label="Ver el índice">☰</button>
+  <div class="bar-id">
+    <b>Dow Summit 2026</b>
+    <span>Sala de revisión</span>
+  </div>
+  <div class="bar-spacer"></div>
+  <button class="bar-alert" id="go-risk" title="Ir a los pendientes">
+    ⚠ <span class="mono" id="risk-n">9</span> <span class="alert-lbl">pendientes</span>
+  </button>
+  <div class="meter" title="Preguntas revisadas">
+    <div class="meter-track"><div class="meter-fill" id="meter" style="width:0%"></div></div>
+    <span class="meter-txt" id="meter-txt">0/42</span>
+  </div>
+  <button class="btn btn-icon" id="theme" aria-label="Cambiar entre claro y oscuro">◐</button>
+  <button class="btn btn-primary" id="go-cierre">Lo elegido</button>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="Índice del formulario"></nav>
+  <main class="doc"><div class="wrap" id="doc"></div></main>
+</div>
+
+<script>
+"use strict";
+
+/* ═══════════════════════════════════════════════════════════════
+   DATOS — 42 ítems del formulario (preguntas 3 a 44).
+   tipo: 'riesgos' | 'texto' (3 variantes) | 'opcion' | 'dato'
+   ═══════════════════════════════════════════════════════════════ */
+
+const CIFRAS = [
+  ["2024 — total del año", "USD 434.415"],
+  ["2025 — total del año", "USD 296.744"],
+  ["2025 — promedio mensual", "USD 24.729"],
+  ["2026 — enero a junio", "USD 463.235"],
+  ["2026 — promedio mensual", "USD 77.206"],
+  ["2026 — pico de abril", "USD 117.355"],
+  ["Ventana del pitch: ago/25 – jun/26", "USD 587.805"],
+  ["└ Maersk (95,0%)", "USD 558.355"],
+  ["└ Hapag-Lloyd (2,8%)", "USD 16.600"],
+  ["└ CMA-CGM (2,2%)", "USD 12.850"],
+  ["Proyección 2026 al ritmo actual", "USD 926.470"]
+];
+
+const RIESGOS = {
+  abiertos: [
+    { g:"warn", ico:"P1", t:"Falta el nombre del contacto de Compras en Dow",
+      d:"Pregunta 9, campo obligatorio. Queda en blanco hasta que lo definas con Mariano. Es lo único que impide enviar el formulario tal como está.", ir:9 },
+    { g:"warn", ico:"P2", t:"¿Cómo se escribe el segundo sitio de Argentina, y a qué localidad del formulario corresponde Brasil?",
+      d:"El formulario ofrece una lista cerrada: São Paulo, Hortolândia, Santos Dumont, Breu Branco, Matarandiba, Aratu, Guarujá, Jacareí, Jundiaí, Bahia Blanca, Cartagena, Cidade do México, Tlaxcala, Querétaro, Lima, Santiago y “Outra”. Bahía Blanca, Lima y Santiago están. Itajaí no, y el segundo sitio argentino tampoco: los dos van por “Outra”, pero necesito la grafía exacta. Si la operación de Brasil sale por el puerto de Santos, quizá corresponda marcar Guarujá o Santos Dumont en vez de “Outra”.", ir:13 },
+    { g:"warn", ico:"P3", t:"Falta el porcentaje de contenedores Log-In",
+      d:"John lo calcula después contra el total de contenedores del año. Mientras tanto el texto dice “una porción relevante”, que funciona pero es más débil que un número. En cuanto lo tengas, entra en las preguntas 11, 22 y 44.", ir:11 },
+    { g:"crit", ico:"P4", t:"Hay que reescribir el business case antes de que salga de SSB",
+      d:"Verificado en el archivo, no es una sospecha: docs/caso-negocio/business-case-en.html tiene una sección titulada “Project status: platform v2 in production” y dice textual “Unlike a proposal yet to be built, this system is deployed to production in its second version”. El español dice lo mismo. Decisión de John: no se comparte así. Queda pendiente reescribirlo al framing de “es posible desarrollarlo”.", ir:null }
+  ],
+  resueltos: [
+    { g:"done", ico:"OK", t:"Framing: proyecto nuevo, a desarrollar en conjunto con Dow",
+      d:"Dow no tiene que saber que ya existe algo funcional, sino que es posible desarrollarlo. Todas las respuestas están escritas como co-desarrollo." },
+    { g:"done", ico:"OK", t:"El origen del dato es el seguimiento manual en Excel",
+      d:"Los números salen de la planilla que lleva a mano una persona del equipo en la operación. Son datos reales de un trabajo humano, no output de ningún sistema. Por eso el formulario es coherente de punta a punta: hay medición, no hay plataforma." },
+    { g:"done", ico:"OK", t:"Relación con Dow: más de 10 años",
+      d:"Más de 10 años de relación comercial, 5 en la operativa de exportación e importación y más años con el sector de MRO. Va en la pregunta 8 y el detalle se usa en la 44." },
+    { g:"done", ico:"OK", t:"Plazo: 1 a 3 meses",
+      d:"Decisión de John: en tres meses debería haber un sistema funcional. El piloto de 8 semanas entra dentro de ese plazo, así que el formulario ofrece resultado medible antes del cierre." },
+    { g:"done", ico:"OK", t:"USD 587.805: cerrado, no se toca",
+      d:"Es el dato de la planilla actualizado hasta hace una semana. Se saca la marca de “a confirmar”." },
+    { g:"done", ico:"OK", t:"Sin conversación previa con Dow",
+      d:"La propuesta es interna de SSB. La pregunta 40 va “No” y la 41 no se muestra." },
+    { g:"done", ico:"OK", t:"Se nombra a Maersk explícitamente",
+      d:"El 95% del costo está en un solo armador. Dato real, verificable por Dow contra sus propias facturas." },
+    { g:"done", ico:"OK", t:"El foco es el cost saving, no las horas",
+      d:"Quien lleva el seguimiento manual es personal in-house pago por SSB dentro de la operación de Dow. Por eso el argumento no se apoya en ahorrar horas de nadie: se apoya en los USD que se dejan de pagar." },
+    { g:"done", ico:"OK", t:"Reconocimiento de contenedores e importación entran al alcance",
+      d:"Confirmado contra el repo: lectura de siglas por cámara con validación ISO 6346 para ingreso y egreso de planta, ciclo completo de importación (arribo a terminal → retiro → ingreso a planta → devolución del vacío) e incidencias propias de impo (lavado exigido y daño con refacción, con seguimiento del reclamo). Aparecen en las preguntas 11, 17 y 38." }
+  ]
+};
+
+const ITEMS = [
+
+{ n:"R", tipo:"riesgos", sec:"Tablero", titulo:"Pendientes y decisiones" },
+
+/* ── Datos del responsable ─────────────────────────────────── */
+{ n:3, tipo:"dato", sec:"Datos del responsable", estado:"ok",
+  q:"Nombre de la empresa", qpt:"Nome da empresa",
+  valor:"SSB INTERNATIONAL SA", nota:"Precargado por el formulario." },
+
+{ n:4, tipo:"opcion", sec:"Datos del responsable", estado:"ok",
+  q:"País principal de actuación de la empresa", qpt:"País principal de atuação da empresa",
+  opciones:[{t:"Argentina",sel:true},{t:"Brasil"},{t:"Colombia"},{t:"México"},{t:"Otro"}],
+  porQue:"Sin discusión. La operación es Bahía Blanca." },
+
+{ n:5, tipo:"dato", sec:"Datos del responsable", estado:"ok",
+  q:"Nombre completo del responsable del envío", qpt:"Nome completo do responsável pela submissão",
+  valor:"Jonathan Ezequiel Zenteno Parrado", nota:"Precargado por el formulario." },
+
+{ n:6, tipo:"dato", sec:"Datos del responsable", estado:"ok",
+  q:"E-mail del responsable del envío", qpt:"E-mail do responsável pela submissão",
+  valor:"jzenteno@ssbint.com", nota:"Precargado por el formulario." },
+
+/* ── Perfil de la empresa ──────────────────────────────────── */
+{ n:7, tipo:"opcion", sec:"Perfil de la empresa", estado:"ok",
+  q:"¿Cuál es el sector principal de actuación de la empresa?",
+  qpt:"Qual é o setor principal de atuação da empresa?",
+  opciones:[{t:"Logística",sel:true},{t:"Industria / Manufactura"},{t:"Servicios"},{t:"Tecnología"},{t:"Otro"}],
+  porQue:"SSB es el operador logístico de la exportación. Marcar “Tecnología” desviaría el foco: la tecnología es el medio, el resultado es logístico." },
+
+{ n:8, tipo:"dato", sec:"Perfil de la empresa", estado:"falta",
+  q:"¿Hace cuánto tiempo su empresa atiende o se relaciona comercialmente con Dow?",
+  qpt:"Há quanto tempo sua empresa atende ou se relaciona comercialmente com a Dow?",
+  valor:"Más de 10 años",
+  nota:"Más de 10 años de relación comercial: 5 años en la operativa de exportación e importación, y más años antes con el sector de MRO. Es de las pocas preguntas donde la antigüedad juega a favor sola — el detalle de los 5 años en la operativa se usa en la 44 para respaldar que SSB conoce el problema desde adentro." },
+
+{ n:9, tipo:"dato", sec:"Perfil de la empresa", estado:"falta",
+  q:"¿Cuál es el nombre de su principal contacto de Compras en Dow?",
+  qpt:"Qual é o nome do seu principal contato de Compras na Dow?",
+  valor:"",
+  nota:"Queda en blanco a propósito: se define con Mariano. Es el único campo obligatorio que falta para poder enviar. Tené en cuenta que es también, probablemente, la persona que reciba el formulario del otro lado." },
+
+/* ── El problema ───────────────────────────────────────────── */
+{ n:10, tipo:"opcion", sec:"El problema", estado:"ok",
+  q:"¿Qué tipo de desafío de Dow busca abordar su propuesta?",
+  qpt:"Qual tipo de desafio da Dow sua proposta busca endereçar?",
+  opciones:[{t:"Costo elevado de materiales o servicios",sel:true},
+    {t:"Ineficiencias, retrabajo o cuellos de botella de proceso"},
+    {t:"Falta de visibilidad o de información"},{t:"Riesgo de suministro"},{t:"Otro"}],
+  porQue:"El pitch abre con USD 587.805 medidos en 11 meses. “Costo elevado” es la única opción que ese número respalda directamente.",
+  alt:"“Ineficiencias, retrabajo o cuellos de botella” es igual de defendible: la causa raíz es de proceso, el seguimiento manual. Pero el evaluador que filtra por impacto financiero busca la palabra costo." },
+
+{ n:11, tipo:"texto", sec:"El problema", estado:"ok",
+  q:"Describa de forma objetiva el problema, oportunidad o necesidad que su propuesta busca resolver en Dow.",
+  qpt:"Descreva de forma objetiva o problema, oportunidade ou necessidade que sua proposta busca resolver na Dow.",
+  busca:"Que el problema esté cuantificado y sea de Dow, no tuyo. Sin un número acá, el resto del formulario no se lee con atención.",
+  v:[
+{tag:"TÉCNICA",para:"para quien valida el diagnóstico",txt:`El costo de detention en la exportación de Bahía Blanca (PBB Polisur/Dow, operada por SSB) pasó de un promedio de USD 24.729 por mes en 2025 a USD 77.206 por mes en el primer semestre de 2026, con un pico de USD 117.355 en abril. El acumulado de agosto/2025 a junio/2026 es de USD 587.805, con el 95% —USD 558.355— concentrado en cargas de un solo armador, Maersk.
+
+La causa no es tarifaria sino de visibilidad: el seguimiento del free time se lleva en planillas, sin cálculo diario de días libres restantes por contenedor y por naviera, y sin alerta previa al vencimiento. La demora se detecta cuando llega la factura, es decir cuando ya no se puede evitar.
+
+Tampoco existe aviso de movimiento: la terminal no informa cuándo ingresó ni cuándo salió un contenedor, así que cada fecha del ciclo se reconstruye a mano y siempre después de los hechos.
+
+A esto se suma que una porción relevante de la operación —los contenedores de Log-In, cuyo esquema no genera cargo por estadía— hoy queda fuera de todo seguimiento: no produce costo, pero tampoco deja registro ni trazabilidad. El mismo vacío se repite en bookings y reprogramaciones de embarque, en incidencias de contenedor (lavados exigidos, averías) y en el control de prefijos restringidos que exige Dow, cada uno en su propia planilla y sin un registro único.`},
+{tag:"EJECUTIVA",para:"para entender de un vistazo",txt:`En los últimos 11 meses la exportación de Bahía Blanca pagó USD 587.805 en detention, y el costo mensual se triplicó respecto de 2025.
+
+El problema no es la tarifa: es que nadie ve cuántos días libres le quedan a cada contenedor hasta que llega la factura. El seguimiento se hace en planillas sueltas, y una parte de los contenedores directamente no se sigue porque no genera cargo —no cuesta plata, pero tampoco hay control sobre ellos.
+
+Encima nadie avisa los movimientos: la terminal no informa cuándo entró ni cuándo salió un contenedor, así que las fechas se cargan a mano y siempre tarde.
+
+Lo mismo pasa con los bookings, con las incidencias por lavados y averías, y con el control de prefijos restringidos: cada cosa en su propia planilla, sin un único lugar donde mirar.`},
+{tag:"COMERCIAL",para:"para quien decide por el número",txt:`Agosto/2025 a junio/2026: USD 587.805 de detention en la exportación de Bahía Blanca. El 95% —USD 558.355— concentrado en un solo armador, Maersk.
+
+El costo mensual pasó de USD 25 mil en 2025 a USD 77 mil en 2026, con un pico de USD 117 mil en abril. Al ritmo actual el año cierra por encima de USD 900 mil, contra USD 434 mil en 2024.
+
+Es un costo que se paga todos los meses y que hoy se detecta tarde, cuando ya no se puede evitar: el seguimiento del free time es manual, no hay alerta anticipada y la terminal no avisa cuándo entra o sale un contenedor. Y es solo la parte que se factura. Los contenedores que no generan cargo tampoco se controlan, así que hoy ni siquiera se conoce el tamaño total del problema.`}]},
+
+/* ── Categoría y alcance ───────────────────────────────────── */
+{ n:12, tipo:"opcion", sec:"Categoría y alcance", estado:"ok",
+  q:"¿En qué categoría o área se aplica principalmente la propuesta?",
+  qpt:"Em qual categoria ou área a proposta se aplica principalmente?",
+  opciones:[{t:"Logística",sel:true},{t:"Digitalización / automatización"},
+    {t:"Compras / Sourcing"},{t:"Manufactura"},{t:"Sustentabilidad"}],
+  porQue:"El resultado que se le vende a Dow es logístico. La tecnología es cómo se llega, no qué se entrega.",
+  alt:"Si el campo permite una segunda opción, agregar “Digitalización / automatización” — refuerza la pregunta 37 sin debilitar el foco." },
+
+{ n:13, tipo:"opcion", sec:"Categoría y alcance", estado:"decidir", multi:true,
+  q:"¿Para qué localidad(es) de Dow podría aplicarse la propuesta?",
+  qpt:"Para qual(is) localidade(s) da Dow a proposta poderia ser aplicada?",
+  opciones:[{t:"Bahia Blanca — donde SSB ya opera",sel:true},
+    {t:"Lima — Dow Perú",sel:true},{t:"Santiago — Petroquímica, Chile",sel:true},
+    {t:"Outra — Itajaí (Brasil, el de mayor movimiento) + el segundo sitio de Argentina",sel:true},
+    {t:"São Paulo"},{t:"Hortolândia"},{t:"Santos Dumont"},{t:"Breu Branco"},{t:"Matarandiba"},
+    {t:"Aratu"},{t:"Guarujá"},{t:"Jacareí"},{t:"Jundiaí"},{t:"Cartagena"},
+    {t:"Cidade do México"},{t:"Tlaxcala"},{t:"Querétaro"}],
+  porQue:"Marcadas solo las que nombraste: los dos sitios de Argentina, Brasil —el de mayor movimiento—, Perú y Chile. La pregunta dice “podría ser aplicada”, o sea potencial, así que declarar los cinco es legítimo y es donde la escalabilidad regional deja de ser retórica.",
+  alt:"Esta es la lista real del formulario, sacada del PDF. Itajaí no figura y el segundo sitio de Argentina tampoco, por eso van en “Outra”. Falta que me pases la grafía exacta del sitio argentino. Y si la operación de Brasil sale por el puerto de Santos, capaz corresponde marcar Guarujá o Santos Dumont en vez de “Outra” — eso lo sabés vos." },
+
+{ n:14, tipo:"opcion", sec:"Categoría y alcance", estado:"ok",
+  q:"¿La propuesta podría escalarse a otras unidades o países de América Latina?",
+  qpt:"A proposta poderia ser escalada para outras unidades ou países da América Latina?",
+  opciones:[{t:"Sí",sel:true},{t:"No"},{t:"Todavía no evaluado"}],
+  porQue:"Es la pregunta que más pesa para un programa regional. Y en este caso el “Sí” es sustantivo: navieras, tarifas, plantas e idioma son parámetros, así que replicar es configurar." },
+
+/* ── La propuesta ──────────────────────────────────────────── */
+{ n:15, tipo:"texto", sec:"La propuesta", estado:"ok",
+  q:"Título de la propuesta o proyecto", qpt:"Título da proposta ou projeto",
+  busca:"Es lo primero que se lee y probablemente lo único que sobreviva a un resumen. Tiene que decir qué es y qué resuelve, sin siglas internas.",
+  v:[
+{tag:"TÉCNICA",para:"describe el alcance completo",txt:`Visibilidad y Control de Free Time: plataforma parametrizable para detention y demurrage, bookings, incidencias y prefijos restringidos en exportación e importación, replicable por planta y por país`},
+{tag:"EJECUTIVA",para:"se entiende sin contexto previo",txt:`Control de Free Time: ver todos los días cuánto tiempo le queda a cada contenedor, antes de que la naviera cobre`},
+{tag:"COMERCIAL",para:"lleva el beneficio en el título",txt:`Free Time bajo Control: reducir el costo de detention en la operación de Dow, desde Bahía Blanca hacia América Latina`}]},
+
+{ n:16, tipo:"texto", sec:"La propuesta", estado:"ok", limite:620,
+  q:"Resuma su propuesta en hasta 5 líneas, explicando la solución y el beneficio esperado para Dow.",
+  qpt:"Resuma sua proposta em até 5 linhas, explicando a solução e o benefício esperado para a Dow.",
+  busca:"El filtro real del formulario. Si en cinco líneas no se entiende qué es, cuánto ahorra y qué cuesta, no llega a la ronda de pitch. El formulario pide 5 líneas: pasarse se nota.",
+  v:[
+{tag:"TÉCNICA",para:"para quien valida que sea factible",txt:`Proponemos desarrollar junto con Dow una plataforma web que siga cada contenedor desde el retiro hasta la devolución, con un motor que calcule a diario el free time restante según las reglas contractuales de cada naviera —versionadas por fecha de vigencia— y alerte en semáforo antes del primer cargo. Cubre el ciclo de importación completo, lectura de la sigla por cámara en el portón de planta, bookings, incidencias y prefijos restringidos. Navieras, tarifas, plantas e idioma son configuración, no código: replicarla en otro sitio de la región es parametrizar, no desarrollar de nuevo. Beneficio estimado: USD 118 a 206 mil por año en Bahía Blanca. Sin costo para Dow.`},
+{tag:"EJECUTIVA",para:"para entender de un vistazo",txt:`Un tablero que muestra todos los días cuántos días libres le quedan a cada contenedor y avisa antes de que la naviera empiece a cobrar. Lo desarrollamos junto con Dow, arranca en Bahía Blanca y el mismo sistema se replica en las demás plantas de la región cambiando parámetros, no código. Beneficio estimado: USD 118 a 206 mil por año. Sin costo para Dow.`},
+{tag:"COMERCIAL",para:"para quien decide por el número",txt:`En 11 meses la exportación de Bahía Blanca pagó USD 587.805 de detention, 95% concentrado en un solo armador. Proponemos desarrollar junto con Dow un sistema de alerta anticipada de free time: evitar entre el 20% y el 35% de ese costo representa USD 118 a 206 mil por año, solo en Bahía Blanca. Sin costo para Dow y con un piloto medible en 8 semanas. El mismo modelo aplica a cada planta de la región que mueve contenedores.`}]},
+
+{ n:17, tipo:"texto", sec:"La propuesta", estado:"ok",
+  q:"Explique cómo funcionaría la solución en la práctica. Incluya etapas principales, áreas involucradas, tecnología/proceso utilizado y cómo participaría Dow en la implementación.",
+  qpt:"Explique como a solução funcionaria na prática. Inclua etapas principais, áreas envolvidas, tecnologia/processo utilizado e como a Dow participaria da implementação.",
+  busca:"Acá Dow evalúa si es ejecutable o si es una idea linda. Las tres cosas que buscan: qué tienen que poner ellos, si hay que meter a TI, y en cuánto tiempo ven algo.",
+  v:[
+{tag:"TÉCNICA",para:"siete frentes, con el detalle",txt:`Siete frentes, entregados en fases.
+
+(1) Free time en exportación. Registro por tanda del retiro de vacíos: la lista de contenedores se pega tal cual viene, con validación automática del número según ISO 6346. Un cálculo diario cruza cada contenedor con el free time y la tarifa vigente de su naviera y proyecta el costo de no actuar, con alertas en semáforo verde, amarillo y rojo. Incluye los contenedores que hoy no generan cargo de estadía, que quedan trazados aunque no facturen.
+
+(2) Ciclo completo de importación. Arribo a terminal, retiro de terminal con la mercadería, ingreso a planta y devolución del vacío, que es el evento que corta el reloj. Una orden de importación agrupa varios contenedores con arribo común y retiros escalonados, y el free time de destino se calcula con las reglas de demurrage y detention del contrato de cada naviera.
+
+(3) Reconocimiento de contenedores en portón. Lectura de la sigla por cámara al ingreso y al egreso de planta, con validación del dígito verificador ISO 6346 —que descarta automáticamente las lecturas erróneas— y foto del momento como comprobante. Resuelve el punto ciego actual: hoy la terminal no avisa cuándo un contenedor entró o salió, y esas fechas son las que determinan el cargo. Aplica igual en el ingreso de importación y en la devolución del vacío.
+
+(4) Bookings y roleo. Registro de bookings de retiro, control de ETD, alertas de corte documental y de embarque, y soporte a la reprogramación de contenedores en riesgo de demora.
+
+(5) Incidencias y reclamos. Lavados exigidos al devolver el vacío, daños con costo de refacción y averías, todo con fotos y línea de tiempo, y seguimiento del reclamo hasta la resolución: cuánto se pagó y cuánto se recuperó.
+
+(6) Prefijos restringidos. Validación automática de los prefijos definidos por Dow al momento del ingreso —tanto en exportación como en importación—, más barrido periódico sobre el stock en operación.
+
+(7) Reportes. Exportación a Excel con filtros y resumen periódico automático por correo a la gerencia.
+
+Tecnología: aplicación web en la nube, actualización en tiempo real, perfiles de acceso por rol (operador, supervisor, administrador) y auditoría completa de cambios.
+
+Áreas involucradas: la operación de SSB como usuaria diaria; logística y supply de Dow como destinatarios de los indicadores y del reporte gerencial.
+
+Participación de Dow: validar las reglas de free time y las tarifas negociadas con cada naviera, definir los prefijos restringidos y los destinatarios del reporte, y designar un interlocutor de logística para acompañar el piloto. No requiere integración con sistemas de TI de Dow: la solución es autónoma y se accede por navegador.
+
+Implementación: piloto de 8 semanas en Bahía Blanca sobre el módulo de mayor impacto financiero, que es free time en exportación. Los demás módulos entran en fases siguientes, priorizados junto con Dow.`},
+{tag:"EJECUTIVA",para:"el mismo flujo, sin jerga",txt:`Cuando se retiran los contenedores vacíos, se pega la lista en el sistema tal cual viene, sin cargar uno por uno. Desde ese momento el sistema cuenta solo: cada día muestra cuántos días libres le quedan a cada contenedor según lo que Dow tenga negociado con esa naviera, y cuánto costaría si se pasa. Verde, amarillo o rojo. Cuando algo se pone amarillo avisa, y el operador reprograma o prioriza antes de que se cobre.
+
+En importación es el mismo mecanismo: se registra cuándo llegó el barco, cuándo se retiró el contenedor de la terminal, cuándo entró a planta y cuándo se devolvió el vacío, que es lo que corta el reloj.
+
+Y para no depender de que alguien anote las fechas a mano, una cámara en el portón lee la sigla del contenedor cuando entra y cuando sale, verifica sola que la lectura sea correcta y guarda la foto como respaldo. Hoy la terminal no avisa esos movimientos, y son justo los que definen cuánto se cobra.
+
+Lo mismo con los bookings, con las incidencias por lavados exigidos y daños, y con el control de los prefijos que Dow no acepta.
+
+Qué necesitamos de Dow: que nos confirmen el free time y las tarifas acordadas con cada naviera, la lista de prefijos restringidos, y una persona de logística de referencia. Nada de sistemas y nada de TI: se entra por navegador, como a cualquier página.
+
+Cómo arrancamos: 8 semanas en Bahía Blanca con el módulo de free time de exportación, que es donde está la plata. El resto se agrega después, en el orden que Dow prefiera.`},
+{tag:"COMERCIAL",para:"organizado por fases y por quién pone qué",txt:`El sistema convierte una planilla que se mira una vez por mes en un tablero que se mira todos los días.
+
+Fase 1 — Piloto. 8 semanas en Bahía Blanca sobre free time de exportación, el módulo donde están los USD 587.805. Se carga el histórico como línea de base, se parametrizan navieras, tarifas y free time, y se opera con alertas en semáforo. Al cierre, reporte con el costo mensual medido contra la línea de base.
+
+Fase 2 — Cobertura completa de la operación. El ciclo de importación entero, desde el arribo a terminal hasta la devolución del vacío. Bookings y roleo. Incidencias con seguimiento del reclamo hasta la recuperación. Control de prefijos restringidos. Y reconocimiento de la sigla del contenedor por cámara en el portón de planta, que elimina la dependencia de que alguien registre a mano las fechas de ingreso y egreso —las mismas que hoy la terminal no informa y que son las que definen el cargo. Acá entran también los contenedores que hoy no facturan estadía y por eso nadie sigue: pasan a estar trazados.
+
+Fase 3 — Réplica regional. Navieras, tarifas, plantas e idioma son parámetros, no código. Llevarlo a otra planta de Dow en la región es una configuración, no un proyecto nuevo.
+
+Qué pone Dow: horas de logística para validar free time, tarifas por naviera y prefijos restringidos, y un interlocutor para el piloto. Sin presupuesto, sin licencias y sin integración con TI.
+
+Qué pone SSB: el desarrollo, la infraestructura, la capacitación y la operación diaria.`}]},
+
+/* ── Implementación previa ─────────────────────────────────── */
+{ n:18, tipo:"opcion", sec:"Implementación previa", estado:"ok",
+  q:"¿Esta solución ya fue implementada anteriormente?",
+  qpt:"Esta solução já foi implementada anteriormente?",
+  opciones:[{t:"No, es una propuesta nueva",sel:true},{t:"Sí, en Dow"},
+    {t:"Sí, en otro cliente"},{t:"Sí, en formato piloto"}],
+  porQue:"Decisión de framing ya tomada: para Dow es un proyecto nuevo, a desarrollar en conjunto. Lo construido internamente fue prueba de factibilidad y no se menciona.",
+  alt:"Consecuencia mecánica: con esta respuesta el formulario no muestra la pregunta 19. Consecuencia de fondo: el material de docs/caso-negocio/ contradice este framing — ver el pendiente P1 del tablero." },
+
+{ n:19, tipo:"dato", sec:"Implementación previa", estado:"ok",
+  q:"Si ya fue implementada, describa dónde, cuándo y qué resultados se obtuvieron.",
+  qpt:"Se já foi implementada, descreva onde, quando e quais resultados foram obtidos.",
+  valor:"No se muestra",
+  nota:"Pregunta condicional: el formulario solo la despliega si en la 18 se responde “Sí”. Con “No, es una propuesta nueva”, no aparece." },
+
+/* ── Diferencial y beneficio financiero ────────────────────── */
+{ n:20, tipo:"opcion", sec:"Diferencial y beneficio", estado:"ok",
+  q:"¿Cuál es el principal diferencial de la propuesta respecto del modelo actual?",
+  qpt:"Qual é o principal diferencial da proposta em relação ao modelo atual?",
+  opciones:[{t:"Uso de datos / IA / analytics",sel:true},{t:"Rediseño de proceso"},
+    {t:"Nuevo material o insumo"},{t:"Cambio de modelo comercial"},{t:"Otro"}],
+  porQue:"El núcleo es un motor de cálculo diario que proyecta costo y dispara alertas, no un cambio de procedimiento manual. Además engancha directo con la pregunta 37." },
+
+{ n:21, tipo:"opcion", sec:"Diferencial y beneficio", estado:"ok",
+  q:"¿Cuál es el beneficio financiero estimado para Dow?",
+  qpt:"Qual é o benefício financeiro estimado para a Dow?",
+  opciones:[{t:"Hasta USD 50 mil/año"},{t:"USD 50–100 mil/año"},
+    {t:"USD 100–250 mil/año",sel:true},{t:"USD 250–500 mil/año"},{t:"Más de USD 500 mil/año"}],
+  porQue:"El rango calculado, USD 118 a 206 mil, cae entero dentro de esta franja. Subir a la siguiente exigiría contar importación y el resto de los módulos, que hoy no tienen línea de base." },
+
+{ n:22, tipo:"texto", sec:"Diferencial y beneficio", estado:"ok",
+  q:"Informe el valor estimado del beneficio financiero anual para Dow, en USD, y explique las principales premisas del cálculo.",
+  qpt:"Informe o valor estimado do benefício financeiro anual para a Dow, em USD, e explique as principais premissas do cálculo.",
+  busca:"La pregunta con más riesgo del formulario. Dow tiene analistas que van a mirar las premisas antes que el número. Un supuesto declarado como supuesto suma credibilidad; un supuesto disfrazado de medición la destruye.",
+  v:[
+{tag:"TÉCNICA",para:"trazabilidad completa del cálculo",txt:`USD 118.000 a 206.000 por año.
+
+Base de cálculo: acumulado de agosto/2025 a junio/2026 en la exportación de Bahía Blanca = USD 587.805 de detention facturado, tomado de la planilla de costos de la operación, con serie mensual abierta por naviera. Concentración en esa ventana: Maersk USD 558.355 (95,0%), Hapag-Lloyd USD 16.600 (2,8%), CMA-CGM USD 12.850 (2,2%).
+
+Sobre esa base aplicamos dos escenarios de reducción, declarados como hipótesis de trabajo apoyada en benchmarks de detention con alerta anticipada y gestión activa de free time, no como resultado ya medido: escenario conservador, evitar el 20% = USD 117.561 por año; escenario alcanzable, evitar el 35% priorizando el armador de mayor concentración = USD 205.732 por año.
+
+Alcance del cálculo: solo exportación de Bahía Blanca. Quedan fuera, por no tener línea de base, el demurrage y detention de importación, el impacto de bookings e incidencias, y los contenedores cuyo esquema no genera cargo de estadía y por lo tanto no figuran en la serie de costos. La línea de base por contenedor y por día se relevaría durante el piloto.`},
+{tag:"EJECUTIVA",para:"la cuenta en cuatro frases",txt:`Entre USD 118 mil y USD 206 mil por año.
+
+La cuenta es directa: en 11 meses se pagaron USD 587.805 de detention en Bahía Blanca. Si con alerta anticipada evitamos el 20%, son USD 118 mil. Si llegamos al 35% enfocándonos en la naviera que concentra el 95% del costo, son USD 206 mil.
+
+El 20% y el 35% son supuestos de trabajo, no algo ya medido: el piloto los confirma o los corrige contra la línea de base real.
+
+El número cubre solo exportación de Bahía Blanca. Importación y el resto de los módulos no están contados.`},
+{tag:"COMERCIAL",para:"el número, con el techo a la vista",txt:`USD 118.000 a 206.000 por año, y eso es solo Bahía Blanca y solo exportación.
+
+Punto de partida: USD 587.805 pagados de detention entre agosto/2025 y junio/2026, con el 95% concentrado en Maersk. Sobre ese costo, dos escenarios: evitar el 20% son USD 118 mil; evitar el 35% enfocando el armador dominante son USD 206 mil.
+
+Son escenarios declarados, no promesas. El piloto de 8 semanas los valida contra la línea de base real antes de que Dow comprometa nada.
+
+El potencial es mayor que el número declarado, porque todavía no incluye importación, bookings, incidencias, ni los contenedores que hoy no facturan estadía y por eso nadie controla. Ninguno de ellos tiene línea de base todavía, así que preferimos no contarlos.`}]},
+
+{ n:23, tipo:"opcion", sec:"Diferencial y beneficio", estado:"ok",
+  q:"¿Cuál es el tipo principal de ganancia financiera esperada?",
+  qpt:"Qual é o tipo principal de ganho financeiro esperado?",
+  opciones:[{t:"Saving directo",sel:true},{t:"Cost avoidance"},
+    {t:"Aumento de ingresos"},{t:"Liberación de capital"}],
+  porQue:"El detention se paga hoy, todos los meses, contra factura. Reducirlo es plata que deja de salir, no un costo hipotético que se evita. “Cost avoidance” debilitaría un caso que es más fuerte de lo que ese rótulo sugiere." },
+
+/* ── Productividad ─────────────────────────────────────────── */
+{ n:24, tipo:"opcion", sec:"Productividad", estado:"ok", multi:true,
+  q:"¿Qué ganancia de productividad o eficiencia operativa puede generar la propuesta?",
+  qpt:"Qual ganho de produtividade ou eficiência operacional a proposta pode gerar?",
+  opciones:[{t:"Reducción de horas manuales",sel:true},{t:"Reducción de retrabajo",sel:true},
+    {t:"Mejora de planificación",sel:true},{t:"Menor complejidad operativa",sel:true},
+    {t:"Reducción de lead time"}],
+  porQue:"La principal es horas manuales: hoy la carga es fila por fila en Excel y el seguimiento vive en cuatro planillas paralelas.",
+  alt:"Si el campo acepta una sola opción, dejar “Reducción de horas manuales” — es la más medible y la que sostiene el texto de la pregunta 25." },
+
+{ n:25, tipo:"texto", sec:"Productividad", estado:"ok",
+  q:"¿Cómo se medirá esa ganancia de productividad? Indique KPIs, línea de base actual y resultado esperado, si está disponible.",
+  qpt:"Como esse ganho de produtividade será medido? Indique KPIs, baseline atual e resultado esperado, se disponível.",
+  busca:"Buscan si tenés línea de base o si vas a inventarla después. Decir “hoy no se mide y lo relevamos en el piloto” es una respuesta fuerte; decir un porcentaje sin fuente es una respuesta débil.",
+  v:[
+{tag:"TÉCNICA",para:"tres KPIs con su línea de base",txt:`Tres KPIs, medidos mensualmente contra la línea de base registrada en la planilla de costos de la operación.
+
+(1) Costo de detention por mes y por naviera, comparado contra el promedio 2026 de USD 77.206 por mes y contra el pico de abril de USD 117.355.
+
+(2) Porcentaje de contenedores devueltos dentro del free time. Hoy no se mide de forma sistemática: solo se infiere del costo consolidado a fin de mes. La línea de base se releva en las primeras semanas del piloto.
+
+(3) Cobertura de trazabilidad: porcentaje de contenedores de la operación con registro completo en el sistema, incluidos los que no generan cargo de estadía. Línea de base actual: solo el subconjunto que factura detention.
+
+Productividad en horas: el registro por tanda reemplaza la carga fila por fila en Excel y elimina el seguimiento paralelo en planillas separadas —costos, free time de origen, free time de destino e historial de contenedores—; cualquier reporte se genera con un clic en lugar de consolidarse a mano.`},
+{tag:"EJECUTIVA",para:"dos números y un control",txt:`Dos números principales, mirados todos los meses.
+
+Cuánto se pagó de detention este mes, comparado contra el promedio de 2026 —USD 77 mil— y contra el peor mes, que fue abril con USD 117 mil.
+
+Qué porcentaje de contenedores se devolvió dentro del free time. Hoy no lo sabemos con precisión; el piloto lo empieza a medir desde la primera semana.
+
+Y un tercero, de control: cuántos contenedores de la operación están efectivamente registrados. Hoy solo los que facturan.
+
+En horas de trabajo: se pega la lista de contenedores en vez de cargarla fila por fila, y los reportes salen con un clic en vez de armarse a mano.`},
+{tag:"COMERCIAL",para:"KPIs que Dow puede auditar",txt:`KPI principal: costo mensual de detention. La línea de base ya existe y es auditable —USD 77.206 por mes de promedio en 2026, con pico de USD 117.355 en abril—, y Dow puede verificarla contra sus propias facturas.
+
+KPI secundario: porcentaje de contenedores devueltos dentro del free time, a relevar en las primeras semanas del piloto porque hoy no se mide.
+
+KPI de control: cobertura de trazabilidad sobre el total de contenedores de la operación, no solo sobre los que facturan.
+
+Criterio de éxito del piloto: tendencia de reducción visible en el costo mensual y reporte gerencial entregado con datos del sistema, no con estimaciones reconstruidas a mano.`}]},
+
+/* ── Working capital ───────────────────────────────────────── */
+{ n:26, tipo:"opcion", sec:"Working capital", estado:"ok",
+  q:"¿La propuesta contribuye a reducir working capital, stock, inventario o plazo de entrega?",
+  qpt:"A proposta contribui para redução de working capital, estoque, inventário ou prazo de entrega?",
+  opciones:[{t:"Sí"},{t:"Parcialmente",sel:true},{t:"No"}],
+  porQue:"“Sí” obligaría a cuantificarlo y no hay con qué. “No” regala un punto que sí existe. “Parcialmente” es exacto y deja la pregunta 27 para explicar por qué." },
+
+{ n:27, tipo:"texto", sec:"Working capital", estado:"ok",
+  q:"Si aplica, explique el impacto esperado.", qpt:"Se aplicável, explique o impacto esperado.",
+  busca:"Pregunta menor, trampa mayor: si sobrevendés acá, el evaluador desconfía de las respuestas grandes. Conviene ser explícito en que el impacto principal es otro.",
+  v:[
+{tag:"TÉCNICA",para:"nombra las dos vías",txt:`El impacto principal es sobre costo operativo, no sobre inventario. El aporte a working capital es indirecto y llega por dos vías.
+
+Primera: al priorizar por días libres restantes en lugar de por orden de llegada, se acorta el ciclo de rotación del contenedor. El activo se libera antes y baja la exposición a cargos en curso.
+
+Segunda: el seguimiento documentado de incidencias —lavados exigidos y averías, con evidencia fotográfica y línea de tiempo— reduce el monto en disputa y acorta el plazo hasta recuperar lo cobrado indebidamente, que hoy depende de reconstruir cada caso a mano.`},
+{tag:"EJECUTIVA",para:"dos frases, sin inflar",txt:`El impacto grande es en costo, no en stock.
+
+Igual ayuda de dos maneras: los contenedores se despachan o se devuelven antes, porque el sistema muestra cuál está más cerca de vencer; y los reclamos por lavados o averías se resuelven más rápido, porque queda todo registrado con fotos y fechas en vez de tener que reconstruirlo después.`},
+{tag:"COMERCIAL",para:"honesto sobre la proporción",txt:`Parcialmente, y conviene decirlo con precisión: el grueso del beneficio es saving directo sobre un costo que hoy se paga todos los meses.
+
+Sobre working capital el efecto es de segundo orden, pero real: menos días de contenedor retenido, y menos plata inmovilizada en reclamos abiertos por lavados y averías que hoy se pierden o se resuelven tarde por falta de evidencia ordenada.`}]},
+
+/* ── Costo e implementación ────────────────────────────────── */
+{ n:28, tipo:"opcion", sec:"Costo e implementación", estado:"ok",
+  q:"¿Cuál es el costo estimado de implementación para Dow?",
+  qpt:"Qual é o custo estimado de implementação para a Dow?",
+  opciones:[{t:"Sin costo para Dow",sel:true},{t:"Hasta USD 10 mil"},
+    {t:"USD 10–50 mil"},{t:"USD 50–100 mil"},{t:"Más de USD 100 mil"}],
+  porQue:"Es probablemente la respuesta que más hace por la propuesta: elimina la aprobación de presupuesto, que es donde mueren la mayoría de las iniciativas de proveedor.",
+  alt:"Tenés que poder sostenerla si preguntan cómo se financia en el tiempo. Ver el pendiente P9 del tablero: hoy es parte del servicio de SSB, no un producto que se licencia." },
+
+{ n:29, tipo:"texto", sec:"Costo e implementación", estado:"ok",
+  q:"Detalle los costos estimados, incluyendo inversión inicial, costos recurrentes, licencias, equipos, personas, capacitación u otros recursos necesarios.",
+  qpt:"Detalhe os custos estimados, incluindo investimento inicial, custos recorrentes, licenças, equipamentos, pessoas, treinamento ou outros recursos necessários.",
+  busca:"Verifican que el “sin costo” de la 28 sea real y no una omisión. Un “cero” sin desglose se lee como que no lo pensaste; un cero línea por línea se lee como una oferta.",
+  v:[
+{tag:"TÉCNICA",para:"cero, línea por línea",txt:`Inversión inicial: íntegramente a cargo de SSB, incluyendo el desarrollo de la plataforma y su infraestructura. Sin costo de desarrollo ni de licenciamiento para Dow.
+
+Costos recurrentes: hosting y base de datos en la nube, de costo marginal, también absorbidos por SSB como parte del servicio. Sin licencias por usuario ni por puesto, y sin cargo por sitio adicional.
+
+Equipos: ninguno. Se accede por navegador desde el equipamiento existente.
+
+Capacitación: incluida en las 2 primeras semanas del piloto, a cargo de SSB, con el equipo operativo.
+
+Recursos requeridos de Dow: horas del equipo de logística para validar las reglas de free time y las tarifas negociadas con cada naviera, confirmar los prefijos restringidos y definir los destinatarios del reporte gerencial.
+
+Referencia de retorno: evitar que dos contenedores por mes caigan en demora cubre el costo anual de operar el sistema.`},
+{tag:"EJECUTIVA",para:"lo mismo, en tres frases",txt:`Para Dow: cero. SSB pone el desarrollo, el servidor y la capacitación. No hay licencias, no hay equipos que comprar y no hay nada que instalar: se entra por navegador.
+
+Lo único que necesitamos de Dow son horas de su gente de logística para confirmar el free time y las tarifas de cada naviera, y la lista de prefijos que no aceptan.
+
+Para dimensionarlo: evitando dos contenedores en demora por mes ya se cubre el costo anual de mantener el sistema andando.`},
+{tag:"COMERCIAL",para:"cero, y sin costo marginal al escalar",txt:`Sin costo para Dow en ninguna línea: ni inversión inicial, ni licencias, ni recurrentes, ni equipos, ni capacitación. SSB absorbe el desarrollo y la infraestructura como parte del servicio.
+
+El único recurso de Dow son horas de logística para validar las reglas comerciales —free time y tarifas por naviera— y definir los prefijos restringidos.
+
+Escala sin costo marginal: agregar otra planta o país no genera licencia nueva ni cargo adicional, porque es una parametrización sobre la misma plataforma.
+
+Referencia de magnitud: evitar dos contenedores en demora por mes cubre el costo anual de operación del sistema. Todo lo que se evite por encima de eso es saving neto.`}]},
+
+{ n:30, tipo:"opcion", sec:"Costo e implementación", estado:"ok", multi:true,
+  q:"¿Qué recursos se necesitarían de Dow para implementar o probar la propuesta?",
+  qpt:"Quais recursos seriam necessários da Dow para implementar ou testar a proposta?",
+  opciones:[{t:"Tiempo de operación",sel:true},{t:"Datos / información",sel:true},
+    {t:"Presupuesto"},{t:"Equipo de TI"},{t:"Infraestructura"}],
+  porQue:"“Datos / información” son las reglas de free time, las tarifas negociadas por naviera y los prefijos restringidos: información que Dow ya tiene y que es la única entrada crítica del sistema.",
+  alt:"Si el campo acepta una sola opción, elegí “Tiempo de operación”. Lo importante es que ni “Presupuesto” ni “Equipo de TI” queden marcados — son las dos casillas que frenan una propuesta." },
+
+{ n:31, tipo:"opcion", sec:"Costo e implementación", estado:"decidir",
+  q:"¿Cuál es el tiempo estimado para la implementación completa de la propuesta, considerando desde la aprobación hasta que la solución esté operativa en Dow?",
+  qpt:"Qual é o tempo estimado para implementação completa da proposta, considerando desde a aprovação até a solução estar operacional na Dow?",
+  opciones:[{t:"Hasta 30 días"},{t:"1–3 meses",sel:true},{t:"3–6 meses"},
+    {t:"6–12 meses"},{t:"Más de 12 meses"}],
+  porQue:"Decisión tuya: en tres meses debería haber un sistema funcional. Encaja justo en esta franja y es más agresivo que el 3–6 que tenía antes, sin dejar de ser creíble. El piloto de 8 semanas entra dentro del plazo, así que Dow ve resultado medido antes de que termine la implementación.",
+  alt:"Es el número que va a quedar registrado. Si Dow selecciona la propuesta, tres meses desde la aprobación es lo que se firma — asegurate de que el equipo pueda sostenerlo con los cinco módulos, o acotá el alcance de la 17." },
+
+{ n:32, tipo:"opcion", sec:"Costo e implementación", estado:"ok",
+  q:"¿Cuál es la complejidad de implementación de la propuesta?",
+  qpt:"Qual é a complexidade de implementação da proposta?",
+  opciones:[{t:"Baja — no exige cambios estructurales"},
+    {t:"Media — exige coordinación entre áreas, ajustes operativos o validaciones técnicas",sel:true},
+    {t:"Alta — exige cambios estructurales o inversión relevante"}],
+  porQue:"Coordina la operación de SSB, logística y supply de Dow, y validación de reglas comerciales por naviera. Marcar “Baja” con ese alcance suena a que no se dimensionó el trabajo.",
+  alt:"Va de la mano con los tres meses de la 31: complejidad media y plazo corto se leen como equipo que sabe lo que hace. Complejidad baja con cinco módulos se leería como que no se midió." },
+
+{ n:33, tipo:"texto", sec:"Costo e implementación", estado:"ok",
+  q:"¿Cuáles son las principales dependencias, riesgos o restricciones para implementar la propuesta?",
+  qpt:"Quais são as principais dependências, riscos ou restrições para implementar a proposta?",
+  busca:"La pregunta que separa una propuesta seria de un folleto. Nombrar riesgos con su mitigación genera más confianza que decir que no hay ninguno. Lo que Dow más quiere leer acá: que no depende de su área de TI.",
+  v:[
+{tag:"TÉCNICA",para:"cinco riesgos con mitigación",txt:`(1) Alcance y plazo. La propuesta cubre siete frentes: free time en exportación, ciclo de importación, reconocimiento de contenedores en portón, bookings, incidencias, prefijos restringidos y reportes. Mitigación: entrega en fases dentro de los tres meses comprometidos, con un piloto acotado de 8 semanas sobre el frente de mayor impacto financiero.
+
+(2) Adopción. Riesgo de doble registro, con la planilla existente conviviendo con el sistema nuevo. Mitigación: puesta en marcha acompañada y designación del sistema como registro único apenas validada la primera parametrización.
+
+(3) Exactitud de las reglas comerciales. Depende de confirmar con Dow el free time, las tarifas negociadas por naviera y los prefijos restringidos. Mitigación: modelo de reglas versionado por fecha de vigencia, actualizable sin perder historial ni recalcular el pasado.
+
+(4) Calidad del dato de entrada. Mitigación: validación ISO 6346 de cada número de contenedor en la carga, y auditoría de toda corrección posterior.
+
+(5) Cobertura parcial de la línea de base. Los contenedores cuyo esquema no genera cargo de estadía no figuran en la serie histórica de costos, por lo que su volumen real se conoce recién al incorporarlos al sistema.
+
+No hay dependencia del área de TI de Dow: la solución es autónoma y se accede por navegador.`},
+{tag:"EJECUTIVA",para:"cuatro riesgos, en criollo",txt:`El alcance es grande: siete frentes en tres meses. Lo cortamos en fases y arrancamos por donde está la plata.
+
+Que el equipo siga usando la planilla vieja en paralelo. Se resuelve acompañando la puesta en marcha y declarando el sistema como el único registro válido.
+
+Que las reglas de free time o las tarifas queden mal cargadas. Por eso necesitamos que Dow las confirme; el sistema las guarda con fecha de vigencia, así que actualizarlas después no rompe el historial.
+
+Que se carguen datos con errores. El sistema valida cada número de contenedor al ingresar y guarda quién corrigió qué.
+
+Y una aclaración importante: no dependemos del área de TI de Dow para nada.`},
+{tag:"COMERCIAL",para:"ordenado por lo que Dow tiene que poner",txt:`Ninguna dependencia bloqueante y ninguna integración con sistemas de Dow.
+
+Lo único que necesitamos: que Dow confirme el free time y las tarifas negociadas con cada naviera, y la lista de prefijos restringidos. Es la única entrada crítica del sistema, y es información que Dow ya tiene.
+
+Riesgo de plazo: el alcance completo son siete frentes en tres meses. Se mitiga entregando en fases, con un piloto de 8 semanas que produce resultado medible antes de comprometer el resto.
+
+Riesgo de adopción: que convivan la planilla vieja y el sistema nuevo. Se mitiga con puesta en marcha acompañada y un único registro válido.
+
+Riesgo de dato: se mitiga con validación automática de cada número de contenedor y auditoría de toda corrección.`}]},
+
+/* ── Piloto ────────────────────────────────────────────────── */
+{ n:34, tipo:"opcion", sec:"Piloto", estado:"ok",
+  q:"¿La propuesta podría probarse en formato piloto o prueba de concepto?",
+  qpt:"A proposta poderia ser testada em formato piloto ou prova de conceito?",
+  opciones:[{t:"Sí, sin costo para Dow",sel:true},{t:"Sí, con costo"},
+    {t:"No"},{t:"Requiere evaluación"}],
+  porQue:"Un piloto sin costo baja el riesgo de decir que sí a casi cero. Es la respuesta que convierte una propuesta interesante en una propuesta que se prueba." },
+
+{ n:35, tipo:"texto", sec:"Piloto", estado:"ok",
+  q:"Describa cómo sería un piloto inicial: localidad, duración, recursos necesarios, KPIs y criterio de éxito.",
+  qpt:"Descreva como seria um piloto inicial: localidade, duração, recursos necessários, KPIs e critério de sucesso.",
+  busca:"Si esta respuesta es concreta, el evaluador puede imaginarse aprobándola. Cinco cosas explícitas: dónde, cuánto dura, qué ponen ellos, qué se mide y cuándo se considera que salió bien.",
+  v:[
+{tag:"TÉCNICA",para:"semana por semana",txt:`Localidad: Bahía Blanca, exportación de PBB Polisur/Dow operada por SSB.
+
+Duración: 8 semanas. Semanas 1 a 3: carga del histórico de costos como línea de base, parametrización de navieras, tarifas, free time por contrato y depósitos, y relevamiento de la línea de base del porcentaje de devolución dentro del free time, que hoy no existe. Semanas 4 a 8: operación acompañada con alertas en semáforo y reporte gerencial automático.
+
+Recursos: sin costo para Dow. Se requieren horas del equipo de logística de Dow para validar las reglas comerciales, y un interlocutor designado.
+
+KPIs: (a) costo mensual de detention contra la línea de base 2026 —USD 77.206 por mes de promedio, con pico de USD 117.355 en abril—; (b) porcentaje de contenedores devueltos dentro del free time; (c) cobertura de trazabilidad sobre el total de contenedores operados.
+
+Criterio de éxito: tendencia medible de reducción en el costo mensual de detention, y reporte gerencial semanal entregado con dato del sistema en lugar de reconstruido a mano.
+
+Un piloto validado en Bahía Blanca funciona como plantilla de réplica: el módulo de exportación se despliega en otra planta de la región configurando navieras, tarifas, free time e idioma.`},
+{tag:"EJECUTIVA",para:"las cinco preguntas, contestadas",txt:`Dónde: Bahía Blanca.
+
+Cuánto: 8 semanas. Las primeras 2 o 3 son de preparación —cargar el histórico y configurar navieras, tarifas y free time. Las otras 5, operando con el sistema.
+
+Qué necesitamos de Dow: horas de logística para confirmar las reglas, y una persona de contacto. Nada más, y sin costo.
+
+Cómo sabemos si salió bien: si el costo mensual de detention baja contra el promedio de 2026, que es USD 77 mil, y si al final entregamos el reporte gerencial saliendo del sistema en vez de armado a mano.
+
+Y si funciona en Bahía Blanca, lo mismo se instala en otra planta cambiando parámetros.`},
+{tag:"COMERCIAL",para:"el piloto como molde de la réplica",txt:`8 semanas, Bahía Blanca, sin costo para Dow y con resultado medible al cierre.
+
+Semanas 1 a 3: se carga el histórico como línea de base y se configuran navieras, tarifas y free time. Semanas 4 a 8: operación con alertas y reporte gerencial automático.
+
+Lo que Dow aporta: horas de logística para validar reglas y un interlocutor. Nada de presupuesto y nada de TI.
+
+Cómo se mide el éxito: costo mensual de detention contra una línea de base que ya existe —USD 77 mil por mes de promedio en 2026, USD 117 mil en el peor mes— más el porcentaje de contenedores devueltos dentro del free time.
+
+El piloto no es solo una prueba: es el molde. Validado en Bahía Blanca, replicarlo en otra planta de la región es cargar parámetros, no empezar de cero.`}]},
+
+/* ── Innovación y tecnología ───────────────────────────────── */
+{ n:36, tipo:"opcion", sec:"Innovación y tecnología", estado:"ok",
+  q:"¿Cuál es el nivel de innovación de la propuesta para Dow?",
+  qpt:"Qual é o nível de inovação da proposta para a Dow?",
+  opciones:[{t:"Mejora incremental"},{t:"Nueva solución aún no aplicada en Dow",sel:true},
+    {t:"Innovación disruptiva para el sector"}],
+  porQue:"Es coherente con la 18. “Disruptiva para el sector” sería exagerado —hay software de tracking de contenedores en el mercado— y exagerar acá le da al evaluador motivo para dudar del resto.",
+  alt:"Lo que sí es distintivo, y conviene decirlo en la 38 en vez de acá: está parametrizado sobre los contratos que Dow negocia con cada naviera, no sobre reglas genéricas de mercado." },
+
+{ n:37, tipo:"opcion", sec:"Innovación y tecnología", estado:"ok",
+  q:"¿La propuesta utiliza tecnología, automatización, digitalización, datos o inteligencia artificial?",
+  qpt:"A proposta utiliza tecnologia, automação, digitalização, dados ou inteligência artificial?",
+  opciones:[{t:"Sí",sel:true},{t:"No"},{t:"Parcialmente"}],
+  porQue:"Habilita la pregunta 38, que es donde la propuesta se diferencia de una planilla mejor hecha." },
+
+{ n:38, tipo:"texto", sec:"Innovación y tecnología", estado:"ok",
+  q:"Si es así, describa la tecnología utilizada y cómo contribuye a generar productividad, costo o confiabilidad.",
+  qpt:"Se sim, descreva a tecnologia utilizada e como ela contribui para gerar produtividade, custo ou confiabilidade.",
+  busca:"Es donde se justifica el “Uso de datos / IA / analytics” de la pregunta 20 y donde la escalabilidad regional deja de ser una promesa. Si la arquitectura parametrizada se explica bien, el “Sí” de la 14 queda demostrado y no solo afirmado.",
+  v:[
+{tag:"TÉCNICA",para:"la arquitectura, con nombre propio",txt:`Aplicación web en la nube, con actualización en tiempo real y auditoría completa de cambios.
+
+El núcleo es un motor de cálculo diario que cruza cada contenedor con las reglas comerciales de su naviera —free time y tarifas versionados por fecha de vigencia, parametrizables según los contratos que Dow negocia con cada armador— y proyecta el costo de no actuar, con alertas en semáforo.
+
+Automatización de ingreso: carga por tanda con validación del número de contenedor según ISO 6346, que corta el error de tipeo en el origen.
+
+Visión por computadora en portón: lectura de la sigla del contenedor por cámara al ingreso y al egreso de planta. El dígito verificador del estándar ISO 6346 —una comprobación aritmética sobre los propios caracteres— permite descartar automáticamente las lecturas erróneas, de modo que solo se registra lo que se validó, con la foto del momento como comprobante. Es la pieza que cierra el punto ciego de las fechas de movimiento, que hoy la terminal no informa.
+
+Control de acceso por rol —operador, supervisor, administrador— con trazabilidad de quién cambió qué y cuándo.
+
+Registro de waivers con neto facturable, exportación a Excel configurable y reporte gerencial automático por correo.
+
+Arquitectura 100% parametrizada: navieras, tarifas, plantas, depósitos, prefijos restringidos e idioma (español, portugués e inglés) son configuración, no código. La réplica en otro sitio de América Latina —y, en fases siguientes, en EMEAI, APAC o NAM— es una parametrización, no un desarrollo nuevo.`},
+{tag:"EJECUTIVA",para:"qué hace, sin nombrar tecnología",txt:`Es una aplicación web: se entra desde el navegador, no hay que instalar nada y se actualiza sola.
+
+Lo que hace por dentro: todos los días revisa contenedor por contenedor cuántos días libres quedan según lo acordado con esa naviera, y calcula cuánto costaría si se pasa.
+
+Y usa la cámara del portón para leer sola la sigla del contenedor cuando entra y cuando sale de planta. El número de contenedor tiene un dígito de control, así que el sistema se da cuenta solo si leyó mal y descarta la lectura. Queda la foto como respaldo.
+
+Cada persona ve lo que le corresponde según su rol, y queda registrado quién cambió qué.
+
+Y lo más importante para Dow: las navieras, las tarifas, las plantas y hasta el idioma son configuración. Poner el sistema en otra planta es cargar los datos de esa planta, no volver a programar.`},
+{tag:"COMERCIAL",para:"por qué no es una planilla mejor",txt:`Sí. Y la diferencia con una planilla no es que sea digital: es que calcula solo y avisa antes.
+
+El motor cruza a diario cada contenedor con el free time y la tarifa que Dow tiene negociada con esa naviera, y proyecta cuánto cuesta no actuar. De ahí sale la alerta en semáforo, que es lo que convierte un costo detectado tarde en un costo evitado.
+
+Sobre confiabilidad: cada número de contenedor se valida al ingresar, cada cambio queda auditado y cada usuario ve solo lo que le corresponde. Y una cámara en el portón lee la sigla al entrar y al salir de planta, con la foto como comprobante: las fechas de movimiento dejan de depender de que alguien las anote, que es hoy el eslabón más frágil porque la terminal no las informa.
+
+Sobre escala: navieras, tarifas, plantas e idioma —español, portugués e inglés— son parámetros. Llevar el sistema a otra planta de Dow en la región no es un proyecto nuevo, es una configuración. Por eso el costo marginal de escalar es prácticamente cero, y por eso lo que se valide en Bahía Blanca sirve para toda la región.`}]},
+
+/* ── Otros impactos ────────────────────────────────────────── */
+{ n:39, tipo:"opcion", sec:"Otros impactos", estado:"ok", multi:true,
+  q:"Además de productividad y costo, ¿qué otros impactos positivos puede generar la propuesta?",
+  qpt:"Além de produtividade e custo, quais outros impactos positivos a proposta pode gerar?",
+  opciones:[{t:"Gobernanza",sel:true},{t:"Reducción de riesgo",sel:true},
+    {t:"Confiabilidad de supply",sel:true},{t:"Calidad",sel:true},
+    {t:"Sustentabilidad"},{t:"Seguridad"}],
+  porQue:"Gobernanza y reducción de riesgo salen de la auditoría y del registro único. Confiabilidad de supply, de las alertas de corte documental y de embarque. Calidad se agregó por el módulo de prefijos restringidos, que es un control de cumplimiento sobre qué contenedores entran a operar con Dow.",
+  alt:"“Sustentabilidad” es tentador —menos movimientos vacíos, menos reposicionamiento— pero sin dato que lo respalde es la clase de check que un evaluador atento castiga. Lo dejé afuera." },
+
+{ n:40, tipo:"dato", sec:"Otros impactos", estado:"ok",
+  q:"¿La propuesta está alineada con algún desafío u oportunidad ya discutida con equipos de Dow?",
+  qpt:"A proposta está alinhada a algum desafio ou oportunidade já discutida com times da Dow?",
+  valor:"No",
+  nota:"La propuesta es interna de SSB: no se conversó con nadie de Dow. Va “No” y punto. Un alineamiento inventado se verifica con una llamada, y el costo de que se caiga es mucho mayor que el punto que suma." },
+
+{ n:41, tipo:"dato", sec:"Otros impactos", estado:"ok",
+  q:"Si es así, informe el área, localidad, contacto de Dow o contexto ya discutido.",
+  qpt:"Se sim, informe a área, localidade, contato Dow ou contexto já discutido.",
+  valor:"No se muestra",
+  nota:"Condicional a la 40. Con “No” seleccionado en la 40, el formulario no despliega esta pregunta." },
+
+/* ── Pitch ─────────────────────────────────────────────────── */
+{ n:42, tipo:"opcion", sec:"Pitch", estado:"ok",
+  q:"En caso de selección, ¿su empresa estaría disponible para presentar la propuesta en una sesión de pitch de 15 minutos + 10 minutos de preguntas durante el Supplier Productivity Summit?",
+  qpt:"Em caso de seleção, sua empresa estaria disponível para apresentar a proposta em uma sessão de pitch de 15 minutos + 10 minutos de perguntas durante o Supplier Productivity Summit?",
+  opciones:[{t:"Sí",sel:true},{t:"No"},{t:"A confirmar"}],
+  porQue:"“A confirmar” en esta pregunta es una forma elegante de quedar afuera del armado de la agenda." },
+
+{ n:43, tipo:"dato", sec:"Pitch", estado:"ok",
+  q:"Nombre y e-mail de la persona que presentaría la propuesta, en caso de ser seleccionada.",
+  qpt:"Nome e e-mail da pessoa que apresentaria a proposta, caso selecionada.",
+  valor:"Jonathan Ezequiel Zenteno Parrado — jzenteno@ssbint.com",
+  nota:"Son 15 minutos más 10 de preguntas. Tres preguntas casi seguras, con la respuesta lista. (1) “¿De dónde salen los USD 587.805?” → De la planilla de costos que el equipo lleva en la operación, mes a mes y por naviera, cruzable contra las facturas de Dow. (2) “¿Por qué 20% y 35% y no otro número?” → Son escenarios declarados, no una medición; el piloto de 8 semanas los valida o los corrige contra la línea de base real. (3) “¿Cómo se sostiene el sin costo?” → El costo de operar el sistema es marginal contra el ahorro: evitar dos contenedores en demora por mes ya lo cubre. SSB lo absorbe porque el foco de la propuesta es el cost saving sobre los números medidos, no un cambio en el esquema comercial." },
+
+{ n:44, tipo:"texto", sec:"Pitch", estado:"ok",
+  q:"Comentarios adicionales", qpt:"Comentários adicionais",
+  busca:"Campo libre, y por eso el más desperdiciado. Es el último lugar para dejar una impresión: o se usa para dar credibilidad a los números, o para comprometerse con algo concreto. Repetir lo ya dicho no suma.",
+  v:[
+{tag:"TÉCNICA",para:"trazabilidad y alcance declarado",txt:`SSB mantiene relación comercial con Dow desde hace más de 10 años, de los cuales los últimos 5 en la operativa de exportación e importación. El diagnóstico de esta propuesta no viene de un análisis externo: viene de operar el proceso todos los días.
+
+Las cifras de este formulario provienen de la planilla de costos de detention que el equipo de SSB lleva en la operación —serie mensual por naviera, 2024 a 2026—, verificable contra las facturas de cada armador. La ventana de 11 meses, de agosto/2025 a junio/2026, se eligió por ser el período con datos cerrados; julio a diciembre de 2026 todavía no está consolidado.
+
+Aclaración de alcance: el costo declarado corresponde a las navieras que facturan estadía. Una porción relevante de la operación se mueve con esquemas que no generan ese cargo y por lo tanto no figura en la serie de costos. Incorporarla al sistema no agrega ahorro directo, pero completa la trazabilidad de la operación.
+
+SSB está en condiciones de entregar el piloto del módulo de free time en 8 semanas desde la aprobación, sin costo para Dow, con reporte de resultado medido al cierre.`},
+{tag:"EJECUTIVA",para:"corto y honesto",txt:`SSB trabaja con Dow hace más de 10 años, los últimos 5 en la operativa de exportación e importación. Esto no lo pensó alguien de afuera: sale de operar el proceso todos los días.
+
+Los números salen de la planilla de costos que lleva el equipo en la operación, mes a mes y naviera por naviera, y se pueden cruzar contra las facturas.
+
+Una aclaración honesta: el costo que informamos es el de las navieras que cobran estadía. Hay una parte de la operación que no genera ese cargo y por eso hoy no se sigue. Incorporarla no suma ahorro, pero completa el control.
+
+Si la propuesta avanza, SSB entrega el piloto en 8 semanas desde la aprobación, sin costo para Dow y con resultado medido al final.`},
+{tag:"COMERCIAL",para:"cierra con el compromiso",txt:`Tres cosas que queremos dejar dichas.
+
+Primero, los números son verificables y salen de adentro. SSB opera para Dow hace más de 10 años, los últimos 5 en exportación e importación, y la planilla de costos la lleva el propio equipo en la operación: mes a mes, naviera por naviera, cruzable contra las facturas de Dow.
+
+Segundo, el número declarado es conservador. Cubre solo la exportación de Bahía Blanca y solo las navieras que facturan estadía. No incluye importación, bookings, incidencias, ni los contenedores que hoy no generan cargo y por eso nadie controla.
+
+Tercero, el compromiso es concreto: piloto en 8 semanas desde la aprobación, sin costo para Dow y con resultado medido al cierre. Y como la arquitectura es parametrizable, lo que se valide en Bahía Blanca queda listo para replicarse en las demás localidades de Dow en América Latina y, en fases siguientes, en otras regiones donde Dow opera con SSB.`}]}
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   ESTADO
+   ═══════════════════════════════════════════════════════════════ */
+const KEY = "dow-summit-2026-revision-v2";
+let S = { sel:{}, notas:{}, ok:{}, quien:"" };
+try { const raw = localStorage.getItem(KEY); if (raw) Object.assign(S, JSON.parse(raw)); } catch(e){}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+const LETRAS = ["A","B","C"];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const parrafos = t => t.split(/\n\s*\n/).map(p =>
+  "<p>" + esc(p).replace(/\n/g, "<br>") + "</p>").join("");
+
+const PREGUNTAS = ITEMS.filter(i => i.tipo !== "riesgos");
+const resuelto = it => it.tipo === "texto" ? !!S.sel[it.n] : !!S.ok[it.n];
+const claseDot = it => resuelto(it) ? "hecho"
+  : it.estado === "falta" ? "falta"
+  : it.estado === "decidir" ? "decidir" : "ok";
+
+/* ═══════════════════════════════════════════════════════════════
+   ÍNDICE (columna izquierda)
+   ═══════════════════════════════════════════════════════════════ */
+function construirRiel(){
+  const p = [`<button class="rail-risk" data-ir="pendientes">
+      <span>⚠</span><span>Pendientes y decisiones</span></button>`];
+  let sec = null;
+  PREGUNTAS.forEach(it => {
+    if (it.sec !== sec){ sec = it.sec; p.push(`<div class="rail-grp">${esc(sec)}</div>`); }
+    p.push(`<button class="rail-item" data-ir="q-${it.n}" id="riel-${it.n}" title="${esc(it.q)}">
+        <span class="rail-n">${it.n}</span>
+        <span class="dot ${claseDot(it)}" id="dot-${it.n}"></span>
+        <span class="rail-t">${esc(it.q)}</span></button>`);
+  });
+  p.push(`<div class="rail-grp">Cierre</div>
+    <button class="rail-item" data-ir="cierre">
+      <span class="rail-n">↓</span><span class="dot"></span>
+      <span class="rail-t">Lo elegido, para pasarme</span></button>`);
+  $("#rail").innerHTML = p.join("");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DOCUMENTO (columna derecha, de arriba a abajo)
+   ═══════════════════════════════════════════════════════════════ */
+function bloquePendientes(){
+  const fila = r => `<div class="risk ${r.g}">
+      <span class="risk-ico">${esc(r.ico)}</span>
+      <div><h3>${esc(r.t)}</h3><p>${esc(r.d)}</p></div>
+      ${r.ir ? `<button class="risk-go" data-ir="q-${r.ir}">ir a ${r.ir} →</button>` : ""}
+    </div>`;
+  const n = RIESGOS.abiertos.length, m = RIESGOS.resueltos.length;
+  const palabra = ["cero","una","dos","tres","cuatro","cinco","seis","siete","ocho","nueve"][n] || n;
+  return `<section class="hero" id="pendientes">
+      <h1>Quedan ${palabra} ${n === 1 ? "cosa" : "cosas"} para decidir</h1>
+      <p>Abajo están las 42 preguntas del formulario, en orden, con las respuestas ya escritas.
+      Esto de acá es lo otro: lo que ninguna redacción resuelve. ${m} de estos puntos ya se
+      cerraron y quedan listados al final para que veas en qué se decidió cada uno.</p>
+      <div class="who">
+        <label for="quien">Quién está revisando:</label>
+        <input id="quien" type="text" placeholder="tu nombre" value="${esc(S.quien)}">
+        <span class="meter-txt">Firma el resumen del final.</span>
+      </div>
+      <div class="risk-grp">Abiertos</div>
+      <div class="risks">${RIESGOS.abiertos.map(fila).join("")}</div>
+      <div class="risk-grp">Cerrados en esta sesión</div>
+      <div class="risks">${RIESGOS.resueltos.map(fila).join("")}</div>
+      <div class="fuente">
+        <h4>De dónde salen los números</h4>
+        <p style="margin:0 0 11px">Planilla <span class="mono">COSTOS POR DETENTION SEMANAL
+        2024-2025-2026</span>, que lleva a mano el equipo en la operación. Serie mensual por
+        naviera, actualizada hasta hace una semana. <b>Cerrada: estos números no se tocan.</b></p>
+        <table>${CIFRAS.map(c => `<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join("")}</table>
+      </div>
+    </section>`;
+}
+
+function chips(it){
+  const c = [];
+  if (it.tipo === "texto") c.push('<span class="chip escribir">Texto libre · elegí una</span>');
+  else if (it.tipo === "opcion") c.push('<span class="chip">Opción a marcar</span>');
+  else if (it.estado !== "falta") c.push('<span class="chip">Dato</span>');
+  if (it.estado === "falta") c.push('<span class="chip falta">Falta tu dato</span>');
+  if (it.estado === "decidir") c.push('<span class="chip decidir">Decisión abierta</span>');
+  c.push(`<span class="chip ok" id="chip-ok-${it.n}"
+    style="display:${resuelto(it) ? "inline" : "none"}">Revisada ✓</span>`);
+  return c.join("");
+}
+
+function tarjeta(it, i){
+  const v = it.v[i], sel = S.sel[it.n] === LETRAS[i];
+  const n = v.txt.length, over = it.limite && n > it.limite;
+  return `<article class="card ${sel ? "sel" : ""}" data-letra="${LETRAS[i]}">
+      <header class="card-top">
+        <span class="card-key">${LETRAS[i]}</span>
+        <span class="card-id">
+          <span class="card-tag">${esc(v.tag)}</span>
+          <span class="card-para">${esc(v.para)}</span>
+        </span>
+      </header>
+      <div class="card-body">${parrafos(v.txt)}</div>
+      <footer class="card-foot">
+        <span class="card-count ${over ? "over" : ""}">${n} caracteres${over ? " · se pasa" : ""}</span>
+        <button class="btn" data-copy="${it.n}:${i}">Copiar</button>
+        <button class="btn ${sel ? "" : "btn-primary"}" data-pick="${it.n}:${LETRAS[i]}">
+          ${sel ? "Elegida ✓" : "Elegir " + LETRAS[i]}</button>
+      </footer>
+    </article>`;
+}
+
+function cuerpo(it){
+  if (it.tipo === "texto"){
+    return `<div class="busca"><span class="busca-lbl">Qué busca Dow</span>
+        <p>${esc(it.busca)}</p></div>
+      <div class="cards">${[0,1,2].map(i => tarjeta(it, i)).join("")}</div>`;
+  }
+  const ok = !!S.ok[it.n];
+  const boton = `<button class="btn ${ok ? "" : "btn-primary"}" data-ok="${it.n}">
+      ${ok ? "Revisada ✓" : (it.tipo === "dato" && !it.valor ? "Anotado, lo completo" : "De acuerdo")}
+    </button>`;
+  if (it.tipo === "opcion"){
+    const opts = it.opciones.map(o =>
+      `<div class="opt ${o.sel ? "on" : ""} ${it.multi ? "multi" : ""}">
+         <span class="radio"></span><span>${esc(o.t)}</span></div>`).join("");
+    return `<div class="panel">
+        <div class="opts">${opts}</div>
+        <div class="why"><span class="why-lbl">Por qué</span><p>${esc(it.porQue)}</p></div>
+        ${it.alt ? `<div class="why alt"><span class="why-lbl">Ojo</span><p>${esc(it.alt)}</p></div>` : ""}
+        <div class="acciones">${boton}
+          <span class="meter-txt">Si lo cambiarías, escribilo en la nota.</span></div>
+      </div>`;
+  }
+  const vacio = !it.valor;
+  return `<div class="panel">
+      <span class="dato ${vacio ? "vacio" : ""}">${vacio ? "— pendiente de tu dato —" : esc(it.valor)}</span>
+      <div class="why"><span class="why-lbl">Nota</span><p>${esc(it.nota)}</p></div>
+      <div class="acciones">${boton}</div>
+    </div>`;
+}
+
+function bloquePregunta(it){
+  return `<section class="qb" id="q-${it.n}" data-n="${it.n}">
+      <div class="qhead">
+        <span class="q-num">${it.n}</span>
+        <h2 class="q-title">${esc(it.q)}</h2>
+        <div class="q-meta">${chips(it)}
+          ${it.qpt ? `<span class="q-pt">${esc(it.qpt)}</span>` : ""}</div>
+      </div>
+      ${cuerpo(it)}
+      <div class="note">
+        <label for="nota-${it.n}">Nota para la reunión</label>
+        <textarea id="nota-${it.n}" data-nota="${it.n}"
+          placeholder="Qué cambiarías, qué preguntar, qué falta…">${esc(S.notas[it.n] || "")}</textarea>
+      </div>
+    </section>`;
+}
+
+function construirDoc(){
+  const p = [bloquePendientes()];
+  let sec = null;
+  PREGUNTAS.forEach(it => {
+    if (it.sec !== sec){ sec = it.sec; p.push(`<h2 class="doc-sec">${esc(sec)}</h2>`); }
+    p.push(bloquePregunta(it));
+  });
+  p.push(`<section class="cierre" id="cierre">
+      <h2>Lo elegido</h2>
+      <p>Se actualiza solo a medida que vas eligiendo. Copiá esto y pasámelo:
+      con eso redacto la versión final en portugués para pegar en el formulario.</p>
+      <textarea id="salida" readonly spellcheck="false"></textarea>
+      <div class="acciones">
+        <button class="btn btn-primary" id="copiar">Copiar todo</button>
+        <span class="meter-txt" id="copy-msg"></span>
+      </div>
+    </section>`);
+  $("#doc").innerHTML = p.join("");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTUALIZACIONES PUNTUALES (sin re-render: no se pierde el scroll)
+   ═══════════════════════════════════════════════════════════════ */
+function refrescarPregunta(n){
+  const it = PREGUNTAS.find(x => String(x.n) === String(n));
+  const bloque = document.getElementById("q-" + n);
+  if (it.tipo === "texto"){
+    bloque.querySelectorAll(".card").forEach(c => {
+      const on = S.sel[n] === c.dataset.letra;
+      c.classList.toggle("sel", on);
+      const b = c.querySelector("[data-pick]");
+      b.textContent = on ? "Elegida ✓" : "Elegir " + c.dataset.letra;
+      b.classList.toggle("btn-primary", !on);
+    });
+  } else {
+    const on = !!S.ok[n];
+    const b = bloque.querySelector("[data-ok]");
+    b.textContent = on ? "Revisada ✓"
+      : (it.tipo === "dato" && !it.valor ? "Anotado, lo completo" : "De acuerdo");
+    b.classList.toggle("btn-primary", !on);
+  }
+  const chip = document.getElementById("chip-ok-" + n);
+  if (chip) chip.style.display = resuelto(it) ? "inline" : "none";
+  const dot = document.getElementById("dot-" + n);
+  if (dot) dot.className = "dot " + claseDot(it);
+  refrescarGlobal();
+}
+
+function refrescarGlobal(){
+  const hechas = PREGUNTAS.filter(resuelto).length;
+  $("#meter").style.width = (hechas / PREGUNTAS.length * 100) + "%";
+  $("#meter-txt").textContent = hechas + "/" + PREGUNTAS.length;
+  $("#risk-n").textContent = RIESGOS.abiertos.length;
+  const s = $("#salida");
+  if (s) s.value = armarSalida();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SALIDA
+   ═══════════════════════════════════════════════════════════════ */
+function armarSalida(){
+  const L = ["DOW SUPPLIER PRODUCTIVITY SUMMIT 2026 — REVISION DEL FORMULARIO",
+             "Revisado por: " + (S.quien || "(sin firmar)"), ""];
+  L.push("PENDIENTES ABIERTOS");
+  RIESGOS.abiertos.forEach(r => L.push("  [" + r.ico + "] " + r.t));
+  L.push("", "DECISIONES POR PREGUNTA", "");
+  PREGUNTAS.forEach(it => {
+    const nota = (S.notas[it.n] || "").trim();
+    if (it.tipo === "texto"){
+      const s = S.sel[it.n];
+      if (!s && !nota) return;
+      L.push("P" + it.n + " — " + it.q);
+      L.push("   Elegida: " + (s ? s + " · " + it.v[LETRAS.indexOf(s)].tag : "SIN ELEGIR"));
+    } else {
+      if (!S.ok[it.n] && !nota) return;
+      L.push("P" + it.n + " — " + it.q);
+      const marcada = it.tipo === "opcion"
+        ? it.opciones.filter(o => o.sel).map(o => o.t).join(" + ")
+        : (it.valor || "PENDIENTE DE DATO");
+      L.push("   " + (S.ok[it.n] ? "Confirmada: " : "Sin confirmar: ") + marcada);
+    }
+    if (nota) L.push("   Nota: " + nota);
+    L.push("");
+  });
+  const sin = PREGUNTAS.filter(i => i.tipo === "texto" && !S.sel[i.n]).map(i => i.n);
+  if (sin.length) L.push("TEXTOS SIN VARIANTE ELEGIDA: " + sin.join(", "), "");
+  const faltan = PREGUNTAS.filter(i => i.estado === "falta");
+  if (faltan.length){
+    L.push("DATOS QUE FALTAN");
+    faltan.forEach(f => L.push("  P" + f.n + " " + f.q));
+  }
+  return L.join("\n");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EVENTOS
+   ═══════════════════════════════════════════════════════════════ */
+function irA(id){
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ block:"start" });
+  $("#rail").classList.remove("open");
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-ir],[data-pick],[data-ok],[data-copy]");
+  if (!t) return;
+  if (t.dataset.ir){ irA(t.dataset.ir); return; }
+  if (t.dataset.pick){
+    const [n, letra] = t.dataset.pick.split(":");
+    S.sel[n] = S.sel[n] === letra ? null : letra;
+    save(); refrescarPregunta(n); return;
+  }
+  if (t.dataset.ok){
+    S.ok[t.dataset.ok] = !S.ok[t.dataset.ok];
+    save(); refrescarPregunta(t.dataset.ok); return;
+  }
+  if (t.dataset.copy){
+    const [n, i] = t.dataset.copy.split(":");
+    const it = PREGUNTAS.find(x => String(x.n) === n);
+    copiar(it.v[+i].txt, t);
+  }
+});
+
+async function copiar(txt, boton){
+  const previo = boton.textContent;
+  try {
+    await navigator.clipboard.writeText(txt);
+    boton.textContent = "Copiado ✓";
+  } catch(err){
+    const ta = document.createElement("textarea");
+    ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    boton.textContent = document.execCommand("copy") ? "Copiado ✓" : "No se pudo";
+    ta.remove();
+  }
+  setTimeout(() => { boton.textContent = previo; }, 1600);
+}
+
+document.addEventListener("input", e => {
+  if (e.target.dataset.nota){
+    S.notas[e.target.dataset.nota] = e.target.value; save();
+    $("#salida").value = armarSalida();
+  }
+  if (e.target.id === "quien"){
+    S.quien = e.target.value; save();
+    $("#salida").value = armarSalida();
+  }
+});
+
+$("#go-risk").addEventListener("click", () => irA("pendientes"));
+$("#go-cierre").addEventListener("click", () => irA("cierre"));
+$("#burger").addEventListener("click", () => $("#rail").classList.toggle("open"));
+$("#theme").addEventListener("click", () => {
+  const actual = document.documentElement.getAttribute("data-theme");
+  const oscuro = actual ? actual === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", oscuro ? "light" : "dark");
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   ARRANQUE
+   ═══════════════════════════════════════════════════════════════ */
+construirRiel();
+construirDoc();
+refrescarGlobal();
+
+$("#copiar").addEventListener("click", e => copiar($("#salida").value, e.target));
+
+/* El índice sigue al scroll: marca dónde estás sin que tengas que buscarlo. */
+const anclas = [...document.querySelectorAll(".qb, .hero, .cierre")];
+const rielDe = el => el.id === "pendientes" ? $('[data-ir="pendientes"]')
+  : el.id === "cierre" ? $('[data-ir="cierre"]')
+  : document.getElementById("riel-" + el.dataset.n);
+
+let activo = null;
+const obs = new IntersectionObserver(() => {
+  const y = window.scrollY + 90;
+  let cand = anclas[0];
+  for (const el of anclas) if (el.offsetTop <= y) cand = el;
+  const btn = rielDe(cand);
+  if (btn === activo) return;
+  if (activo) activo.classList.remove("aqui");
+  activo = btn;
+  if (btn){
+    btn.classList.add("aqui");
+    const r = btn.getBoundingClientRect(), c = $("#rail").getBoundingClientRect();
+    if (r.top < c.top + 8 || r.bottom > c.bottom - 8){
+      btn.scrollIntoView({ block:"center", behavior:"auto" });
+    }
+  }
+}, { rootMargin:"-80px 0px -70% 0px", threshold:0 });
+anclas.forEach(a => obs.observe(a));
+</script>

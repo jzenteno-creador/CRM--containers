@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+    <title>CRM Detention de Contenedores — SSB International</title>
+    <style>
+:root{--dark: #121c2f;--accent: #c74f12;--accent-light: #e08a5c;--accent-bg: #faeee6;--navy-bg: #e8ecf3;--bg: #fafafb;--card: #f4f4f6;--muted: #64708a;--border: #dde1e8;--semantic-green: #2ba185;--semantic-red: #f55459;--semantic-amber: #d4953a;--semantic-green-bg: #e0f5ef;--semantic-red-bg: #fde8e9;--semantic-amber-bg: #fdf3e4}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:Rubik,system-ui,-apple-system,sans-serif;color:var(--dark);background:var(--bg);line-height:1.7;font-size:.9rem;overflow:hidden}
+h1{font-size:2.5rem;font-weight:700;letter-spacing:-.03em;line-height:1.2}
+h2{font-size:1.55rem;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+h3{font-size:1rem;font-weight:600}
+.subtitle{font-size:.95rem;color:var(--muted);max-width:680px;margin-bottom:22px}
+.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);transition:width .3s;z-index:10}
+.slide{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:safe center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .45s ease;overflow-y:auto}
+.slide.active{opacity:1;pointer-events:auto}
+.slide-content{width:100%;max-width:960px;padding:56px 40px 84px}
+@keyframes fadeUp{0%{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.anim h2,.anim .subtitle,.anim .cols,.anim .cards,.anim .stat-row,.anim .flow-wrap,.anim table,.anim ul,.anim .title-block,.anim .closing-block,.anim .formula-box,.anim .chart-wrap,.anim .semaforo,.anim .geo-row,.anim .flow-note{opacity:0;animation:fadeUp .5s ease both}
+.anim .d1{animation-delay:.1s}.anim .d2{animation-delay:.2s}.anim .d3{animation-delay:.3s}
+.glyph-watermark{position:fixed;top:20px;left:24px;z-index:8;opacity:.35;pointer-events:none;display:flex;align-items:center;gap:10px;transition:opacity .3s}
+.glyph-watermark.hidden{opacity:0}
+.glyph-watermark svg{width:44px;height:auto;display:block}
+.watermark-title{font-size:.85rem;font-weight:600;letter-spacing:-.01em;line-height:1;color:var(--muted)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;padding:14px;z-index:5}
+nav button{background:none;border:none;cursor:pointer;font-family:inherit;font-size:.9rem;color:var(--muted);padding:4px 8px}
+nav button:hover{color:var(--dark)}
+nav button:disabled{opacity:.2;cursor:default}
+.slide-number{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--border);cursor:pointer;transition:background .2s}
+.dot.on{background:var(--accent)}
+.lang-switch{position:fixed;top:14px;right:20px;z-index:20;display:flex;gap:2px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:3px}
+.lang-switch button{border:none;background:none;font-family:inherit;font-size:.7rem;font-weight:600;letter-spacing:.06em;color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s}
+.lang-switch button:hover{color:var(--dark)}
+.lang-switch button.on{background:var(--accent);color:#fff}
+.cols{display:flex;gap:28px}.col{flex:1}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.cards.three{grid-template-columns:1fr 1fr 1fr;gap:11px}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.cards.three .card{padding:11px 14px}
+.card h3{display:flex;align-items:center;gap:8px;font-size:.92rem;margin-bottom:4px}
+.cards.three .card h3{font-size:.86rem}
+.card p{font-size:.83rem;color:var(--muted);line-height:1.55}
+.cards.three .card p{font-size:.77rem;line-height:1.48}
+.card .material-symbols-outlined{font-size:20px;color:var(--accent)}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}
+.stat-row.three{grid-template-columns:repeat(3,1fr)}
+.stat{background:#fff;border:1px solid var(--border);border-radius:8px;padding:15px 14px 12px;text-align:center}
+.stat .num{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;color:var(--dark);line-height:1.15;font-variant-numeric:tabular-nums}
+.stat .num.accent{color:var(--accent)}
+.stat .num.red{color:var(--semantic-red)}
+.stat .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-top:6px;line-height:1.4}
+.tag{display:inline-block;font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:4px 10px;border-radius:4px;margin-bottom:8px}
+.tag-green{background:var(--semantic-green-bg);color:var(--semantic-green)}
+.tag-amber{background:var(--semantic-amber-bg);color:var(--semantic-amber)}
+.tag-red{background:var(--semantic-red-bg);color:var(--semantic-red)}
+.tag-accent{background:var(--accent-bg);color:var(--accent)}
+.flow-wrap{margin:20px 0 14px}
+.flow{display:flex;align-items:stretch;gap:0;justify-content:space-between}
+.flow-step{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.flow-step .fs-icon{width:46px;height:46px;border-radius:50%;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:8px;z-index:1}
+.flow-step .fs-icon .material-symbols-outlined{font-size:22px;color:var(--dark)}
+.flow-step.hito .fs-icon{border-color:var(--accent);background:var(--accent-bg)}
+.flow-step.hito .fs-icon .material-symbols-outlined{color:var(--accent)}
+.flow-step .fs-title{font-size:.8rem;font-weight:600;line-height:1.3}
+.flow-step .fs-sub{font-size:.7rem;color:var(--muted);line-height:1.35;margin-top:2px;max-width:120px}
+.flow-step:after{content:"";position:absolute;top:23px;left:calc(50% + 26px);width:calc(100% - 52px);height:2px;background:var(--border)}
+.flow-step:last-child:after{display:none}
+.flow-note{margin-top:18px;padding:12px 16px;border-radius:8px;background:var(--navy-bg);font-size:.83rem;color:var(--dark);display:flex;align-items:center;gap:10px}
+.flow-note .material-symbols-outlined{font-size:20px;color:var(--accent)}
+.formula-box{background:var(--dark);color:#fff;border-radius:10px;padding:14px 20px;margin:14px 0;font-size:.95rem;text-align:center;font-variant-numeric:tabular-nums}
+.formula-box .fx{font-weight:600;letter-spacing:.01em}
+.formula-box .fx-sub{font-size:.75rem;color:#9aa7bd;margin-top:6px}
+.semaforo{display:flex;gap:13px;margin-top:12px}
+.sem-item{flex:1;border-radius:8px;padding:11px 13px;border:1px solid var(--border);background:#fff;display:flex;align-items:flex-start;gap:10px}
+.sem-dot{width:12px;height:12px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.sem-item strong{font-size:.85rem;display:block}
+.sem-item span{font-size:.76rem;color:var(--muted);line-height:1.45}
+.chart-wrap{max-width:920px;margin:0 auto}
+.compare{width:100%;border-collapse:collapse}
+.compare th{text-align:left;font-weight:600;font-size:.82rem;padding:10px 14px;border-bottom:2px solid var(--border)}
+.compare td{padding:9px 14px;border-bottom:1px solid #eef0f3;font-size:.83rem}
+.compare td:first-child{font-weight:500}
+.compare td .material-symbols-outlined{font-size:18px;vertical-align:-4px;color:var(--accent);margin-right:6px}
+.title-block{text-align:center}
+.title-logos{display:flex;align-items:center;justify-content:center;gap:34px;margin-bottom:40px}
+.title-logos .x{font-size:1.3rem;color:var(--muted);font-weight:300}
+.title-block h1{margin-bottom:14px}
+.title-block .t-sub{font-size:1.02rem;color:var(--muted);max-width:640px;margin:0 auto 30px}
+.title-meta{font-size:.8rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.title-meta strong{color:var(--dark)}
+.closing-block{text-align:center}
+.closing-block h2{margin-bottom:10px}
+.closing-block .c-sub{color:var(--muted);max-width:560px;margin:0 auto 26px}
+.closing-contact{display:inline-flex;flex-direction:column;gap:4px;padding:18px 34px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:.9rem}
+.closing-contact strong{font-size:1rem}
+.closing-contact span{color:var(--muted);font-size:.83rem}
+ul.checks{list-style:none}
+ul.checks li{padding:5px 0 5px 30px;position:relative;font-size:.87rem}
+ul.checks li:before{content:"check_circle";font-family:Material Symbols Outlined;position:absolute;left:0;top:7px;font-size:19px;color:var(--semantic-green)}
+ul.checks.next li:before{content:"arrow_circle_right";color:var(--accent)}
+ul.checks li strong{font-weight:600}
+ul.checks li .li-sub{color:var(--muted);font-size:.8rem;display:block;line-height:1.45}
+.geo-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 18px}
+.geo-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-right:4px}
+.geo-chip{font-size:.74rem;font-weight:500;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--dark);white-space:nowrap}
+.geo-chip.now{background:var(--dark);border-color:var(--dark);color:#fff}
+.geo-chip.strong{background:var(--accent-bg);border-color:var(--accent-light);color:var(--accent);font-weight:600}
+.geo-chip.more{color:var(--muted);border-style:dashed}
+    </style>
+  </head>
+  <body>
+    <div class="progress" style="width:10%"></div>
+
+    <div class="glyph-watermark hidden"><svg viewBox="0 0 512 202" width="170" aria-label="SSB International"><g fill="#121c2f"><path d="M96.83,104.37H20.54c-8.44,0-15.29-6.84-15.29-15.29s6.84-15.29,15.29-15.29h124.6v-33.17H49.46C22.67,40.63.96,62.37,1,89.16h0c.04,26.73,21.72,48.38,48.46,48.38h76.29c8.44,0,15.29,6.84,15.29,15.29h0c0,8.44-6.84,15.29-15.29,15.29H1.14v33.17h95.69c26.79,0,48.5-21.74,48.46-48.53h0c-.04-26.73-21.72-48.38-48.46-48.38Z"></path><path d="M252.58,104.37h-76.29c-8.44,0-15.29-6.84-15.29-15.29s6.84-15.29,15.29-15.29h124.6v-33.17h-95.69c-26.79,0-48.5,21.74-48.46,48.53h0c.04,26.73,21.72,48.38,48.46,48.38h76.29c8.44,0,15.29,6.84,15.29,15.29h0c0,8.44-6.84,15.29-15.29,15.29h-124.6v33.17h95.69c26.79,0,48.5-21.74,48.46-48.53h0c-.04-26.73-21.72-48.38-48.46-48.38Z"></path><path d="M462.56,89.01c-.04-26.73-21.72-48.38-48.46-48.38h-95.83v33.17h124.75c8.44,0,15.29,6.84,15.29,15.29s-6.84,15.29-15.29,15.29h-124.75v33.17h124.75c8.44,0,15.29,6.84,15.29,15.29h0c0,8.44-6.84,15.29-15.29,15.29h-124.6v33.17h95.69c26.79,0,48.5-21.74,48.46-48.53h0c-.02-12.18-4.54-23.3-11.97-31.8,7.46-8.54,11.99-19.71,11.97-31.94h0Z"></path></g><g fill="#c74f12"><rect x="461.84" y="17.1" width="32.78" height="32.78"></rect><rect x="494.61" y=".72" width="16.39" height="16.39"></rect></g></svg><span class="watermark-title" data-i18n="wm.title">CRM Detention de Contenedores</span></div>
+
+    <div class="lang-switch" role="group" aria-label="Idioma">
+      <button data-lang="es" class="on">ES</button>
+      <button data-lang="pt">PT</button>
+      <button data-lang="en">EN</button>
+    </div>
+
+    <!-- ═════════ Slide 1 · Portada ═════════ -->
+    <div class="slide active">
+      <div class="slide-content anim">
+        <div class="title-block">
+          <div class="title-logos"><svg viewBox="0 0 512 202" width="170" aria-label="SSB International"><g fill="#121c2f"><path d="M96.83,104.37H20.54c-8.44,0-15.29-6.84-15.29-15.29s6.84-15.29,15.29-15.29h124.6v-33.17H49.46C22.67,40.63.96,62.37,1,89.16h0c.04,26.73,21.72,48.38,48.46,48.38h76.29c8.44,0,15.29,6.84,15.29,15.29h0c0,8.44-6.84,15.29-15.29,15.29H1.14v33.17h95.69c26.79,0,48.5-21.74,48.46-48.53h0c-.04-26.73-21.72-48.38-48.46-48.38Z"></path><path d="M252.58,104.37h-76.29c-8.44,0-15.29-6.84-15.29-15.29s6.84-15.29,15.29-15.29h124.6v-33.17h-95.69c-26.79,0-48.5,21.74-48.46,48.53h0c.04,26.73,21.72,48.38,48.46,48.38h76.29c8.44,0,15.29,6.84,15.29,15.29h0c0,8.44-6.84,15.29-15.29,15.29h-124.6v33.17h95.69c26.79,0,48.5-21.74,48.46-48.53h0c-.04-26.73-21.72-48.38-48.46-48.38Z"></path><path d="M462.56,89.01c-.04-26.73-21.72-48.38-48.46-48.38h-95.83v33.17h124.75c8.44,0,15.29,6.84,15.29,15.29s-6.84,15.29-15.29,15.29h-124.75v33.17h124.75c8.44,0,15.29,6.84,15.29,15.29h0c0,8.44-6.84,15.29-15.29,15.29h-124.6v33.17h95.69c26.79,0,48.5-21.74,48.46-48.53h0c-.02-12.18-4.54-23.3-11.97-31.8,7.46-8.54,11.99-19.71,11.97-31.94h0Z"></path></g><g fill="#c74f12"><rect x="461.84" y="17.1" width="32.78" height="32.78"></rect><rect x="494.61" y=".72" width="16.39" height="16.39"></rect></g></svg><span class="x">×</span><img src="data:image/png;base64,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" alt="Dow" height="62"></div>
+          <h1 data-i18n="s1.h1">CRM Detention de Contenedores</h1>
+          <p class="t-sub" data-i18n="s1.sub">Convertir el costo de detention — hoy en escalada — en un costo visible, gestionado y en descenso. Sistema propio, ya operativo, construido sobre los datos reales de la operación de exportación de Bahía Blanca — y diseñado para replicarse en la región.</p>
+          <p class="title-meta"><strong>SSB International</strong> · <span data-i18n="s1.meta">Julio 2026</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 2 · El costo se triplicó ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <h2 data-i18n="s2.h2">El costo mensual de detention se triplicó</h2>
+          <p class="subtitle" data-i18n="s2.sub">Costo real por mes de cierre de operación, según los registros de la propia operación (agosto 2025 – junio 2026). De un promedio de <strong>USD 25 mil/mes en 2025</strong> a <strong>USD 77 mil/mes en 2026</strong>, con pico de USD 117 mil en abril.</p>
+          <div class="chart-wrap d1" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 18px 6px"><svg viewBox="0 0 880 250" width="100%" style="display: block;"><g><rect x="22" y="189.2625" width="56" height="26.73750000000001" rx="4" fill="#8b97ab"></rect><text x="50" y="181.2625" text-anchor="middle" font-size="13" font-weight="600" fill="#64708a">17k</text><text data-i18n="c.m1" x="50" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Ago</text><text x="50" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2025</text></g><g><rect x="100" y="192.95925" width="56" height="23.040750000000003" rx="4" fill="#8b97ab"></rect><text x="128" y="184.95925" text-anchor="middle" font-size="13" font-weight="600" fill="#64708a">15k</text><text data-i18n="c.m2" x="128" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Sep</text><text x="128" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2025</text></g><g><rect x="178" y="157.348" width="56" height="58.65199999999999" rx="4" fill="#8b97ab"></rect><text x="206" y="149.348" text-anchor="middle" font-size="13" font-weight="600" fill="#64708a">38k</text><text data-i18n="c.m3" x="206" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Oct</text><text x="206" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2025</text></g><g><rect x="256" y="179.9625" width="56" height="36.037499999999994" rx="4" fill="#8b97ab"></rect><text x="284" y="171.9625" text-anchor="middle" font-size="13" font-weight="600" fill="#64708a">23k</text><text data-i18n="c.m4" x="284" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Nov</text><text x="284" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2025</text></g><g><rect x="334" y="167.547" width="56" height="48.453" rx="4" fill="#8b97ab"></rect><text x="362" y="159.547" text-anchor="middle" font-size="13" font-weight="600" fill="#64708a">31k</text><text data-i18n="c.m5" x="362" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Dic</text><text x="362" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2025</text></g><g><rect x="412" y="126.48750000000001" width="56" height="89.51249999999999" rx="4" fill="#c74f12"></rect><text x="440" y="118.48750000000001" text-anchor="middle" font-size="13" font-weight="600" fill="#c74f12">58k</text><text data-i18n="c.m6" x="440" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Ene</text><text x="440" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2026</text></g><g><rect x="490" y="164.60975000000002" width="56" height="51.39024999999998" rx="4" fill="#c74f12"></rect><text x="518" y="156.60975000000002" text-anchor="middle" font-size="13" font-weight="600" fill="#c74f12">33k</text><text data-i18n="c.m7" x="518" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Feb</text><text x="518" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2026</text></g><g><rect x="568" y="132.55575" width="56" height="83.44425000000001" rx="4" fill="#c74f12"></rect><text x="596" y="124.55574999999999" text-anchor="middle" font-size="13" font-weight="600" fill="#c74f12">54k</text><text data-i18n="c.m8" x="596" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Mar</text><text x="596" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2026</text></g><g><rect x="646" y="34.09974999999999" width="56" height="181.90025" rx="4" fill="#c74f12"></rect><text x="674" y="26.099749999999993" text-anchor="middle" font-size="13" font-weight="600" fill="#c74f12">117k</text><text data-i18n="c.m9" x="674" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Abr</text><text x="674" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2026</text></g><g><rect x="724" y="53.25" width="56" height="162.75" rx="4" fill="#c74f12"></rect><text x="752" y="45.25" text-anchor="middle" font-size="13" font-weight="600" fill="#c74f12">105k</text><text data-i18n="c.m10" x="752" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">May</text><text x="752" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2026</text></g><g><rect x="802" y="66.92875" width="56" height="149.07125000000002" rx="4" fill="#c74f12"></rect><text x="830" y="58.928749999999994" text-anchor="middle" font-size="13" font-weight="600" fill="#c74f12">96k</text><text data-i18n="c.m11" x="830" y="232" text-anchor="middle" font-size="11.5" fill="#64708a">Jun</text><text x="830" y="246" text-anchor="middle" font-size="9.5" fill="#9aa4b5">2026</text></g><line x1="0" y1="216" x2="880" y2="216" stroke="#dde1e8" stroke-width="1.5"></line></svg></div>
+          <div class="flow-note d2">
+            <span class="material-symbols-outlined">trending_up</span>
+            <span data-i18n="s2.note"><strong>USD 588 mil acumulados en 11 meses.</strong> Si el ritmo de 2026 se sostiene, el año cierra por encima de <strong>USD 900 mil</strong> — y hoy nada en el proceso manual lo frena, porque el costo se conoce cuando ya ocurrió.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 3 · La causa ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <h2 data-i18n="s3.h2">La causa: la demora que nadie ve, crece</h2>
+          <p class="subtitle" data-i18n="s3.sub">Análisis de los 1.259 contenedores que pagaron demora en el período. El costo no está en los atrasos cortos: está en los contenedores que quedaron semanas fuera de plazo sin que nadie lo advirtiera a tiempo.</p>
+          <table class="compare d1">
+            <thead>
+              <tr>
+                <th data-i18n="s3.th1">Demora sobre el free time</th>
+                <th data-i18n="s3.th2">Contenedores</th>
+                <th data-i18n="s3.th3">Días de demora</th>
+                <th data-i18n="s3.th4">Costo</th>
+                <th data-i18n="s3.th5">% del costo total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="s3.r1c1">1 a 5 días</td><td>459</td><td data-i18n="s3.r1c3">1.183</td><td data-i18n="s3.r1c4">USD 38.975</td><td>7%</td>
+              </tr>
+              <tr>
+                <td data-i18n="s3.r2c1">6 a 15 días</td><td>425</td><td data-i18n="s3.r2c3">4.280</td><td data-i18n="s3.r2c4">USD 147.055</td><td>25%</td>
+              </tr>
+              <tr style="font-weight:600">
+                <td data-i18n="s3.r3c1">16 días o más</td><td>375</td><td data-i18n="s3.r3c3">12.102</td><td style="color:var(--semantic-red)" data-i18n="s3.r3c4">USD 402.340</td><td>68%</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="flow-note d2">
+            <span class="material-symbols-outlined">visibility_off</span>
+            <span data-i18n="s3.note">375 contenedores estuvieron en promedio <strong>32 días</strong> generando cargos. Con una planilla manual, la demora se descubre al liquidar — cuando la factura ya existe. <strong>El problema no es operativo: es de visibilidad.</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 4 · La oportunidad ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <h2 data-i18n="s4.h2">La oportunidad: entre USD 120 y 200 mil por año</h2>
+          <p class="subtitle" data-i18n="s4.sub">Cada día de demora evitado vale en promedio USD 33 (hasta USD 85 según la naviera). No todo el detention es evitable — buques que se atrasan existen — pero la porción por falta de visibilidad, sí. Escenarios sobre los 17.565 días de demora reales del período:</p>
+          <div class="stat-row three d1">
+            <div class="stat"><div class="num" data-i18n="s4.n1">USD 118 mil</div><div class="lbl" data-i18n="s4.l1">Escenario conservador · evitar 20% de los días de demora</div></div>
+            <div class="stat"><div class="num accent" data-i18n="s4.n2">USD 206 mil</div><div class="lbl" data-i18n="s4.l2">Escenario alcanzable · evitar 35% priorizando demoras largas</div></div>
+            <div class="stat"><div class="num" data-i18n="s4.n3">+ recupero</div><div class="lbl" data-i18n="s4.l3">Disputa de cargos mal facturados, con evidencia auditable</div></div>
+          </div>
+          <div class="cards d2">
+            <div class="card">
+              <h3><span class="material-symbols-outlined">notifications_active</span> <span data-i18n="s4.c1h">El mecanismo del ahorro</span></h3>
+              <p data-i18n="s4.c1p">Alerta amarilla días antes del vencimiento y roja al primer día de demora: el contenedor se prioriza, embarca o devuelve antes. Es exactamente la banda de 16+ días — el 68% del costo — la que se corta de raíz.</p>
+            </div>
+            <div class="card">
+              <h3><span class="material-symbols-outlined">gavel</span> <span data-i18n="s4.c2h">Defensa ante las navieras</span></h3>
+              <p data-i18n="s4.c2p">Cada operación queda con línea de tiempo auditada, waivers registrados con su neto facturable y fotos de incidencias: base concreta para pedir waivers y disputar cargos incorrectos, algo imposible de sostener con una planilla.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 5 · La solución ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <h2 data-i18n="s5.h2">La solución: cada contenedor, vigilado desde el día cero</h2>
+          <p class="subtitle" data-i18n="s5.sub">El CRM sigue el ciclo completo — del retiro del vacío al embarque o devolución — y calcula a diario, por contenedor, los días libres restantes y el costo de no actuar, con la tarifa vigente de cada naviera.</p>
+          <div class="flow-wrap d1">
+            <div class="flow">
+              <div class="flow-step hito"><div class="fs-icon"><span class="material-symbols-outlined">outbound</span></div><div class="fs-title" data-i18n="s5.f1t">Retiro en depósito</div><div class="fs-sub" data-i18n="s5.f1s">Arranca el free time</div></div>
+              <div class="flow-step"><div class="fs-icon"><span class="material-symbols-outlined">local_shipping</span></div><div class="fs-title" data-i18n="s5.f2t">Tránsito a planta</div><div class="fs-sub" data-i18n="s5.f2s">Camión o tren</div></div>
+              <div class="flow-step"><div class="fs-icon"><span class="material-symbols-outlined">factory</span></div><div class="fs-title" data-i18n="s5.f3t">En planta</div><div class="fs-sub" data-i18n="s5.f3s">Bahía / Abbott</div></div>
+              <div class="flow-step"><div class="fs-icon"><span class="material-symbols-outlined">package_2</span></div><div class="fs-title" data-i18n="s5.f4t">Carga y asignación</div><div class="fs-sub" data-i18n="s5.f4s">Booking, buque, destino</div></div>
+              <div class="flow-step"><div class="fs-icon"><span class="material-symbols-outlined">directions_boat</span></div><div class="fs-title" data-i18n="s5.f5t">Egreso</div><div class="fs-sub" data-i18n="s5.f5s">Embarque o devolución</div></div>
+              <div class="flow-step hito"><div class="fs-icon"><span class="material-symbols-outlined">flag_circle</span></div><div class="fs-title" data-i18n="s5.f6t">Ingreso a terminal</div><div class="fs-sub" data-i18n="s5.f6s">Corta el free time</div></div>
+            </div>
+          </div>
+          <div class="semaforo d2">
+            <div class="sem-item"><div class="sem-dot" style="background:var(--semantic-green)"></div><div><strong data-i18n="s5.g1t">Verde — en plazo</strong><span data-i18n="s5.g1s">Dentro del free time, sin acción requerida.</span></div></div>
+            <div class="sem-item"><div class="sem-dot" style="background:var(--semantic-amber)"></div><div><strong data-i18n="s5.g2t">Amarillo — por vencer</strong><span data-i18n="s5.g2s">Quedan pocos días libres: es el momento de actuar, antes del primer dólar de cargo.</span></div></div>
+            <div class="sem-item"><div class="sem-dot" style="background:var(--semantic-red)"></div><div><strong data-i18n="s5.g3t">Rojo — en demora</strong><span data-i18n="s5.g3s">Ya genera cargos: muestra el costo acumulado y cuánto suma cada día más.</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 6 · En producción ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <span class="tag tag-green" data-i18n="s6.tag">Plataforma v2 en producción — riesgo de ejecución: cero</span>
+          <h2 data-i18n="s6.h2">No es una propuesta: ya está funcionando</h2>
+          <p class="subtitle" data-i18n="s6.sub">El sistema está desplegado en su segunda versión y validado contra el historial completo: el motor de cálculo reproduce <strong>2.804 de 2.804</strong> contenedores del registro histórico, día por día. Arranca ahora el uso interno en modo test. Lo que sigue es adoptarlo — no financiar su desarrollo.</p>
+          <div class="stat-row d1">
+            <div class="stat"><div class="num">2.944</div><div class="lbl" data-i18n="s6.l1">Contenedores de historial real procesados</div></div>
+            <div class="stat"><div class="num">11.669</div><div class="lbl" data-i18n="s6.l2">Eventos de trazabilidad</div></div>
+            <div class="stat"><div class="num" data-i18n="s6.n3">11 meses</div><div class="lbl" data-i18n="s6.l3">De línea de base medida para comparar el ahorro</div></div>
+            <div class="stat"><div class="num">14</div><div class="lbl" data-i18n="s6.l4">Navieras parametrizadas, con tarifas y free time versionados</div></div>
+          </div>
+          <div class="flow-note d2" style="background:var(--semantic-red-bg)">
+            <span class="material-symbols-outlined">emergency_home</span>
+            <span data-i18n="s6.note"><strong>Al corte del 7 de julio de 2026, el sistema mostraba 19 contenedores en rojo: USD 29.890 ya acumulados, sumando USD 665 más por día.</strong> Y 6 en amarillo donde todavía se llegaba a tiempo. Esa foto — imposible en la planilla — es exactamente lo que este proyecto vende.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 7 · Horas de trabajo ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <h2 data-i18n="s7.h2">El segundo ahorro: horas de trabajo del equipo</h2>
+          <p class="subtitle" data-i18n="s7.sub">El diseño salió del análisis de un año de operación real (2.804 contenedores, 417 tandas de retiro): el sistema replica cómo trabaja el equipo, no al revés.</p>
+          <div class="cards d1">
+            <div class="card">
+              <h3><span class="material-symbols-outlined">stacks</span> <span data-i18n="s7.c1h">Registrar 31 contenedores = una sola carga</span></h3>
+              <p data-i18n="s7.c1p">Los datos comunes de la tanda se cargan una vez; la lista de contenedores se pega tal cual viene. Lo que era una fila manual por contenedor en Excel hoy es una operación de minutos, con validación ISO 6346 automática.</p>
+            </div>
+            <div class="card">
+              <h3><span class="material-symbols-outlined">bolt</span> <span data-i18n="s7.c2h">Un solo tablero, siempre al día</span></h3>
+              <p data-i18n="s7.c2p">Fin de las planillas paralelas: todas las pantallas se actualizan en tiempo real y cualquier listado se exporta a Excel con filtros y selección de columnas, con un click.</p>
+            </div>
+            <div class="card">
+              <h3><span class="material-symbols-outlined">photo_camera</span> <span data-i18n="s7.c3h">Incidencias con evidencia</span></h3>
+              <p data-i18n="s7.c3p">Averías documentadas con fotos en el momento, asociadas al contenedor — la evidencia queda donde se la necesita, no en el teléfono de alguien.</p>
+            </div>
+            <div class="card">
+              <h3><span class="material-symbols-outlined">shield_person</span> <span data-i18n="s7.c4h">Control por roles y auditoría</span></h3>
+              <p data-i18n="s7.c4p">Operador, supervisor y administrador con permisos distintos; anulaciones y correcciones exigen rol supervisor y quedan registradas con usuario y fecha.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 8 · Escalabilidad (NUEVA) ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <span class="tag tag-accent" data-i18n="s8.tag">Piense en escala</span>
+          <h2 data-i18n="s8.h2">Diseñado para replicarse en LATAM</h2>
+          <p class="subtitle" data-i18n="s8.sub">La mecánica del detention es idéntica en todos los puertos del mundo: free time por naviera y tarifa diaria en USD. Solo cambian los parámetros — y en este sistema los parámetros son datos configurables, no código. Donde Dow exporta en contenedores, hay free time corriendo.</p>
+          <div class="geo-row d1">
+            <span class="geo-lbl" data-i18n="s8.geo">Dow en la región:</span>
+            <span class="geo-chip now" data-i18n="s8.geo1">Argentina — hoy</span>
+            <span class="geo-chip strong" data-i18n="s8.geo2">Brasil — presencia principal</span>
+            <span class="geo-chip" data-i18n="s8.geo3">Estados Unidos</span>
+            <span class="geo-chip">Colombia</span>
+            <span class="geo-chip" data-i18n="s8.geo5">Perú</span>
+            <span class="geo-chip" data-i18n="s8.geo6">México</span>
+            <span class="geo-chip">Chile</span>
+            <span class="geo-chip more" data-i18n="s8.geo7">+ otros mercados</span>
+          </div>
+          <div class="stat-row three d1">
+            <div class="stat"><div class="num">100%</div><div class="lbl" data-i18n="s8.l1">Parametrizado: navieras, tarifas, free time, plantas y depósitos son catálogos, no código</div></div>
+            <div class="stat"><div class="num accent" data-i18n="s8.n2">3 idiomas</div><div class="lbl" data-i18n="s8.l2">Español · Portugués · Inglés — esta misma presentación cambia de idioma</div></div>
+            <div class="stat"><div class="num">USD 0</div><div class="lbl" data-i18n="s8.l3">En licencias por usuario o por sitio: la misma nube escala a costo marginal</div></div>
+          </div>
+          <div class="cards d2">
+            <div class="card">
+              <h3><span class="material-symbols-outlined">public</span> <span data-i18n="s8.c1h">Mismo problema, otra escala</span></h3>
+              <p data-i18n="s8.c1p">Las mismas navieras globales — Maersk, MSC, Hapag-Lloyd, ZIM — operan en toda la región con la misma lógica de free time. Cada sitio que exporta en contenedores acumula el riesgo que Bahía Blanca ya midió: USD 588 mil en 11 meses.</p>
+            </div>
+            <div class="card">
+              <h3><span class="material-symbols-outlined">content_copy</span> <span data-i18n="s8.c2h">Playbook de réplica probado</span></h3>
+              <p data-i18n="s8.c2p">Alta de un sitio nuevo = cargar catálogos y reglas locales e importar su historial — el mismo proceso ya ejecutado con 2.944 contenedores. De 4 a 6 semanas por sitio, cada uno medido contra su propia línea de base.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 9 · Por qué seleccionarlo ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div>
+          <h2 data-i18n="s9.h2">Por qué este proyecto merece ser seleccionado</h2>
+          <p class="subtitle" data-i18n="s9.sub">Cinco diferencias frente a cualquier alternativa que todavía está en papel:</p>
+          <ul class="checks d1">
+            <li><strong data-i18n="s9.i1t">Retorno cuantificado con datos propios, no estimaciones</strong><span class="li-sub" data-i18n="s9.i1s">USD 120–200 mil/año de ahorro direccionable, calculado sobre los 17.565 días de demora reales del último año — la línea de base ya está medida.</span></li>
+            <li><strong data-i18n="s9.i2t">Riesgo de ejecución cero</strong><span class="li-sub" data-i18n="s9.i2s">Está construido, desplegado y validado contra el historial completo. No hay desarrollo por financiar ni plazos de entrega que puedan fallar.</span></li>
+            <li><strong data-i18n="s9.i3t">Inversión operativa marginal</strong><span class="li-sub" data-i18n="s9.i3s">Infraestructura en la nube de costo mínimo y sin licencias por usuario. Con evitar que dos contenedores por mes caigan en demora, el sistema paga su operación anual.</span></li>
+            <li><strong data-i18n="s9.i4t">Resultados medibles desde el primer mes</strong><span class="li-sub" data-i18n="s9.i4s">Dos indicadores simples, comparados contra la línea de base histórica: días promedio de demora por contenedor y % de operaciones cerradas dentro del free time.</span></li>
+            <li><strong data-i18n="s9.i5t">Escalable por diseño a la región</strong><span class="li-sub" data-i18n="s9.i5s">Todo lo específico del sitio — navieras, tarifas, free time, plantas, depósitos, idioma — es configuración, no código. El mismo sistema se replica en cualquier operación de Dow en LATAM.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════ Slide 10 · Cierre ═════════ -->
+    <div class="slide">
+      <div class="slide-content">
+        <div class="closing-block">
+          <h2 data-i18n="s10.h2">Lo que pedimos: adopción formal</h2>
+          <p class="c-sub" data-i18n="s10.sub">Seleccionado el proyecto, el plan de puesta en valor es de semanas, no meses:</p>
+          <div style="max-width:640px;margin:0 auto 26px;text-align:left">
+            <ul class="checks next">
+              <li><strong data-i18n="s10.i1t">Semanas 1–2 · Puesta en marcha con el equipo operativo</strong><span class="li-sub" data-i18n="s10.i1s">Recorrida de los flujos reales con los operadores — ya iniciada en modo test interno —, ajuste fino y adopción como herramienta única de registro.</span></li>
+              <li><strong data-i18n="s10.i2t">Semanas 3–4 · Reporte gerencial automático</strong><span class="li-sub" data-i18n="s10.i2s">Resumen semanal por correo a dirección: costo del período, contenedores en riesgo y evolución contra la línea de base.</span></li>
+              <li><strong data-i18n="s10.i3t">Continuo · Medición del ahorro</strong><span class="li-sub" data-i18n="s10.i3s">Seguimiento mensual de los dos indicadores comprometidos, con resguardo automático diario de la información.</span></li>
+              <li><strong data-i18n="s10.i4t">Fase siguiente · Réplica regional</strong><span class="li-sub" data-i18n="s10.i4s">Con el ahorro validado en Bahía Blanca, el mismo playbook se lleva a otras operaciones de Dow en LATAM.</span></li>
+            </ul>
+          </div>
+          <div class="closing-contact"><strong>Jonathan Zenteno</strong><span>SSB International · jzenteno@ssbint.com</span></div>
+        </div>
+      </div>
+    </div>
+
+    <nav>
+      <button id="btn-prev" aria-label="Anterior" disabled>←</button>
+      <div class="dots" id="dots"></div>
+      <button id="btn-next" aria-label="Siguiente">→</button>
+      <span class="slide-number" id="slide-number">1 / 10</span>
+    </nav>
+
+    <script>
+// ── i18n ────────────────────────────────────────────────────────────────────
+// El español vive inline en el HTML (fuente de verdad). EN y PT se aplican
+// reemplazando el contenido de cada [data-i18n]; "es" restaura el original.
+const I18N = {
+  en: {
+    'doc.title': 'Container Detention CRM — SSB International',
+    'wm.title': 'Container Detention CRM',
+    's1.h1': 'Container Detention CRM',
+    's1.sub': 'Turning detention — a cost that is currently escalating — into a visible, managed, declining cost. An in-house system, already live, built on the real data of the Bahía Blanca export operation — and designed to be replicated across the region.',
+    's1.meta': 'July 2026',
+    's2.h2': 'The monthly detention cost has tripled',
+    's2.sub': 'Actual cost by operation closing month, from the operation’s own records (August 2025 – June 2026). From an average of <strong>USD 25k/month in 2025</strong> to <strong>USD 77k/month in 2026</strong>, peaking at USD 117k in April.',
+    's2.note': '<strong>USD 588k accumulated in 11 months.</strong> If the 2026 pace holds, the year closes above <strong>USD 900k</strong> — and today nothing in the manual process stops it, because the cost is only known after it has already happened.',
+    's3.h2': 'The cause: the delay nobody sees keeps growing',
+    's3.sub': 'Analysis of the 1,259 containers that incurred detention charges in the period. The cost is not in the short, unavoidable delays: it is in the containers that sat weeks past their deadline without anyone noticing in time.',
+    's3.th1': 'Days past free time', 's3.th2': 'Containers', 's3.th3': 'Delay days', 's3.th4': 'Cost', 's3.th5': '% of total cost',
+    's3.r1c1': '1 to 5 days', 's3.r1c3': '1,183', 's3.r1c4': 'USD 38,975',
+    's3.r2c1': '6 to 15 days', 's3.r2c3': '4,280', 's3.r2c4': 'USD 147,055',
+    's3.r3c1': '16 days or more', 's3.r3c3': '12,102', 's3.r3c4': 'USD 402,340',
+    's3.note': '375 containers spent an average of <strong>32 days</strong> generating charges. With a manual spreadsheet, the delay is discovered at invoicing — when the bill already exists. <strong>The problem is not operational: it is visibility.</strong>',
+    's4.h2': 'The opportunity: USD 120–200k per year',
+    's4.sub': 'Each avoided delay day is worth USD 33 on average (up to USD 85 depending on the carrier). Not all detention is avoidable — vessels do run late — but the share caused by lack of visibility is. Scenarios over the 17,565 real delay days of the period:',
+    's4.n1': 'USD 118k', 's4.l1': 'Conservative scenario · avoid 20% of delay days',
+    's4.n2': 'USD 206k', 's4.l2': 'Achievable scenario · avoid 35%, prioritizing long delays',
+    's4.n3': '+ recovery', 's4.l3': 'Disputing wrongly invoiced charges, with auditable evidence',
+    's4.c1h': 'How the savings happen',
+    's4.c1p': 'A yellow alert days before free time expires and a red one on the first day of delay: the container gets prioritized, shipped or returned earlier. It is precisely the 16+ day band — 68% of the cost — that gets cut at the root.',
+    's4.c2h': 'Defense before the carriers',
+    's4.c2p': 'Every operation keeps an audited timeline, waivers recorded with their net billable amount, and incident photos: concrete grounds to request waivers and dispute incorrect charges — impossible to sustain with a spreadsheet.',
+    's5.h2': 'The solution: every container watched from day zero',
+    's5.sub': 'The CRM follows the full cycle — from empty pickup to shipment or return — and computes daily, per container, the remaining free days and the cost of not acting, at each carrier’s current tariff.',
+    's5.f1t': 'Pickup at depot', 's5.f1s': 'Free time starts',
+    's5.f2t': 'Transit to plant', 's5.f2s': 'Truck or rail',
+    's5.f3t': 'At plant', 's5.f3s': 'Bahía / Abbott',
+    's5.f4t': 'Loading & assignment', 's5.f4s': 'Booking, vessel, destination',
+    's5.f5t': 'Departure', 's5.f5s': 'Shipment or return',
+    's5.f6t': 'Terminal gate-in', 's5.f6s': 'Free time stops',
+    's5.g1t': 'Green — on time', 's5.g1s': 'Within free time, no action required.',
+    's5.g2t': 'Yellow — about to expire', 's5.g2s': 'Few free days left: the moment to act, before the first dollar of charges.',
+    's5.g3t': 'Red — in delay', 's5.g3s': 'Already generating charges: shows the accumulated cost and how much every extra day adds.',
+    's6.tag': 'Platform v2 in production — execution risk: zero',
+    's6.h2': 'Not a proposal: it is already running',
+    's6.sub': 'The system is deployed in its second version and validated against the full history: the calculation engine reproduces <strong>2,804 out of 2,804</strong> containers from the historical record, day by day. Internal test-mode rollout is starting now. What remains is adopting it — not funding its development.',
+    's6.l1': 'Containers of real history processed',
+    's6.l2': 'Traceability events',
+    's6.n3': '11 months', 's6.l3': 'Of measured baseline to compare savings against',
+    's6.l4': 'Carriers parameterized, with versioned tariffs and free time',
+    's6.note': '<strong>As of July 7, 2026, the system showed 19 containers in red: USD 29,890 already accumulated, adding USD 665 more per day.</strong> Plus 6 in yellow where there was still time to act. That snapshot — impossible to get from the spreadsheet — is exactly what this project delivers.',
+    's7.h2': 'The second saving: the team’s working hours',
+    's7.sub': 'The design came out of analyzing a full year of real operation (2,804 containers, 417 pickup batches): the system replicates how the team works, not the other way around.',
+    's7.c1h': 'Registering 31 containers = one single entry',
+    's7.c1p': 'The batch’s common data is entered once; the container list is pasted as-is. What used to be one manual Excel row per container is now a minutes-long operation, with automatic ISO 6346 validation.',
+    's7.c2h': 'One board, always current',
+    's7.c2p': 'No more parallel spreadsheets: every screen updates in real time and any list exports to Excel with filters and column selection, in one click.',
+    's7.c3h': 'Incidents with evidence',
+    's7.c3p': 'Damage documented with photos on the spot, linked to the container — the evidence stays where it is needed, not on someone’s phone.',
+    's7.c4h': 'Role-based control and audit trail',
+    's7.c4p': 'Operator, supervisor and administrator with distinct permissions; voids and corrections require the supervisor role and are logged with user and date.',
+    's8.tag': 'Think at scale',
+    's8.h2': 'Built to be replicated across Latin America',
+    's8.sub': 'Detention mechanics are identical in every port in the world: free time per carrier and a daily tariff in USD. Only the parameters change — and in this system the parameters are configurable data, not code. Wherever Dow exports in containers, free time is running.',
+    's8.geo': 'Dow in the region:',
+    's8.geo1': 'Argentina — today', 's8.geo2': 'Brazil — strongest presence', 's8.geo3': 'United States', 's8.geo5': 'Peru', 's8.geo6': 'Mexico', 's8.geo7': '+ other markets',
+    's8.l1': 'Parameterized: carriers, tariffs, free time, plants and depots are catalogs, not code',
+    's8.n2': '3 languages', 's8.l2': 'Spanish · Portuguese · English — this very presentation switches language',
+    's8.l3': 'In per-user or per-site licenses: the same cloud scales at marginal cost',
+    's8.c1h': 'Same problem, different scale',
+    's8.c1p': 'The same global carriers — Maersk, MSC, Hapag-Lloyd, ZIM — operate across the region with the same free-time logic. Every site exporting in containers accrues the risk Bahía Blanca already measured: USD 588k in 11 months.',
+    's8.c2h': 'A proven replication playbook',
+    's8.c2p': 'Onboarding a new site = loading local catalogs and rules and importing its history — the same process already executed with 2,944 containers. Four to six weeks per site, each measured against its own baseline.',
+    's9.h2': 'Why this project deserves to be selected',
+    's9.sub': 'Five differences against any alternative that is still on paper:',
+    's9.i1t': 'Quantified return on own data, not estimates',
+    's9.i1s': 'USD 120–200k/year of addressable savings, computed over the 17,565 real delay days of the last year — the baseline is already measured.',
+    's9.i2t': 'Zero execution risk',
+    's9.i2s': 'It is built, deployed and validated against the full history. There is no development to fund and no delivery deadlines that can slip.',
+    's9.i3t': 'Marginal operating investment',
+    's9.i3s': 'Minimal-cost cloud infrastructure and no per-user licenses. Keeping just two containers per month out of delay pays for a full year of operation.',
+    's9.i4t': 'Measurable results from month one',
+    's9.i4s': 'Two simple indicators, compared against the historical baseline: average delay days per container and % of operations closed within free time.',
+    's9.i5t': 'Scalable to the region by design',
+    's9.i5s': 'Everything site-specific — carriers, tariffs, free time, plants, depots, language — is configuration, not code. The same system replicates to any Dow operation in Latin America.',
+    's10.h2': 'What we ask for: formal adoption',
+    's10.sub': 'Once the project is selected, the value-capture plan takes weeks, not months:',
+    's10.i1t': 'Weeks 1–2 · Go-live with the operating team',
+    's10.i1s': 'Walkthrough of the real flows with the operators — already underway in internal test mode —, fine-tuning, and adoption as the single system of record.',
+    's10.i2t': 'Weeks 3–4 · Automatic management reporting',
+    's10.i2s': 'Weekly email summary to management: cost for the period, containers at risk, and progress against the baseline.',
+    's10.i3t': 'Ongoing · Savings measurement',
+    's10.i3s': 'Monthly tracking of the two committed indicators, with automatic daily backup of the data.',
+    's10.i4t': 'Next phase · Regional replication',
+    's10.i4s': 'With savings validated in Bahía Blanca, the same playbook rolls out to other Dow operations across Latin America.'
+  },
+  pt: {
+    'doc.title': 'CRM de Detention de Contêineres — SSB International',
+    'wm.title': 'CRM de Detention de Contêineres',
+    's1.h1': 'CRM de Detention de Contêineres',
+    's1.sub': 'Transformar o custo de detention — hoje em escalada — em um custo visível, gerenciado e em queda. Sistema próprio, já operacional, construído sobre os dados reais da operação de exportação de Bahía Blanca — e projetado para ser replicado na região.',
+    's1.meta': 'Julho de 2026',
+    's2.h2': 'O custo mensal de detention triplicou',
+    's2.sub': 'Custo real por mês de fechamento da operação, segundo os registros da própria operação (agosto 2025 – junho 2026). De uma média de <strong>USD 25 mil/mês em 2025</strong> para <strong>USD 77 mil/mês em 2026</strong>, com pico de USD 117 mil em abril.',
+    's2.note': '<strong>USD 588 mil acumulados em 11 meses.</strong> Se o ritmo de 2026 se mantiver, o ano fecha acima de <strong>USD 900 mil</strong> — e hoje nada no processo manual freia isso, porque o custo só é conhecido quando já aconteceu.',
+    's3.h2': 'A causa: o atraso que ninguém vê continua crescendo',
+    's3.sub': 'Análise dos 1.259 contêineres que pagaram detention no período. O custo não está nos atrasos curtos: está nos contêineres que passaram semanas fora do prazo sem que ninguém percebesse a tempo.',
+    's3.th1': 'Atraso sobre o free time', 's3.th2': 'Contêineres', 's3.th3': 'Dias de atraso', 's3.th4': 'Custo', 's3.th5': '% do custo total',
+    's3.r1c1': '1 a 5 dias', 's3.r1c3': '1.183', 's3.r1c4': 'USD 38.975',
+    's3.r2c1': '6 a 15 dias', 's3.r2c3': '4.280', 's3.r2c4': 'USD 147.055',
+    's3.r3c1': '16 dias ou mais', 's3.r3c3': '12.102', 's3.r3c4': 'USD 402.340',
+    's3.note': '375 contêineres ficaram em média <strong>32 dias</strong> gerando cobranças. Com uma planilha manual, o atraso é descoberto na fatura — quando a cobrança já existe. <strong>O problema não é operacional: é de visibilidade.</strong>',
+    's4.h2': 'A oportunidade: entre USD 120 e 200 mil por ano',
+    's4.sub': 'Cada dia de atraso evitado vale em média USD 33 (até USD 85 conforme o armador). Nem todo detention é evitável — navios atrasam —, mas a parcela causada por falta de visibilidade, sim. Cenários sobre os 17.565 dias de atraso reais do período:',
+    's4.n1': 'USD 118 mil', 's4.l1': 'Cenário conservador · evitar 20% dos dias de atraso',
+    's4.n2': 'USD 206 mil', 's4.l2': 'Cenário alcançável · evitar 35%, priorizando atrasos longos',
+    's4.n3': '+ recuperação', 's4.l3': 'Contestação de cobranças indevidas, com evidência auditável',
+    's4.c1h': 'O mecanismo da economia',
+    's4.c1p': 'Alerta amarelo dias antes do vencimento e vermelho no primeiro dia de atraso: o contêiner é priorizado, embarcado ou devolvido antes. É exatamente a faixa de 16+ dias — 68% do custo — que é cortada pela raiz.',
+    's4.c2h': 'Defesa perante os armadores',
+    's4.c2p': 'Cada operação mantém linha do tempo auditada, waivers registrados com seu valor líquido faturável e fotos de avarias: base concreta para pedir waivers e contestar cobranças indevidas — impossível de sustentar com uma planilha.',
+    's5.h2': 'A solução: cada contêiner vigiado desde o dia zero',
+    's5.sub': 'O CRM acompanha o ciclo completo — da retirada do vazio ao embarque ou devolução — e calcula diariamente, por contêiner, os dias livres restantes e o custo de não agir, com a tarifa vigente de cada armador.',
+    's5.f1t': 'Retirada no depósito', 's5.f1s': 'Começa o free time',
+    's5.f2t': 'Trânsito até a planta', 's5.f2s': 'Caminhão ou trem',
+    's5.f3t': 'Na planta', 's5.f3s': 'Bahía / Abbott',
+    's5.f4t': 'Carga e alocação', 's5.f4s': 'Booking, navio, destino',
+    's5.f5t': 'Saída', 's5.f5s': 'Embarque ou devolução',
+    's5.f6t': 'Entrada no terminal', 's5.f6s': 'Encerra o free time',
+    's5.g1t': 'Verde — no prazo', 's5.g1s': 'Dentro do free time, nenhuma ação necessária.',
+    's5.g2t': 'Amarelo — perto de vencer', 's5.g2s': 'Restam poucos dias livres: é a hora de agir, antes do primeiro dólar de cobrança.',
+    's5.g3t': 'Vermelho — em atraso', 's5.g3s': 'Já gera cobranças: mostra o custo acumulado e quanto cada dia a mais adiciona.',
+    's6.tag': 'Plataforma v2 em produção — risco de execução: zero',
+    's6.h2': 'Não é uma proposta: já está funcionando',
+    's6.sub': 'O sistema está implantado em sua segunda versão e validado contra o histórico completo: o motor de cálculo reproduz <strong>2.804 de 2.804</strong> contêineres do registro histórico, dia a dia. O uso interno em modo teste começa agora. O que falta é adotá-lo — não financiar seu desenvolvimento.',
+    's6.l1': 'Contêineres de histórico real processados',
+    's6.l2': 'Eventos de rastreabilidade',
+    's6.n3': '11 meses', 's6.l3': 'De linha de base medida para comparar a economia',
+    's6.l4': 'Armadores parametrizados, com tarifas e free time versionados',
+    's6.note': '<strong>No corte de 7 de julho de 2026, o sistema mostrava 19 contêineres em vermelho: USD 29.890 já acumulados, somando USD 665 a mais por dia.</strong> E 6 em amarelo, onde ainda dava tempo de agir. Essa foto — impossível na planilha — é exatamente o que este projeto entrega.',
+    's7.h2': 'A segunda economia: horas de trabalho da equipe',
+    's7.sub': 'O design nasceu da análise de um ano de operação real (2.804 contêineres, 417 lotes de retirada): o sistema replica como a equipe trabalha, não o contrário.',
+    's7.c1h': 'Registrar 31 contêineres = um único lançamento',
+    's7.c1p': 'Os dados comuns do lote são carregados uma vez; a lista de contêineres é colada como vem. O que era uma linha manual por contêiner no Excel hoje é uma operação de minutos, com validação ISO 6346 automática.',
+    's7.c2h': 'Um único painel, sempre atualizado',
+    's7.c2p': 'Fim das planilhas paralelas: todas as telas se atualizam em tempo real e qualquer lista é exportada para Excel com filtros e seleção de colunas, em um clique.',
+    's7.c3h': 'Avarias com evidência',
+    's7.c3p': 'Danos documentados com fotos na hora, vinculados ao contêiner — a evidência fica onde é necessária, não no celular de alguém.',
+    's7.c4h': 'Controle por perfis e auditoria',
+    's7.c4p': 'Operador, supervisor e administrador com permissões distintas; anulações e correções exigem perfil de supervisor e ficam registradas com usuário e data.',
+    's8.tag': 'Pense em escala',
+    's8.h2': 'Projetado para ser replicado na América Latina',
+    's8.sub': 'A mecânica do detention é idêntica em todos os portos do mundo: free time por armador e tarifa diária em USD. Só mudam os parâmetros — e neste sistema os parâmetros são dados configuráveis, não código. Onde a Dow exporta em contêineres, há free time correndo.',
+    's8.geo': 'Dow na região:',
+    's8.geo1': 'Argentina — hoje', 's8.geo2': 'Brasil — presença principal', 's8.geo3': 'Estados Unidos', 's8.geo5': 'Peru', 's8.geo6': 'México', 's8.geo7': '+ outros mercados',
+    's8.l1': 'Parametrizado: armadores, tarifas, free time, plantas e depósitos são catálogos, não código',
+    's8.n2': '3 idiomas', 's8.l2': 'Espanhol · Português · Inglês — esta própria apresentação troca de idioma',
+    's8.l3': 'Em licenças por usuário ou por site: a mesma nuvem escala a custo marginal',
+    's8.c1h': 'Mesmo problema, outra escala',
+    's8.c1p': 'Os mesmos armadores globais — Maersk, MSC, Hapag-Lloyd, ZIM — operam em toda a região com a mesma lógica de free time. Cada site que exporta em contêineres acumula o risco que Bahía Blanca já mediu: USD 588 mil em 11 meses.',
+    's8.c2h': 'Playbook de replicação comprovado',
+    's8.c2p': 'Ativar um site novo = carregar catálogos e regras locais e importar seu histórico — o mesmo processo já executado com 2.944 contêineres. De 4 a 6 semanas por site, cada um medido contra sua própria linha de base.',
+    's9.h2': 'Por que este projeto merece ser selecionado',
+    's9.sub': 'Cinco diferenças frente a qualquer alternativa que ainda está no papel:',
+    's9.i1t': 'Retorno quantificado com dados próprios, não estimativas',
+    's9.i1s': 'USD 120–200 mil/ano de economia endereçável, calculada sobre os 17.565 dias de atraso reais do último ano — a linha de base já está medida.',
+    's9.i2t': 'Risco de execução zero',
+    's9.i2s': 'Está construído, implantado e validado contra o histórico completo. Não há desenvolvimento a financiar nem prazos de entrega que possam falhar.',
+    's9.i3t': 'Investimento operacional marginal',
+    's9.i3s': 'Infraestrutura em nuvem de custo mínimo e sem licenças por usuário. Evitar que dois contêineres por mês entrem em atraso paga a operação anual do sistema.',
+    's9.i4t': 'Resultados mensuráveis desde o primeiro mês',
+    's9.i4s': 'Dois indicadores simples, comparados com a linha de base histórica: dias médios de atraso por contêiner e % de operações fechadas dentro do free time.',
+    's9.i5t': 'Escalável para a região por design',
+    's9.i5s': 'Tudo o que é específico do site — armadores, tarifas, free time, plantas, depósitos, idioma — é configuração, não código. O mesmo sistema se replica em qualquer operação da Dow na América Latina.',
+    's10.h2': 'O que pedimos: adoção formal',
+    's10.sub': 'Selecionado o projeto, o plano de captura de valor leva semanas, não meses:',
+    's10.i1t': 'Semanas 1–2 · Partida com a equipe operacional',
+    's10.i1s': 'Percurso dos fluxos reais com os operadores — já iniciado em modo teste interno —, ajuste fino e adoção como ferramenta única de registro.',
+    's10.i2t': 'Semanas 3–4 · Relatório gerencial automático',
+    's10.i2s': 'Resumo semanal por e-mail à direção: custo do período, contêineres em risco e evolução contra a linha de base.',
+    's10.i3t': 'Contínuo · Medição da economia',
+    's10.i3s': 'Acompanhamento mensal dos dois indicadores comprometidos, com backup automático diário das informações.',
+    's10.i4t': 'Próxima fase · Replicação regional',
+    's10.i4s': 'Com a economia validada em Bahía Blanca, o mesmo playbook é levado a outras operações da Dow na América Latina.'
+  }
+};
+// Meses del gráfico (elementos <text> del SVG, marcados con data-i18n="c.mN")
+const MONTHS = {
+  es: ['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun'],
+  en: ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+  pt: ['Ago','Set','Out','Nov','Dez','Jan','Fev','Mar','Abr','Mai','Jun']
+};
+for (const lang of ['en','pt']) MONTHS[lang].forEach((m,i)=>{ I18N[lang]['c.m'+(i+1)] = m; });
+
+const ES_CACHE = {};
+document.querySelectorAll('[data-i18n]').forEach(el => { ES_CACHE[el.getAttribute('data-i18n')] = el.innerHTML; });
+ES_CACHE['doc.title'] = document.title;
+
+function setLang(lang) {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = lang === 'es' ? ES_CACHE[key] : (I18N[lang][key] ?? ES_CACHE[key]);
+    if (val.includes('<')) el.innerHTML = val; else el.textContent = val;
+  });
+  document.title = lang === 'es' ? ES_CACHE['doc.title'] : I18N[lang]['doc.title'];
+  document.documentElement.lang = lang;
+  document.querySelectorAll('.lang-switch button').forEach(b => b.classList.toggle('on', b.dataset.lang === lang));
+  try { localStorage.setItem('deck-lang', lang); } catch (e) {}
+}
+document.querySelectorAll('.lang-switch button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+
+// ── Navegación ──────────────────────────────────────────────────────────────
+const slides = Array.from(document.querySelectorAll('.slide'));
+const dotsWrap = document.getElementById('dots');
+const btnPrev = document.getElementById('btn-prev');
+const btnNext = document.getElementById('btn-next');
+const slideNumber = document.getElementById('slide-number');
+const progress = document.querySelector('.progress');
+const watermark = document.querySelector('.glyph-watermark');
+let idx = 0;
+
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' on' : '');
+  d.addEventListener('click', () => go(i));
+  dotsWrap.appendChild(d);
+});
+const dots = Array.from(dotsWrap.children);
+
+function go(i) {
+  idx = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s, j) => {
+    s.classList.toggle('active', j === idx);
+    const c = s.querySelector('.slide-content');
+    c.classList.remove('anim');
+    if (j === idx) { void c.offsetWidth; c.classList.add('anim'); }
+  });
+  dots.forEach((d, j) => d.classList.toggle('on', j === idx));
+  progress.style.width = ((idx + 1) / slides.length * 100) + '%';
+  slideNumber.textContent = (idx + 1) + ' / ' + slides.length;
+  btnPrev.disabled = idx === 0;
+  btnNext.disabled = idx === slides.length - 1;
+  watermark.classList.toggle('hidden', idx === 0);
+}
+btnPrev.addEventListener('click', () => go(idx - 1));
+btnNext.addEventListener('click', () => go(idx + 1));
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(idx + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(slides.length - 1);
+});
+let touchX = null;
+document.addEventListener('touchstart', e => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 60) go(idx + (dx < 0 ? 1 : -1));
+  touchX = null;
+}, { passive: true });
+
+// Idioma inicial: ?lang= o el último elegido
+const urlLang = new URLSearchParams(location.search).get('lang');
+let saved = null;
+try { saved = localStorage.getItem('deck-lang'); } catch (e) {}
+const initial = ['es','pt','en'].includes(urlLang) ? urlLang : (['es','pt','en'].includes(saved) ? saved : 'es');
+if (initial !== 'es') setLang(initial);
+go(0);
+    </script>
+  </body>
+</html>
