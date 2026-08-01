@@ -1,0 +1,174 @@
+name: Restore Drill (ensayo de restauración)
+
+# Cierra el finding D-02 de la auditoría: "tener backups" ≠ "saber restaurar".
+# Levanta un Postgres 17 descartable, baja el último backup exitoso, lo restaura y
+# VERIFICA que los datos y el motor de costos sobrevivieron — cronometrado.
+# Cero contacto con producción: el service container muere con el job.
+#
+# Se dispara A MANO (Actions → Restore Drill → Run workflow). Conviene correrlo
+# después de cada cambio grande de schema y, como mínimo, una vez por trimestre.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run ID del backup a restaurar (vacío = el último exitoso)"
+        required: false
+        type: string
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: drill
+          POSTGRES_DB: drill
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: drill
+      PGDATABASE: drill
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar cliente Postgres 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --batch --yes --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "PSQL=/usr/lib/postgresql/17/bin/psql"           >> "$GITHUB_ENV"
+          echo "PGRESTORE=/usr/lib/postgresql/17/bin/pg_restore" >> "$GITHUB_ENV"
+
+      - name: Bajar el backup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN="${{ inputs.run_id }}"
+          if [ -z "$RUN" ]; then
+            RUN=$(gh run list --workflow=backup-db.yml --status=success \
+                   --limit=1 --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$RUN" ] || [ "$RUN" = "null" ]; then
+            echo "::error::No hay ningún run exitoso de backup-db.yml. El drill no tiene qué restaurar."
+            exit 1
+          fi
+          echo "RUN_ID=$RUN" >> "$GITHUB_ENV"
+          gh run download "$RUN" --dir backup --repo "${{ github.repository }}"
+          find backup -type f -name 'crm-db-*' -print
+          DUMP=$(find backup -type f -name 'crm-db-*.dump' | head -1)
+          if [ -z "$DUMP" ]; then
+            echo "::error::El artifact del run $RUN no contiene ningún .dump"
+            exit 1
+          fi
+          echo "DUMP=$DUMP" >> "$GITHUB_ENV"
+          ls -lh "$DUMP"
+
+      - name: Preparar roles que el dump espera
+        run: |
+          # HALLAZGO DEL DRILL: el dump trae CREATE POLICY ... TO <rol>, pero los roles
+          # son objetos de CLUSTER (no de base) y pg_dump --schema NO los incluye. En un
+          # restore real hay que crearlos ANTES o las policies fallan. En Supabase ya
+          # existen; en un cluster virgen, esto es parte del runbook.
+          "$PSQL" -v ON_ERROR_STOP=1 -c "
+            do \$\$ begin
+              if not exists (select 1 from pg_roles where rolname='anon')             then create role anon nologin; end if;
+              if not exists (select 1 from pg_roles where rolname='authenticated')    then create role authenticated nologin; end if;
+              if not exists (select 1 from pg_roles where rolname='service_role')     then create role service_role nologin bypassrls; end if;
+              if not exists (select 1 from pg_roles where rolname='crm_rpc_executor') then create role crm_rpc_executor nologin; end if;
+              if not exists (select 1 from pg_roles where rolname='supabase_admin')   then create role supabase_admin nologin; end if;
+            end \$\$;"
+          "$PSQL" -v ON_ERROR_STOP=1 -c "grant crm_rpc_executor to authenticated;" || true
+          "$PSQL" -v ON_ERROR_STOP=1 -c "create extension if not exists pg_trgm; create extension if not exists pgcrypto;"
+          # auth.uid() no existe fuera de Supabase: stub para que las policies restauren
+          # y las views security_invoker se puedan consultar (devuelve NULL = sin sesión).
+          "$PSQL" -v ON_ERROR_STOP=1 -c "
+            create schema if not exists auth;
+            create or replace function auth.uid() returns uuid language sql stable as \$\$ select null::uuid \$\$;"
+
+      - name: RESTAURAR (cronometrado)
+        run: |
+          START=$(date +%s)
+          set +e
+          "$PGRESTORE" --no-owner --no-privileges --dbname="$PGDATABASE" \
+            --verbose "$DUMP" 2> restore.log
+          RC=$?
+          set -e
+          END=$(date +%s)
+          echo "RESTORE_SECS=$((END-START))" >> "$GITHUB_ENV"
+          ERRORES=$(grep -c "^pg_restore: error" restore.log || true)
+          echo "RESTORE_ERRORES=$ERRORES" >> "$GITHUB_ENV"
+          echo "pg_restore exit=$RC · errores=$ERRORES · $((END-START))s"
+          if [ "$ERRORES" != "0" ]; then
+            echo "::warning::pg_restore reportó $ERRORES errores — ver el detalle abajo"
+            grep "^pg_restore: error" restore.log | head -20
+          fi
+
+      - name: VERIFICAR que los datos y el motor sobrevivieron
+        run: |
+          Q() { "$PSQL" -tAX -c "$1"; }
+          OPS=$(Q "select count(*) from crm.operaciones")
+          CONT=$(Q "select count(*) from crm.contenedores")
+          TARIFAS=$(Q "select count(*) from crm.freetime_origin")
+          VIEWS=$(Q "select count(*) from pg_views where schemaname='crm'")
+          FUNCS=$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='crm'")
+          POLICIES=$(Q "select count(*) from pg_policies where schemaname='crm'")
+          GRANTS=$(Q "select count(*) from information_schema.role_table_grants where table_schema='crm' and grantee in ('authenticated','anon')")
+          # Prueba del MOTOR: la view de costos cerrados debe seguir calculando plata.
+          MOTOR=$(Q "select count(*) from crm.vista_kpi_costos_cerradas where costo_neto > 0")
+          SUMA=$(Q "select coalesce(round(sum(costo_neto)),0) from crm.vista_kpi_costos_cerradas")
+
+          {
+            echo "## Restore Drill — resultado"
+            echo ""
+            echo "| Chequeo | Valor |"
+            echo "|---|---|"
+            echo "| Run del backup restaurado | \`$RUN_ID\` |"
+            echo "| Tiempo de restauración | **${RESTORE_SECS}s** |"
+            echo "| Errores de pg_restore | $RESTORE_ERRORES |"
+            echo "| Operaciones | **$OPS** |"
+            echo "| Contenedores | $CONT |"
+            echo "| Tarifas (freetime_origin) | $TARIFAS |"
+            echo "| Views del schema crm | $VIEWS |"
+            echo "| Funciones del schema crm | $FUNCS |"
+            echo "| **Policies RLS restauradas** | **$POLICIES** |"
+            echo "| **Grants a authenticated/anon** | **$GRANTS** |"
+            echo "| Operaciones con costo > 0 (motor vivo) | **$MOTOR** |"
+            echo "| Suma de costo neto | USD $SUMA |"
+            echo ""
+            if [ "$GRANTS" = "0" ]; then
+              echo "> ⚠️ **Confirmado: el dump NO trae los GRANT** (\`--no-privileges\`)."
+              echo "> Un restore real necesita reaplicar los grants desde \`crm-v2/supabase/migrations/\`"
+              echo "> antes de que la app pueda usar la base. Las policies RLS **sí** viajan (ver fila de arriba)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # El drill FALLA si los datos no sobrevivieron — silencio no es éxito.
+          if [ "$OPS" -lt 1 ]; then echo "::error::crm.operaciones vacía tras el restore"; exit 1; fi
+          if [ "$MOTOR" -lt 1 ]; then echo "::error::el motor de costos no devuelve plata tras el restore"; exit 1; fi
+          echo "OK: $OPS operaciones, $MOTOR con costo, motor vivo, ${RESTORE_SECS}s"
+
+      - name: Avisar fallo por n8n
+        if: failure()
+        run: |
+          curl -s -X POST https://jzenteno.app.n8n.cloud/webhook/claude-handoff \
+            -H "Content-Type: application/json" \
+            -d "{\"chatInput\": \"🔴 RESTORE DRILL FALLÓ — el backup NO se puede restaurar. Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            || echo "::warning::No se pudo notificar a n8n"
