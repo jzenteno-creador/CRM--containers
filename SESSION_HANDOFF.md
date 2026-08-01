@@ -1,4 +1,4 @@
-# Handoff de sesión — 2026-07-31 (maratón) · CRM Detention v2 · rama v2-rebuild
+# Handoff de sesión — 2026-07-31/08-01 (maratón) · CRM Detention v2 · rama v2-rebuild
 
 ## Resumen
 UNA sesión, cuatro capítulos: (1) limpieza integral del repo + P1 del backup que respaldaba
@@ -39,6 +39,32 @@ migración) · sección "KPIs del piloto" en /inicio (4 cards + tabla 12 meses) 
 automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conectado de verdad
 (expo abiertas/cerradas + impo).
 
+## ✅ SEGUNDA TANDA (GO de John 2026-08-01, "no voy a hacer nada manual")
+- **Restore drill AUTOMATIZADO Y ENSAYADO** (`.github/workflows/restore-drill.yml`, en
+  master): levanta un Postgres 17 descartable, baja el último backup, restaura
+  cronometrado y verifica datos + policies + grants + **que el motor siga calculando
+  plata**. Falla fuerte si algo no sobrevive, avisa por n8n. Run 30674909035: **2.959 ops
+  intactas, 1.331 con costo, <1s**. Cierra D-02 completo. Hallazgos codificados en el
+  workflow: los ROLES son objetos de cluster (no viajan en el dump — crear antes), los
+  GRANTS no viajan (`--no-privileges`, reaplicar desde migrations), `auth.uid()` necesita
+  stub, `pg_trgm` antes de los índices trigram. Correr tras cada cambio grande de schema.
+- **Migración 041 APLICADA**: advisory lock en `crm_registrar_waiver` (expo) — cierra el
+  TOCTOU que impo ya tenía cubierto; guards `rol is null or rol not in (...)` en 6 RPCs
+  (con rol NULL el NOT IN evaluaba NULL y el guard NO rechazaba). Harness T1-T3 PASS,
+  owners verificados (postgres en las 4 de expo, executor en las 2 de impo).
+- **Snapshot mensual a Drive VIVO Y PUBLICADO** (n8n `zTQW5xdg2CEYSmG3`): 1° de cada mes
+  4AM, baja el artifact y lo sube a Drive (retención larga vs. los 90 días de GH).
+  Probado en vivo: `crm-db-backup-20260731-2316.zip` ya está en el Drive de John.
+  Credencial `GitHub PAT (backup CRM)` (`iBh8prhKKIrEOhYz`) creada con autorización
+  explícita de John.
+- **Robustez del front deployada**: caps con badge en importación/prefijos/ingreso/egreso;
+  /bookings con naviera+búsqueda server-side (y 2 bugs cazados en el camino: dropdown de
+  navieras desde catálogo, y ReasignarModal con fetch propio — con filtro activo no se
+  podía rolear a otra naviera); badge de /alertas con conteo real por fuente; fechas como
+  date-cells en los exports de /reportes (expo e impo) vía `ymdADate` compartido.
+- **README de crm-v2 real** (era el boilerplate de create-next-app).
+- `_archivo/` movida ADENTRO del repo y versionada (pedido de John).
+
 ## ⏸ BLOQUEADO EN JOHN (lo único que falta del plan aprobado)
 1. **Correo diario 7AM**: workflow n8n `hdDDj5BLJt5wNESm` ("CRM Detention — Resumen diario
    7AM") creado y probado — falla SOLO por credencial: en n8n no existe ninguna credencial
@@ -48,13 +74,11 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
    la key → nombre `supabase-crm-containers-service`. Después: reasignar la cred en los 3
    nodos HTTP (MCP update_workflow), re-ejecutar prueba, **publish** (hoy está en draft,
    el cron NO corre hasta publicar).
-2. **Snapshot mensual del backup a Drive**: pendiente — requiere workflow n8n con un GH PAT
-   como credencial (John) para bajar el artifact. Diseñar cuando el mail esté vivo.
-3. Decisión **carga peligrosa**: sigue abierta (contrato: ¿tarifa/free time distinto para
+2. Decisión **carga peligrosa**: sigue abierta (contrato: ¿tarifa/free time distinto para
    peligrosa?). Mientras: flag marcado "no usado por el motor" en Admin. Si se confirma
    diferenciación → desarrollo real (columna en contenedores + filtro en motor).
-4. HIBP toggle en Supabase Auth (1 click, John ya tiene acceso al dashboard).
-5. Bucket viejo `incidencias`: quedó privado e inerte; baja física desde dashboard.
+3. HIBP toggle en Supabase Auth (1 click, John ya tiene acceso al dashboard).
+4. Bucket viejo `incidencias`: quedó privado e inerte; baja física desde dashboard.
 
 ## Pendientes de trabajo (no bloqueados)
 - **UI de waiver/corrección impo** (task #9): RPCs verificadas sin pantalla. Diseñar punto
@@ -75,11 +99,11 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   renombrado a `crm-containers` · `gate-019-sandbox` identificado como borrable (~USD 10/mes).
 
 ## Estado técnico exacto
-- `v2-rebuild` == origin (HEAD tras docs de ratificación); `master` == origin con los 3
-  cherry-picks del backup (b621d17→34bc6b5, aviso n8n, fix pg_dump 17). Working tree limpio
+- `v2-rebuild` == origin (HEAD tras docs de ratificación); `master` == origin con los 4
+  cherry-picks de infra (fix schema crm, aviso n8n, fix pg_dump 17, restore-drill). Working tree limpio
   salvo untracked de John (`docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx` — sin clasificar,
   John no explicó qué es).
-- DB prod: migraciones **hasta 040** aplicadas y verificadas. Front prod: deploy del Bloque
+- DB prod: migraciones **hasta 041** aplicadas y verificadas. Front prod: deploy del Bloque
   3 (alineados). CI: verde. Backup: cron diario 03:00 AR operativo con alerta.
 - n8n: workflow del mail en DRAFT (id hdDDj5BLJt5wNESm), sin publicar.
 
