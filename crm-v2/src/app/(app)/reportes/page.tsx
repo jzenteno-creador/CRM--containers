@@ -30,10 +30,10 @@ import {
   TIPO_CIERRE_LABELS,
   fechaAR,
   fmtFecha,
-  fmtFechaDia,
   fmtUSD,
   fmtUSDTarifa,
   hoyAR,
+  ymdADate,
 } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { ESTADO_CARGA_LABELS, EstadoCargaBadge, EstadoOperacionBadge } from "../contenedores/estado-operacion";
@@ -159,8 +159,9 @@ type ColDef = {
   hideOnMobile?: boolean;
   sortValue: (r: ReportRow) => string | number | null;
   preview: (r: ReportRow) => React.ReactNode;
-  /** valor para el Excel: SIN aritmética — fechas formateadas, montos como número crudo. */
-  excel: (r: ReportRow) => string | number;
+  /** valor para el Excel: SIN aritmética — fechas como Date real (celda de fecha nativa,
+   *  ver dateCol), montos como número crudo. */
+  excel: (r: ReportRow) => string | number | Date;
 };
 
 const emDash = <span style={{ color: "var(--color-text-faint)" }}>—</span>;
@@ -185,7 +186,11 @@ function textCol(
 }
 
 // fecha: la columna es timestamptz → se pasa a día calendario AR (fechaAR) y se formatea
-// DD/MM/YY con fmtFechaDia. El orden usa el ISO crudo (lexicográfico = cronológico).
+// DD/MM/YY con fmtFechaDia para el preview en pantalla. El orden usa el ISO crudo
+// (lexicográfico = cronológico). El Excel exporta un Date real (fix P2, auditoría
+// 2026-07-31 — mismo patrón que reportes/omar-export.ts, `ymdADate` extraído a
+// lib/format.ts): antes exportaba el texto "DD/MM/YY" y Excel no podía filtrar/ordenar la
+// columna como fecha nativa.
 function dateCol(key: ColKey, th: string, label: string, get: (r: ReportRow) => string | null): ColDef {
   return {
     key, th, label, group: "base", numeric: true, hideOnMobile: true,
@@ -196,7 +201,7 @@ function dateCol(key: ColKey, th: string, label: string, get: (r: ReportRow) => 
     },
     excel: (r) => {
       const v = get(r);
-      return v ? fmtFechaDia(fechaAR(v)) : "";
+      return v ? ymdADate(fechaAR(v)) : "";
     },
   };
 }
@@ -544,14 +549,17 @@ export default function ReportesPage() {
       const XLSX = await import("xlsx");
       const header = selectedCols.map((c) => c.label);
       const data = rows.map((r) => {
-        const o: Record<string, string | number> = {};
+        const o: Record<string, string | number | Date> = {};
         for (const c of selectedCols) o[c.label] = c.excel(r);
         return o;
       });
-      const ws = XLSX.utils.json_to_sheet(data, { header });
+      // cellDates en json_to_sheet Y writeFile (mismo patrón que omar-export.ts): las
+      // columnas de fecha ahora traen un Date real (dateCol) — sin esto, SheetJS las
+      // vuelve a convertir a número/serial en vez de dejarlas como celda de fecha.
+      const ws = XLSX.utils.json_to_sheet(data, { header, cellDates: true });
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-      XLSX.writeFile(wb, `reporte_${hoyAR()}.xlsx`);
+      XLSX.writeFile(wb, `reporte_${hoyAR()}.xlsx`, { cellDates: true });
       toast({
         type: "exito",
         title: "Reporte exportado",

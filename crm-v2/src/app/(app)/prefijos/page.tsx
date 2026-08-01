@@ -90,6 +90,12 @@ function NotaTruncada({ nota }: { nota: string | null }) {
 
 const PREFIJO_RE = /^[A-Z]{4}$/;
 
+// caps de fetch defensivos (patrón /contenedores): ninguna de las dos listas debería
+// acercarse a estos números en operación normal — si lo hacen, el badge avisa en vez de
+// truncar en silencio.
+const STOCK_FETCH_CAP = 500;
+const PREFIJOS_FETCH_CAP = 300;
+
 /* ─────────────────────────── modal de alta / edición ─────────────────────────── */
 // Alta: prefijo (4 letras, auto-upper, validación en vivo) + nota. Edición: SOLO nota +
 // toggle activo (el prefijo es la identidad del registro — no se edita; si vuelve a
@@ -250,7 +256,8 @@ export default function PrefijosPage() {
     const { data, error } = await getSupabase()
       .from("vista_stock_prefijos_restringidos")
       .select("operacion_id, numero_contenedor, prefijo, nota_prefijo, naviera, planta, estado, estado_carga, fecha_retiro")
-      .order("fecha_retiro", { ascending: false });
+      .order("fecha_retiro", { ascending: false })
+      .limit(STOCK_FETCH_CAP);
     if (error) {
       setStockRows(null);
       setStockError(error.message);
@@ -273,7 +280,8 @@ export default function PrefijosPage() {
       .from("prefijos_restringidos")
       .select("id, prefijo, activo, nota, created_at, updated_at")
       .order("activo", { ascending: false })
-      .order("prefijo", { ascending: true });
+      .order("prefijo", { ascending: true })
+      .limit(PREFIJOS_FETCH_CAP);
     if (error) {
       setPrefRows(null);
       setPrefError(error.message);
@@ -460,6 +468,11 @@ export default function PrefijosPage() {
               {stockRows.length}
             </span>
           )}
+          {stockRows !== null && stockRows.length >= STOCK_FETCH_CAP && (
+            <Badge tone="amarillo" icon="ti-alert-triangle">
+              se muestran las primeras {STOCK_FETCH_CAP}
+            </Badge>
+          )}
           <span style={{ flex: 1 }} />
           <Button variant="ghost" icon="ti-refresh" onClick={() => void loadStock()} disabled={stockLoading}>
             Re-verificar
@@ -516,6 +529,16 @@ export default function PrefijosPage() {
             <i className="ti ti-list-check" aria-hidden style={{ marginRight: 6, color: "var(--color-accent-500)" }} />
             Lista de prefijos
           </span>
+          {prefRows !== null && (
+            <span className="mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              {prefRows.length}
+            </span>
+          )}
+          {prefRows !== null && prefRows.length >= PREFIJOS_FETCH_CAP && (
+            <Badge tone="amarillo" icon="ti-alert-triangle">
+              se muestran los primeros {PREFIJOS_FETCH_CAP}
+            </Badge>
+          )}
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>

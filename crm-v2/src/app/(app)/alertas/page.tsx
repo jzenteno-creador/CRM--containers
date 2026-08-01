@@ -449,6 +449,12 @@ function AlertasPageContent() {
   // vista_alertas_impo es TOLERANTE (§ merge de Alertas, M5 B2): si falla, se muestran
   // igual las filas EXPO con un aviso discreto — no baja toda la pantalla a ErrorState.
   const [impoError, setImpoError] = useState<string | null>(null);
+  // fix P3 (auditoría 2026-07-31): expo e impo tienen CADA UNO su propio cap de
+  // FETCH_CAP — el total mostrado puede llegar a 1000, no 500. Se trackea el cap de cada
+  // fuente por separado para que el badge diga la verdad (conteo real + cuál de las dos
+  // fuentes se truncó), en vez del "primeras 500" fijo que subestimaba lo mostrado.
+  const [expoCapped, setExpoCapped] = useState(false);
+  const [impoCapped, setImpoCapped] = useState(false);
   // umbral amarillo (solo para la leyenda): null = no disponible → leyenda oculta
   const [umbral, setUmbral] = useState<number | null>(null);
   // anti-carrera: descarta respuestas que llegan después de un load más nuevo
@@ -477,16 +483,21 @@ function AlertasPageContent() {
       setRows(null);
       setLoadError(alertas.error.message);
       setImpoError(null);
+      setExpoCapped(false);
+      setImpoCapped(false);
     } else {
       setLoadError(null);
       const expoRows = (alertas.data as unknown as ExpoRawRow[]).map(mapExpo);
+      setExpoCapped(expoRows.length >= FETCH_CAP);
       // fetch impo tolerante: si falla, se muestran solo las EXPO + aviso discreto.
       if (alertasImpo.error) {
         setImpoError(alertasImpo.error.message);
+        setImpoCapped(false);
         setRows(expoRows);
       } else {
         setImpoError(null);
         const impoRows = (alertasImpo.data as unknown as ImpoRawRow[]).map(mapImpo);
+        setImpoCapped(impoRows.length >= FETCH_CAP);
         setRows([...expoRows, ...impoRows]);
       }
     }
@@ -643,9 +654,15 @@ function AlertasPageContent() {
                   {COUNTER_LABEL[s](counts[s])}
                 </Badge>
               ))}
-              {rows.length >= FETCH_CAP && (
+              {(expoCapped || impoCapped) && (
                 <Badge tone="amarillo" icon="ti-alert-triangle">
-                  se muestran las primeras {FETCH_CAP}
+                  se muestran {rows.length} —{" "}
+                  {expoCapped && impoCapped
+                    ? "expo e impo alcanzaron"
+                    : expoCapped
+                      ? "expo alcanzó"
+                      : "impo alcanzó"}{" "}
+                  el límite de {FETCH_CAP}
                 </Badge>
               )}
             </>

@@ -31,7 +31,7 @@ import { Checkbox, DateField, Field } from "@/components/fd/fields";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { useToast } from "@/components/fd/toast";
-import { ESTADO_IMPO_LABELS, fechaAR, fmtFecha, fmtFechaDia, fmtUSD, fmtUSDTarifa, hoyAR } from "@/lib/format";
+import { ESTADO_IMPO_LABELS, fechaAR, fmtFecha, fmtUSD, fmtUSDTarifa, hoyAR, ymdADate } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { EstadoImpoBadge } from "../importacion/estado-impo";
 
@@ -174,9 +174,10 @@ type ColDefImpo = {
   hideOnMobile?: boolean;
   sortValue: (r: ReportRowImpo) => string | number | null;
   preview: (r: ReportRowImpo) => React.ReactNode;
-  /** valor para el Excel: SIN aritmética — fechas formateadas como texto plano (mismo
-   *  patrón EXISTENTE de dateCol() en page.tsx), montos como número crudo. */
-  excel: (r: ReportRowImpo) => string | number;
+  /** valor para el Excel: SIN aritmética — fechas como Date real (celda de fecha nativa,
+   *  mismo patrón que dateCol() en page.tsx tras el fix P2, auditoría 2026-07-31), montos
+   *  como número crudo. */
+  excel: (r: ReportRowImpo) => string | number | Date;
 };
 
 const emDash = <span style={{ color: "var(--color-text-faint)" }}>—</span>;
@@ -211,7 +212,7 @@ function dateColImpo(
     },
     excel: (r) => {
       const v = get(r);
-      return v ? fmtFechaDia(fechaAR(v)) : "";
+      return v ? ymdADate(fechaAR(v)) : "";
     },
   };
 }
@@ -486,14 +487,16 @@ export function ImpoSection() {
       const XLSX = await import("xlsx");
       const header = selectedCols.map((c) => c.label);
       const data = rows.map((r) => {
-        const o: Record<string, string | number> = {};
+        const o: Record<string, string | number | Date> = {};
         for (const c of selectedCols) o[c.label] = c.excel(r);
         return o;
       });
-      const ws = XLSX.utils.json_to_sheet(data, { header });
+      // cellDates en json_to_sheet Y writeFile (mismo patrón que EXPO/page.tsx y
+      // omar-export.ts): las columnas de fecha ahora traen un Date real (dateColImpo).
+      const ws = XLSX.utils.json_to_sheet(data, { header, cellDates: true });
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Importación");
-      XLSX.writeFile(wb, `reporte_importacion_${hoyAR()}.xlsx`);
+      XLSX.writeFile(wb, `reporte_importacion_${hoyAR()}.xlsx`, { cellDates: true });
       toast({
         type: "exito",
         title: "Reporte de importación exportado",

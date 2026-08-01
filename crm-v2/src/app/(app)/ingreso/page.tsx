@@ -45,6 +45,11 @@ const MEDIOS: { value: "camion" | "tren"; label: string }[] = [
   { value: "tren", label: "Tren" },
 ];
 
+// cap de fetch defensivo (patrón /contenedores): la cola de pendientes de ingreso es
+// naturalmente chica — cinturón de seguridad, no funcionalidad. Si algún día la toca, el
+// badge avisa en vez de truncar en silencio.
+const FETCH_CAP = 300;
+
 function SectionTitle({ title, count }: { title: string; count: number | null }) {
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "22px 0 10px" }}>
@@ -147,7 +152,8 @@ export default function IngresoPage() {
         "id, fecha_retiro, booking_retiro, retiro_de, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre)), movimientos_planta(planta_destino:plantas!movimientos_planta_planta_destino_id_fkey(nombre))",
       )
       .eq("estado", "en_transito_a_planta")
-      .order("fecha_retiro", { ascending: true });
+      .order("fecha_retiro", { ascending: true })
+      .limit(FETCH_CAP);
     if (error) {
       setPendientes(null);
       setPendientesError(error.message);
@@ -287,9 +293,16 @@ export default function IngresoPage() {
         title="Ingreso a planta"
         counters={
           pendientesCount != null ? (
-            <Badge tone={pendientesCount > 0 ? "amarillo" : "neutro"} mono icon="ti-truck">
-              {pendientesCount} pendiente{pendientesCount === 1 ? "" : "s"} de ingreso
-            </Badge>
+            <>
+              <Badge tone={pendientesCount > 0 ? "amarillo" : "neutro"} mono icon="ti-truck">
+                {pendientesCount} pendiente{pendientesCount === 1 ? "" : "s"} de ingreso
+              </Badge>
+              {pendientesCount >= FETCH_CAP && (
+                <Badge tone="amarillo" icon="ti-alert-triangle">
+                  se muestran los primeros {FETCH_CAP}
+                </Badge>
+              )}
+            </>
           ) : undefined
         }
         action={

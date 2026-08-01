@@ -79,6 +79,11 @@ const ACTION_BAR: React.CSSProperties = {
   borderRadius: "var(--radius-input)",
 };
 
+// cap de fetch defensivo (patrón /contenedores): los pendientes son una cola operativa,
+// no debería acercarse nunca a este número — si lo toca, el badge avisa en vez de truncar
+// en silencio.
+const FETCH_CAP = 500;
+
 function etiquetaFila(r: PendienteImpoRow): string {
   const num = r.contenedor?.numero_contenedor ?? "—";
   const orden = r.orden?.numero_orden ?? "—";
@@ -556,7 +561,8 @@ export default function ImportacionPage() {
         "id, estado, fecha_retiro_terminal, fecha_ingreso_planta, fecha_devolucion, orden:ordenes_impo(numero_orden, fecha_arribo_terminal, naviera:navieras(nombre), planta_destino:plantas(nombre)), contenedor:contenedores(numero_contenedor, tipo)",
       )
       .in("estado", ["en_terminal", "en_transito_a_planta", "en_planta", "en_transito_devolucion"])
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(FETCH_CAP);
     if (error) {
       setPendientes(null);
       setPendientesError(error.message);
@@ -627,9 +633,16 @@ export default function ImportacionPage() {
         title="Importación"
         counters={
           totalPendientes != null ? (
-            <Badge tone={totalPendientes > 0 ? "amarillo" : "neutro"} mono icon="ti-ship">
-              {totalPendientes} pendiente{totalPendientes === 1 ? "" : "s"} en el ciclo
-            </Badge>
+            <>
+              <Badge tone={totalPendientes > 0 ? "amarillo" : "neutro"} mono icon="ti-ship">
+                {totalPendientes} pendiente{totalPendientes === 1 ? "" : "s"} en el ciclo
+              </Badge>
+              {totalPendientes >= FETCH_CAP && (
+                <Badge tone="amarillo" icon="ti-alert-triangle">
+                  se muestran los primeros {FETCH_CAP}
+                </Badge>
+              )}
+            </>
           ) : undefined
         }
         action={

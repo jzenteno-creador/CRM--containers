@@ -12,9 +12,11 @@
 // nuevo ETD/buque) o se reasignan los contenedores a otro booking. Hoy esto se
 // controla a mano cada viernes; esta pantalla lo reemplaza con saldo + semáforo.
 //
-// Patrón de página del repo (espejo de /alertas): useSearchParams + Suspense para
-// el deep-link ?semaforo=, load() con anti-carrera, refetch al recuperar foco,
-// 4 estados en la tabla, filtro de presentación client-side.
+// Patrón de página del repo (espejo de /alertas y /contenedores): useSearchParams +
+// Suspense para el deep-link ?semaforo=, load() con anti-carrera + debounce, refetch al
+// recuperar foco, 4 estados en la tabla. Naviera y búsqueda filtran SERVER-SIDE (fix P2,
+// auditoría 2026-07-31 — ver comentario en load() más abajo); el semáforo sigue siendo
+// filtro de presentación client-side.
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -214,17 +216,21 @@ const RECHAZO_LABELS: Record<string, string> = {
   no_disponible: "ya no estaba disponible",
 };
 
+// Destino posible del reasignar — SIEMPRE se fetchea propio (ver comentario abajo), nunca
+// se reusa el `rows` de la página: ese ya sale filtrado por naviera/búsqueda del servidor
+// (fix P2, auditoría 2026-07-31), y "reasignar a otra naviera" es un motivo explícito
+// (`roleo_naviera`) — si el destino saliera del `rows` filtrado, con un filtro de naviera
+// activo el usuario no podría elegir un booking de OTRA naviera como destino.
+type BookingDestinoOption = { booking_id: string; numero: string; etd: string };
+
 function ReasignarModal({
   row,
-  bookingOptions,
   navieras,
   onClose,
   onDone,
   onRefreshBookings,
 }: {
   row: BookingSaldoRow;
-  /** Otros bookings de retiro activos (misma vista de la página) — destino posible. */
-  bookingOptions: BookingSaldoRow[];
   navieras: NavieraOption[];
   onClose: () => void;
   onDone: () => void;
@@ -241,6 +247,9 @@ function ReasignarModal({
   const [attempted, setAttempted] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [destinos, setDestinos] = useState<BookingDestinoOption[] | null>(null);
+  const [destinosError, setDestinosError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data, error } = await getSupabase()
@@ -262,18 +271,34 @@ function ReasignarModal({
     );
   }, [row.booking_id]);
 
+  // TODOS los otros bookings de retiro activos (sin naviera/búsqueda del panel — el
+  // "roleo_naviera" tiene que poder llevar a cualquier naviera), capado igual que la
+  // página (FETCH_CAP) por la misma razón defensiva.
+  const loadDestinos = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("vista_bookings_saldo")
+      .select("booking_id, numero, etd")
+      .neq("booking_id", row.booking_id)
+      .order("etd", { ascending: true })
+      .limit(FETCH_CAP);
+    if (error) {
+      setDestinos(null);
+      setDestinosError(error.message);
+      return;
+    }
+    setDestinosError(null);
+    setDestinos(data as unknown as BookingDestinoOption[]);
+  }, [row.booking_id]);
+
   useEffect(() => {
     void (async () => {
-      await load();
+      await Promise.all([load(), loadDestinos()]);
     })();
-  }, [load]);
+  }, [load, loadDestinos]);
 
   const loading = containers === null && !loadError;
   const containerNumeroById = useMemo(() => new Map((containers ?? []).map((c) => [c.id, c.numero])), [containers]);
-  const destinoOpciones = useMemo(
-    () => bookingOptions.filter((b) => b.booking_id !== row.booking_id),
-    [bookingOptions, row.booking_id],
-  );
+  const destinoOpciones = destinos ?? [];
 
   const seleccionError = attempted && selected.size === 0 ? "seleccioná al menos un contenedor" : null;
   const destinoError = attempted && destinoId === "" ? "elegí el booking destino" : null;
@@ -367,10 +392,26 @@ function ReasignarModal({
               onChange={setDestinoId}
               onCreate={(t) => setModalBookingTexto(t)}
               error={destinoError}
-              placeholder="buscá o creá el booking destino…"
+              disabled={destinos === null}
+              placeholder={destinos === null ? "cargando bookings…" : "buscá o creá el booking destino…"}
               emptyMessage="sin otros bookings activos — tipeá para crear uno nuevo"
             />
           </Field>
+          {destinosError && (
+            <FormAlert tone="warning">
+              No se pudieron cargar los bookings destino: {destinosError}{" "}
+              <button
+                type="button"
+                onClick={() => void loadDestinos()}
+                style={{
+                  background: "none", border: "none", padding: 0, font: "inherit", color: "inherit",
+                  textDecoration: "underline", cursor: "pointer",
+                }}
+              >
+                reintentar
+              </button>
+            </FormAlert>
+          )}
 
           <Field label="motivo" htmlFor="reasignar-motivo" error={motivoError}>
             <Select id="reasignar-motivo" value={motivo} error={motivoError} onChange={(e) => setMotivo(e.target.value as typeof motivo)}>
@@ -408,7 +449,10 @@ function ReasignarModal({
           onClose={() => setModalBookingTexto(null)}
           onCreado={async (id) => {
             const textoCreado = modalBookingTexto;
-            await onRefreshBookings();
+            // refresca la tabla de la página Y la lista propia de destinos (fetch
+            // independiente — ver comentario de loadDestinos): sin esto, el booking recién
+            // creado no aparecería en el combobox de destino hasta cerrar y reabrir el modal.
+            await Promise.all([onRefreshBookings(), loadDestinos()]);
             setDestinoId(id);
             setModalBookingTexto(null);
             toast({ type: "exito", title: "Booking creado", detail: `«${textoCreado}» ya está disponible.` });
@@ -433,7 +477,10 @@ function BookingsPageContent() {
   }
 
   const [navieraFiltro, setNavieraFiltro] = useState("");
-  const [busqueda, setBusqueda] = useState("");
+  // búsqueda con debounce 300ms (mismo patrón que /contenedores): el término efectivo
+  // (search) va detrás del input crudo, y solo dispara query con 2+ caracteres.
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   const [rows, setRows] = useState<BookingSaldoRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -443,14 +490,31 @@ function BookingsPageContent() {
   const [rolearTarget, setRolearTarget] = useState<BookingSaldoRow | null>(null);
   const [reasignarTarget, setReasignarTarget] = useState<BookingSaldoRow | null>(null);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearch(searchInput), 300);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  // saneado de sintaxis (ilike no usa la gramática or=() pero igual evita basura del
+  // portapapeles llegando al query) — remover caracteres es saneo, no lógica de negocio.
+  const sane = search.trim().replace(/[,()"'\\*]/g, "");
+  const searchActive = sane.length >= 2;
+
+  // naviera + búsqueda van al SERVIDOR (fix P2, auditoría 2026-07-31): antes filtraban
+  // client-side sobre el dataset ya capado a FETCH_CAP — una naviera fuera del top-500 (por
+  // dias_a_etd) mostraba una lista incompleta sin ningún aviso. El semáforo se queda
+  // client-side a propósito: el cap ordena por dias_a_etd ascendente (más urgente primero),
+  // así que si se toca el cap lo que queda afuera es lo MENOS urgente (verde/neutro) — nunca
+  // corta una fila roja/amarilla antes que una verde. Filtrar por naviera no tiene esa
+  // garantía (una naviera entera puede quedar del lado de afuera del corte), por eso esa sí
+  // tiene que ir al query.
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
-    const { data, error } = await getSupabase()
-      .from("vista_bookings_saldo")
-      .select("*")
-      .order("dias_a_etd", { ascending: true })
-      .limit(FETCH_CAP);
-    if (rid !== reqIdRef.current) return;
+    let q = getSupabase().from("vista_bookings_saldo").select("*");
+    if (navieraFiltro !== "") q = q.eq("naviera", navieraFiltro);
+    if (searchActive) q = q.ilike("numero", `%${sane}%`);
+    const { data, error } = await q.order("dias_a_etd", { ascending: true }).limit(FETCH_CAP);
+    if (rid !== reqIdRef.current) return; // llegó tarde: hay otro load en vuelo
     if (error) {
       setRows(null);
       setLoadError(error.message);
@@ -458,18 +522,27 @@ function BookingsPageContent() {
     }
     setLoadError(null);
     setRows(data as unknown as BookingSaldoRow[]);
-  }, []);
+  }, [navieraFiltro, sane, searchActive]);
 
   const loadNavieras = useCallback(async () => {
     const { data, error } = await getSupabase().from("navieras").select("id, nombre").eq("activa", true).order("nombre");
     setNavieras(error ? [] : ((data as NavieraOption[]) ?? []));
   }, []);
 
+  // navieras: una sola vez al montar (no depende de los filtros de bookings).
   useEffect(() => {
     void (async () => {
-      await Promise.all([load(), loadNavieras()]);
+      await loadNavieras();
     })();
-  }, [load, loadNavieras]);
+  }, [loadNavieras]);
+
+  // load reactivo: se dispara al montar y cada vez que cambia naviera/búsqueda (mismo
+  // patrón que /contenedores) — las filas previas quedan visibles hasta que resuelve.
+  useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
 
   useEffect(() => {
     const onFocus = () => void load();
@@ -482,18 +555,19 @@ function BookingsPageContent() {
   const counts: Record<EstadoSemaforo, number> = { rojo: 0, amarillo: 0, verde: 0, neutro: 0 };
   for (const r of rows ?? []) counts[r.estado_semaforo] += 1;
 
-  const navierasEnLista = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows ?? []) set.add(r.naviera);
-    return [...set].sort((a, b) => a.localeCompare(b, "es"));
-  }, [rows]);
+  // dropdown de naviera: se arma del catálogo completo (navieras activas), NO del `rows`
+  // capado/filtrado — así siempre lista todas las opciones, incluidas las que hoy no
+  // tienen ningún booking dentro del cap. Ya estaba cargado (loadNavieras, para el modal de
+  // alta) — no es una query nueva.
+  const navierasEnLista = useMemo(
+    () => [...navieras].map((n) => n.nombre).sort((a, b) => a.localeCompare(b, "es")),
+    [navieras],
+  );
 
-  const bySemaforo = filtroSemaforo === "todos" ? (rows ?? []) : (rows ?? []).filter((r) => r.estado_semaforo === filtroSemaforo);
-  const byNaviera = navieraFiltro === "" ? bySemaforo : bySemaforo.filter((r) => r.naviera === navieraFiltro);
-  const q = busqueda.trim().toLowerCase();
-  const visibles = q === "" ? byNaviera : byNaviera.filter((r) => r.numero.toLowerCase().includes(q));
+  // semáforo: única presentación que sigue siendo client-side (ver comentario de load()).
+  const visibles = filtroSemaforo === "todos" ? (rows ?? []) : (rows ?? []).filter((r) => r.estado_semaforo === filtroSemaforo);
 
-  const filtroActivo = filtroSemaforo !== "todos" || navieraFiltro !== "" || q !== "";
+  const filtroActivo = filtroSemaforo !== "todos" || navieraFiltro !== "" || searchActive;
 
   const cols: Column<BookingSaldoRow>[] = [
     {
@@ -634,12 +708,12 @@ function BookingsPageContent() {
             />
           </div>
         </Field>
-        <Field label="buscar por número" htmlFor="bookings-busqueda">
+        <Field label="buscar por número" htmlFor="bookings-busqueda" hint="mínimo 2 caracteres">
           <Input
             id="bookings-busqueda"
             type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="número de booking…"
             style={{ minWidth: 200 }}
           />
@@ -660,10 +734,14 @@ function BookingsPageContent() {
           loadError ? <ErrorState title="No se pudieron cargar los bookings" detail={loadError} onRetry={() => void load()} /> : undefined
         }
         emptyState={
-          filtroActivo && (rows?.length ?? 0) > 0 ? (
+          filtroActivo ? (
+            // naviera y búsqueda ya filtran en el servidor (`rows` sale así de la DB) — el
+            // semáforo sigue siendo client-side — por eso ya no se puede afirmar "hay N
+            // bookings pero ninguno con este filtro": puede ser cualquiera de los tres. El
+            // texto queda genérico a propósito.
             <EmptyState icon="ti-filter" title="Sin bookings con este filtro">
-              Hay {rows!.length} booking{rows!.length === 1 ? "" : "s"} de retiro activos, pero ninguno coincide con el
-              filtro actual. Probá cambiando el semáforo, la naviera o la búsqueda.
+              Ningún booking de retiro activo coincide con el filtro actual. Probá cambiando el semáforo, la naviera o
+              la búsqueda.
             </EmptyState>
           ) : (
             <EmptyState icon="ti-anchor" title="No hay bookings de retiro activos">
@@ -690,7 +768,6 @@ function BookingsPageContent() {
       {reasignarTarget && (
         <ReasignarModal
           row={reasignarTarget}
-          bookingOptions={rows ?? []}
           navieras={navieras}
           onClose={() => setReasignarTarget(null)}
           onDone={() => {

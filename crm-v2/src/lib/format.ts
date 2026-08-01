@@ -73,6 +73,19 @@ export function fmtFechaDia(ymd: string | null | undefined): string {
   return `${d}/${m}/${y.slice(2)}`;
 }
 
+/**
+ * 'YYYY-MM-DD' → Date con componentes LOCALES (nunca Date.UTC) — para exportar como celda
+ * de FECHA real en Excel (SheetJS con `cellDates: true` interpreta el Date como hora LOCAL
+ * y le resta `getTimezoneOffset()` al serializar: con componentes UTC, en TZ negativas
+ * (AR, donde corre todo usuario real) el archivo quedaba un día atrás). Extraído del fix
+ * verificado en reportes/omar-export.ts (P1 del review 2026-07-18, contra el XML crudo de
+ * xlsx 0.18.5) para reusar el mismo criterio en el resto de los export a Excel del repo.
+ */
+export function ymdADate(ymd: string): Date {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function fmtUSD(n: number | null | undefined): string {
   if (n == null) return "USD —";
   return "USD " + Math.round(n).toLocaleString("es-AR");

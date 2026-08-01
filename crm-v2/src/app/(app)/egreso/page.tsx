@@ -73,6 +73,11 @@ const TIPOS_CIERRE: { value: TipoCierre; label: string }[] = [
   { value: "devuelto_vacio", label: TIPO_CIERRE_LABELS.devuelto_vacio },
 ];
 
+// cap de fetch defensivo (patrón /contenedores): las dos colas de esta pantalla son
+// naturalmente chicas — cinturón de seguridad, no funcionalidad. Si algún día lo tocan, el
+// badge avisa en vez de truncar en silencio.
+const FETCH_CAP = 300;
+
 function SectionTitle({ title, count }: { title: string; count: number | null }) {
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "22px 0 10px" }}>
@@ -162,7 +167,8 @@ export default function EgresoPage() {
         "id, fecha_retiro, booking_retiro, retiro_de, estado_carga, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre)), planta_actual:plantas(nombre)",
       )
       .eq("estado", "en_planta")
-      .order("fecha_retiro", { ascending: true });
+      .order("fecha_retiro", { ascending: true })
+      .limit(FETCH_CAP);
     if (error) {
       setEnPlanta(null);
       setEnPlantaError(error.message);
@@ -200,7 +206,8 @@ export default function EgresoPage() {
         "id, tipo_cierre, fecha_egreso_planta, booking_asignado, buque, destino, orden, contenedor:contenedores(numero_contenedor, tipo, naviera:navieras(nombre)), planta_actual:plantas(nombre)",
       )
       .eq("estado", "en_transito_a_terminal")
-      .order("fecha_egreso_planta", { ascending: true });
+      .order("fecha_egreso_planta", { ascending: true })
+      .limit(FETCH_CAP);
     if (error) {
       setPendientes(null);
       setPendientesError(error.message);
@@ -502,9 +509,19 @@ export default function EgresoPage() {
                 {enPlantaCount} en planta
               </Badge>
             )}
+            {enPlantaCount != null && enPlantaCount >= FETCH_CAP && (
+              <Badge tone="amarillo" icon="ti-alert-triangle">
+                se muestran los primeros {FETCH_CAP}
+              </Badge>
+            )}
             {pendientesCount != null && (
               <Badge tone={pendientesCount > 0 ? "amarillo" : "neutro"} mono icon="ti-ship">
                 {pendientesCount} pendiente{pendientesCount === 1 ? "" : "s"} de terminal
+              </Badge>
+            )}
+            {pendientesCount != null && pendientesCount >= FETCH_CAP && (
+              <Badge tone="amarillo" icon="ti-alert-triangle">
+                se muestran los primeros {FETCH_CAP}
               </Badge>
             )}
           </>
