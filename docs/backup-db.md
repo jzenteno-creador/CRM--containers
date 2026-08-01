@@ -53,8 +53,14 @@ entero descansa en grants exactos por rol (ver `crm-v2/AGENTS.md`). Después de 
 que reaplicar los grants desde `crm-v2/supabase/migrations/`, y **verificar en el ensayo si
 las policies RLS vinieron en el dump o hay que reaplicarlas también** — no está confirmado.
 
-**Falta ensayar un restore end-to-end contra un proyecto vacío y cronometrarlo** — es el
-paso que convierte "tengo backups" en "sé que puedo restaurar".
+**ENSAYADO 2026-08-01** (run 30674909035 de `restore-drill.yml`): backup del 31/07
+restaurado en un Postgres 17 virgen en **<1s** — 2.959 operaciones intactas, 1.331 con
+costo calculado por el motor tras el restore. El ensayo es reproducible: Actions →
+**Restore Drill** → Run workflow (correrlo tras cada cambio grande de schema y mínimo
+1 vez por trimestre). Matices que el drill codifica: los ROLES son objetos de cluster y
+no viajan en el dump (crearlos antes), los GRANTS no viajan (`--no-privileges` —
+reaplicar desde migrations), `auth.uid()` necesita stub fuera de Supabase, y los índices
+trigram requieren `pg_trgm` previa.
 
 ## Mejora futura (no implementada)
 
