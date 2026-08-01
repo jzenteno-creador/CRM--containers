@@ -219,9 +219,14 @@ function NumOrDash({ n }: { n: number | null }) {
   return n == null ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : <>{n}</>;
 }
 
-// El title recuerda que el flag es informativo: el motor de costos no lo usa (auditoría
-// 2026-07-31) — sin esto la tabla sugiere una diferenciación de tarifa que no existe.
-const PELIGROSA_TITLE = "Dato del contrato — el motor de costos hoy no distingue por carga peligrosa";
+// El flag es anotación del contrato, no condición de aplicación: la operación de SSB no
+// diferencia free time ni tarifa por carga peligrosa (DECISIÓN de John 2026-08-01, tras la
+// auditoría del 2026-07-31). El motor calcula con la tarifa vigente para todos por igual.
+// Si algún día un contrato sí diferencia, hace falta: columna de carga peligrosa en el
+// contenedor/operación + filtro en el LATERAL de tarifa de las views + índice de vigencia
+// que distinga por el flag (hoy `ux_freetime_vigente` NO lo incluye: cargar una "peligrosa"
+// CIERRA la normal en vez de coexistir).
+const PELIGROSA_TITLE = "Dato del contrato — la operación no diferencia por carga peligrosa";
 
 function PeligrosaBadge({ v }: { v: boolean | null }) {
   if (v == null) return <span style={{ color: "var(--color-text-faint)" }}>—</span>;
@@ -469,9 +474,9 @@ function OrigenVersionModal({
 
         <Toggle id="of-peligrosa" checked={peligrosa} onChange={setPeligrosa} label="aplica a carga peligrosa" />
         <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-faint)", lineHeight: 1.5 }}>
-          ⚠ Dato informativo del contrato: el motor de costos HOY no distingue por carga peligrosa —
-          la tarifa vigente se aplica a todos los contenedores de la naviera por igual (auditoría
-          2026-07-31, pendiente de decisión de negocio).
+          Dato informativo del contrato. La operación NO diferencia condiciones por carga
+          peligrosa (decisión de John, 2026-08-01): la tarifa vigente aplica a todos los
+          contenedores de la naviera por igual, y el motor calcula así.
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
@@ -796,8 +801,8 @@ function DestinoVersionModal({
             ))}
           </Select>
           <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--color-text-faint)", lineHeight: 1.5 }}>
-            ⚠ Dato informativo del contrato: el motor de costos HOY no distingue por carga peligrosa
-            (auditoría 2026-07-31, pendiente de decisión de negocio).
+            Dato informativo del contrato. La operación no diferencia por carga peligrosa
+            (decisión de John, 2026-08-01) — el motor no lo usa.
           </p>
         </Field>
 

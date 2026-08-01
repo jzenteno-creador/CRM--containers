@@ -108,3 +108,23 @@ nuevo = migración de 5 minutos. NO dropear estos CHECKs para hacerlos "configur
 Sí es configurable: `depositos` (retiro_de) — catálogo con alta inline del operador
 (023), porque es texto libre de alta frecuencia y su valor es evitar la fragmentación
 (Exolgan/EXOLGAN/...), no una barrera de integridad.
+
+# Carga peligrosa: NO diferencia condiciones (decisión de John, 2026-08-01)
+
+`freetime_origin.aplica_carga_peligrosa` y `freetime_destino.aplica_carga_peligrosa` son
+**anotación del contrato, NO condición de aplicación**. La operación de SSB no negocia free
+time ni tarifa distinta para carga peligrosa, así que el motor calcula con la tarifa vigente
+para todos los contenedores de la naviera por igual. El flag se carga, se ve y se ordena en
+Admin → Tarifas, con el aviso correspondiente; ningún cálculo lo lee.
+
+Contexto: la auditoría 2026-07-31 lo levantó como P1 porque 459/730 tarifas vigentes de
+origen (10 de 14 en Argentina) están marcadas `true` — incluida MAERSK, cuyos términos
+(14 días / USD 35) son los que validaron al 95,8% contra las liquidaciones de Omar. Eso ya
+era evidencia de que el flag es anotación; John lo confirmó.
+
+**Si algún día un contrato SÍ diferencia**, no alcanza con "leer el flag": hace falta
+(a) marcar la carga peligrosa a nivel contenedor/operación —hoy ese dato no existe en el
+modelo—, (b) sumar el filtro al LATERAL de tarifa de `vista_alertas` / `vista_alertas_impo`
+/ las de costos cerrados, y (c) rehacer el índice de vigencia única: `ux_freetime_vigente`
+NO incluye el flag, así que hoy cargar una tarifa "peligrosa" **CIERRA** la normal en vez de
+coexistir con ella.
