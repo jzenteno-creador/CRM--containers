@@ -92,6 +92,31 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 - **gate-019-sandbox BORRADO** por John (verificado vacío antes: 0 tablas de usuario, 0
   usuarios, 0 migraciones) · bucket viejo `incidencias` BORRADO por John.
 
+## ✅ CUARTA TANDA (2026-08-01, "hacé lo que puedas independientemente")
+- **Importador de tarifas por Excel EN PROD** (`admin/tarifas/importar-excel.tsx`): cierra
+  la promesa del pitch de que preparar el piloto es CONFIGURACIÓN, no desarrollo. 3 pasos
+  (cargar → preview fila por fila con ✅/⚠️/❌ → importar), encabezados con sinónimos,
+  plantilla descargable, tope 500 filas, escritura 100% por `crm_nueva_version_freetime`
+  secuencial. El preview SIMULA el efecto atómico de la RPC contra las vigentes, así una
+  fila duplicada del mismo archivo se compara contra lo que dejaría la anterior. Solo
+  ORIGEN (destino no tiene régimen y usa 3 contadores: es otro desarrollo).
+- **Carga peligrosa: DECIDIDA** — John (2026-08-01): la operación NO diferencia condiciones.
+  El flag queda como anotación de contrato; copy de Admin actualizado y AGENTS.md documenta
+  qué haría falta si algún contrato futuro sí diferenciara (dato a nivel contenedor + filtro
+  en views + rehacer `ux_freetime_vigente`, que hoy NO incluye el flag → cargar una
+  "peligrosa" CIERRA la normal en vez de coexistir).
+- **Barrido de advisors post-todo**: 47 lints vs 45 al empezar. El delta son los 2 warnings
+  esperables del patrón DEFINER por las RPCs nuevas; el WARN del bucket público
+  DESAPARECIÓ (John lo borró). Cero problemas nuevos introducidos.
+- **i18n MEDIDO** (para responderle a Dow con un número real, no una estimación): ~730
+  textos de UI en 82 archivos + 27 puntos de formato es-AR + 95 textos de ayuda en la DB +
+  **39 mensajes de error escritos en español DENTRO de las RPCs** (esto último es lo que
+  nadie ve venir: traducirlos exige devolver códigos en vez de frases y toca funciones de
+  plata). Total realista: **4-5 semanas**. Recomendación: no empezarlo hasta que Dow lo
+  confirme — el piloto es en español y una migración transversal a medias no aporta nada.
+- **`_archivo/` adentro del repo** y `docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx`
+  gitignoreado (queda local, pedido de John).
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. **HIBP** — Authentication → **Attack Protection** → "Prevent use of leaked passwords"
    (NO está en Policies ni Sign In; requiere plan Pro, que la org tiene).
@@ -127,7 +152,7 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   cherry-picks de infra (fix schema crm, aviso n8n, fix pg_dump 17, restore-drill). Working tree limpio
   salvo untracked de John (`docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx` — sin clasificar,
   John no explicó qué es).
-- DB prod: migraciones **hasta 043** aplicadas y verificadas. Front prod: deploy del Bloque
+- DB prod: migraciones **hasta 043** aplicadas y verificadas (037-043 todas de hoy). Front prod: deploy del Bloque
   3 (alineados). CI: verde. Backup: cron diario 03:00 AR operativo con alerta.
 - n8n: 2 workflows ACTIVOS del CRM — mail diario `NvpzO39XqZrTU6UD` (7AM, proyecto
   *export proyect*) y snapshot mensual `zTQW5xdg2CEYSmG3` (día 1, 4AM). Draft viejo archivado.
