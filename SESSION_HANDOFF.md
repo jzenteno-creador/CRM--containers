@@ -102,8 +102,11 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 4. Bucket viejo `incidencias`: quedó privado e inerte; baja física desde dashboard.
 
 ## Pendientes de trabajo (no bloqueados)
-- **UI de waiver/corrección impo** (task #9): RPCs verificadas sin pantalla. Diseñar punto
-  de entrada (¿ficha impo?) con el patrón de contenedores/[id]/acciones.tsx.
+- ~~UI de waiver/corrección impo~~ ✅ **HECHA Y EN PROD** (2026-08-01):
+  `importacion/acciones-plata.tsx`, botón "Plata" por fila en las 4 secciones, gate
+  supervisor+admin doble. La corrección de fechas queda construida pero inalcanzable desde
+  ese entry point (la página solo lista estados abiertos) — deliberado, el modal es
+  reusable el día que exista una vista de cerradas.
 - **Verificación visual**: John la hace él (dicho 2026-08-01). Nada de lo deployado se vio
   en pantalla real — todo el análisis fue estático. Mirar especialmente: rail en laptop
   1366×768, sección KPIs del piloto en /inicio, ⌘K, pestaña Importación en /reportes.
