@@ -150,12 +150,35 @@ async function fetchCargaActualOmar(ids: string[]): Promise<Map<string, CargaAct
 
 // Vocabulario EXACTO del archivo real de Omar (CONTROL DE VACIOS 2025-2026, verificado
 // 2026-07-18 hoja por hoja): la columna 9 es una CATEGORIA, no un semaforo del sistema.
-const ALERTA_LABEL: Record<Semaforo, string> = {
-  rojo: "VENCIDO",
-  amarillo: "PROXIMO A VENCER",
-  verde: "VENCE > 5 DÍAS",
-  neutro: "SIN TARIFA",
-};
+//
+// El "5" de "VENCE > 5 DÍAS" NO es literal: es el umbral configurable
+// (`configuracion.umbral_alerta_amarillo`) que la propia vista usa para decidir
+// verde/amarillo. Con el valor de hoy (5) el archivo sale IDÉNTICO al de Omar; si un
+// admin lo cambia, el rótulo sigue al dato en vez de mentir (P2 de la auditoría
+// 2026-07-31: el label estaba hardcodeado y el umbral siempre fue configurable).
+const UMBRAL_FALLBACK = 5;
+
+function alertaLabels(umbral: number): Record<Semaforo, string> {
+  return {
+    rojo: "VENCIDO",
+    amarillo: "PROXIMO A VENCER",
+    verde: `VENCE > ${umbral} DÍAS`,
+    neutro: "SIN TARIFA",
+  };
+}
+
+/** Umbral de alerta amarilla vigente. Si la lectura falla, cae al 5 histórico de Omar
+ *  (degradación: el Excel se genera igual, con el rótulo que el archivo real usaba). */
+async function fetchUmbralAmarillo(): Promise<number> {
+  const { data, error } = await getSupabase()
+    .from("configuracion")
+    .select("valor")
+    .eq("clave", "umbral_alerta_amarillo")
+    .maybeSingle();
+  if (error || !data) return UMBRAL_FALLBACK;
+  const dias = Number((data.valor as { dias?: unknown } | null)?.dias);
+  return Number.isFinite(dias) && dias > 0 ? dias : UMBRAL_FALLBACK;
+}
 
 const REFORZADO_LABEL: Record<string, string> = {
   confirmado_reforzado: "REFORZADO",
@@ -214,7 +237,9 @@ function buildOmarRows(
   stock: StockAbiertoRow[],
   detalle: Map<string, DetalleRow>,
   carga: Map<string, CargaActualRow>,
+  umbral: number,
 ): OmarRow[] {
+  const ALERTA_LABEL = alertaLabels(umbral);
   return stock.map((s) => {
     const d = detalle.get(s.operacion_id);
     const c = carga.get(s.operacion_id);
@@ -378,9 +403,13 @@ export async function generarExcelOmar(): Promise<OmarResult> {
   if (stock.length === 0) return { kind: "empty" };
 
   const ids = stock.map((s) => s.operacion_id);
-  const [detalle, carga] = await Promise.all([fetchDetalleOperaciones(ids), fetchCargaActualOmar(ids)]);
+  const [detalle, carga, umbral] = await Promise.all([
+    fetchDetalleOperaciones(ids),
+    fetchCargaActualOmar(ids),
+    fetchUmbralAmarillo(),
+  ]);
 
-  const rows = buildOmarRows(stock, detalle, carga);
+  const rows = buildOmarRows(stock, detalle, carga, umbral);
   const { general, vencidos, proximos, vacios } = bucketize(rows);
 
   // dynamic import: SheetJS solo se descarga al generar (mismo patrón que handleExport).
@@ -391,7 +420,8 @@ export async function generarExcelOmar(): Promise<OmarResult> {
     ["GENERAL ", "general", general],
     ["VENCIDOS", "vencidos", vencidos],
     ["PROXIMOS A VENCER", "proximos", proximos],
-    ["VACIOS A VENCER > A 5 DÍAS", "vacios", vacios],
+    // El umbral también manda acá: con 5 (valor de hoy) el nombre es el de Omar.
+    [`VACIOS A VENCER > A ${umbral} DÍAS`, "vacios", vacios],
   ];
   for (const [nombre, clave, filas] of sheets) {
     // Layout de Omar: fila 1 = "FECHA ACTUAL" + fecha (celda de fecha), fila 2 = headers

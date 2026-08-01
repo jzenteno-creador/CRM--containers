@@ -112,6 +112,12 @@ const REGIMEN_LABELS: Record<string, string> = {
   sin_uso: "sin uso",
 };
 
+// El motor de costos resuelve la tarifa con `regimen = 'vacios'` FIJO (007/019/021/026).
+// Una tarifa cargada con otro régimen se guarda y se ve, pero NINGÚN cálculo la lee jamás
+// (P2 de la auditoría 2026-07-31). Hasta que el motor los soporte, el alta los ofrece
+// deshabilitados: mejor no poder elegirlos que cargar una tarifa que nunca va a aplicar.
+const REGIMENES_EN_EL_MOTOR = new Set(["vacios"]);
+
 // espeja el CHECK de la RPC (tipo ∈ {Detention, Demurrage, Combined} — vocabulario naviero)
 const TIPOS = ["Detention", "Demurrage", "Combined"] as const;
 
@@ -406,11 +412,14 @@ function OrigenVersionModal({
             </Field>
             <Field label="régimen" htmlFor="of-regimen">
               <Select id="of-regimen" value={regimen} onChange={(e) => setRegimen(e.target.value)}>
-                {Object.entries(REGIMEN_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+                {Object.entries(REGIMEN_LABELS).map(([value, label]) => {
+                  const enElMotor = REGIMENES_EN_EL_MOTOR.has(value);
+                  return (
+                    <option key={value} value={value} disabled={!enElMotor}>
+                      {enElMotor ? label : `${label} — no implementado en el motor`}
+                    </option>
+                  );
+                })}
               </Select>
             </Field>
             <Field label="hub" htmlFor="of-hub" hint="opcional — puerto/terminal específico dentro del país">
