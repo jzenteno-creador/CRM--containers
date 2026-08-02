@@ -1,7 +1,7 @@
 {
   "packageId": "com.ssbint.crmdetention",
   "host": "crm-detention.vercel.app",
-  "name": "CRM Detention \u2014 SSB",
+  "name": "CRM Detention — SSB",
   "launcherName": "CRM SSB",
   "display": "standalone",
   "themeColor": "#0A0C10",
@@ -20,8 +20,8 @@
     "path": "./crm-ssb.keystore",
     "alias": "crm-ssb"
   },
-  "appVersionName": "1.1.0",
-  "appVersionCode": 2,
+  "appVersionName": "1.2.0",
+  "appVersionCode": 3,
   "shortcuts": [
     {
       "name": "Alertas",
