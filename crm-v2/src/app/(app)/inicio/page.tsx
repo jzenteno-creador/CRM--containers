@@ -45,6 +45,9 @@ type ResumenRow = {
   demora_promedio_dias: NumLike;
 };
 
+const RESUMEN_COLS =
+  "costo_mes, costo_ytd, costo_abierto_proyectado, en_riesgo_rojo, en_riesgo_amarillo, stock_vacios, demora_promedio_dias";
+
 // Contrato real de crm.vista_kpi_resumen_impo (migración 032, bloque H) — espejo mínimo
 // del resumen EXPO, sin stock_vacios/demora_promedio_dias (no modelados para importación).
 type ResumenImpoRow = {
@@ -56,6 +59,9 @@ type ResumenImpoRow = {
   abiertas_total: NumLike;
 };
 
+const RESUMEN_IMPO_COLS =
+  "costo_mes, costo_ytd, costo_abierto_proyectado, en_riesgo_rojo, en_riesgo_amarillo, abiertas_total";
+
 type CostoNavieraRow = {
   naviera: string | null;
   costo_realizado_ytd: NumLike;
@@ -63,11 +69,15 @@ type CostoNavieraRow = {
   costo_total: NumLike;
 };
 
+const COSTO_NAVIERA_COLS = "naviera, costo_realizado_ytd, costo_proyectado_abierto, costo_total";
+
 type TendenciaRow = {
   mes: string; // date "YYYY-MM-01" (día 1 del mes AR)
   costo_realizado: NumLike;
   cerradas: NumLike;
 };
+
+const TENDENCIA_COLS = "mes, costo_realizado, cerradas";
 
 // Contrato real de crm.vista_kpi_piloto_mensual (migración 040, auditoría 2026-07-31
 // Bloque 3): los 3 KPIs del piloto Dow que faltaban además de costo/naviera (018) —
@@ -85,6 +95,9 @@ type PilotoMensualRow = {
   trazados_sin_cargo: NumLike;
   costo_neto_mes: NumLike;
 };
+
+const PILOTO_MENSUAL_COLS =
+  "mes, cerradas, dentro_freetime, pct_dentro_freetime, estadia_promedio, estadia_mediana, demora_promedio, demora_mediana, trazados_sin_cargo, costo_neto_mes";
 
 type DashboardData = {
   resumen: ResumenRow;
@@ -531,14 +544,18 @@ export default function InicioPage() {
     const rid = ++reqIdRef.current;
     const supabase = getSupabase();
     const [resumen, resumenImpo, porNaviera, tendencia, pilotoRes] = await Promise.all([
-      supabase.from("vista_kpi_resumen").select("*").single(),
+      supabase.from("vista_kpi_resumen").select(RESUMEN_COLS).single(),
       // TOLERANTE (M5 B2): si falla, el dashboard sigue con los KPIs de importación en
       // cero — no tumba el resto (mismo criterio que vista_alertas_impo en /alertas).
-      supabase.from("vista_kpi_resumen_impo").select("*").single(),
-      supabase.from("vista_kpi_costo_naviera").select("*").order("costo_total", { ascending: false }),
-      supabase.from("vista_kpi_tendencia_mensual").select("*").order("mes", { ascending: true }),
+      supabase.from("vista_kpi_resumen_impo").select(RESUMEN_IMPO_COLS).single(),
+      supabase.from("vista_kpi_costo_naviera").select(COSTO_NAVIERA_COLS).order("costo_total", { ascending: false }),
+      supabase.from("vista_kpi_tendencia_mensual").select(TENDENCIA_COLS).order("mes", { ascending: true }),
       // KPIs del piloto (040) — 13 para dar margen defensivo a la tabla de 12 meses.
-      supabase.from("vista_kpi_piloto_mensual").select("*").order("mes", { ascending: false }).limit(13),
+      supabase
+        .from("vista_kpi_piloto_mensual")
+        .select(PILOTO_MENSUAL_COLS)
+        .order("mes", { ascending: false })
+        .limit(13),
     ]);
     if (rid !== reqIdRef.current) return; // llegó tarde: hay otro load en vuelo
 

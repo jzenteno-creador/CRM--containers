@@ -58,18 +58,26 @@ function BookingsPorRolearSection() {
   const [rows, setRows] = useState<BookingRolearRow[] | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      const { data, error } = await getSupabase()
-        .from("vista_bookings_saldo")
-        .select("booking_id, numero, naviera, etd, dias_a_etd, contenedores_en_planta, estado_semaforo")
-        .in("estado_semaforo", ["rojo", "amarillo"])
-        .order("dias_a_etd", { ascending: true })
-        .limit(50);
-      setRows(error ? null : (data as unknown as BookingRolearRow[]));
-      setLoaded(true);
-    })();
+  const load = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("vista_bookings_saldo")
+      .select("booking_id, numero, naviera, etd, dias_a_etd, contenedores_en_planta, estado_semaforo")
+      .in("estado_semaforo", ["rojo", "amarillo"])
+      .order("dias_a_etd", { ascending: true })
+      .limit(50);
+    setRows(error ? null : (data as unknown as BookingRolearRow[]));
+    setLoaded(true);
   }, []);
+
+  useEffect(() => {
+    // IIFE async: los setState de load() quedan detrás del await (set-state-in-effect)
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
+  // pantalla de monitoreo continuo: esta sección también se refresca cada 60s
+  // (optimización 2026-08-02 — quedaba stale mientras la tabla principal sí rotaba)
+  useAutoRefresh(load, 60_000);
 
   if (!loaded) {
     return (
@@ -161,17 +169,24 @@ function PrefijosRestringidosSection() {
   const [rows, setRows] = useState<PrefijoStockRow[] | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      const { data, error } = await getSupabase()
-        .from("vista_stock_prefijos_restringidos")
-        .select("operacion_id, numero_contenedor, prefijo, naviera, planta, fecha_retiro")
-        .order("fecha_retiro", { ascending: false })
-        .limit(50);
-      setRows(error ? null : (data as unknown as PrefijoStockRow[]));
-      setLoaded(true);
-    })();
+  const load = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("vista_stock_prefijos_restringidos")
+      .select("operacion_id, numero_contenedor, prefijo, naviera, planta, fecha_retiro")
+      .order("fecha_retiro", { ascending: false })
+      .limit(50);
+    setRows(error ? null : (data as unknown as PrefijoStockRow[]));
+    setLoaded(true);
   }, []);
+
+  useEffect(() => {
+    // IIFE async: los setState de load() quedan detrás del await (set-state-in-effect)
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
+  // mismo criterio que BookingsPorRolearSection: 60s (optimización 2026-08-02)
+  useAutoRefresh(load, 60_000);
 
   if (!loaded) {
     return (
@@ -254,6 +269,9 @@ type ExpoRawRow = {
   estado_semaforo: EstadoSemaforo;
 };
 
+const EXPO_RAW_COLS =
+  "operacion_id, contenedor_id, numero_contenedor, planta_actual, naviera, estado, fecha_retiro, sin_cargo, dias_transcurridos, dias_libres, dias_restantes, tarifa_usd_dia, costo_proyectado, estado_semaforo";
+
 // Contrato real de crm.vista_alertas_impo (migración 032, bloque G) — motor de destino:
 // 3 pares demurrage/detention/combined ya calculados en DB, `modo_reloj` dice cuál está
 // activo (mismo criterio que usó la view para dias_restantes/costo_proyectado/semáforo).
@@ -282,6 +300,9 @@ type ImpoRawRow = {
   estado_semaforo: EstadoSemaforo;
   dias_restantes: number | null;
 };
+
+const IMPO_RAW_COLS =
+  "operacion_impo_id, numero_orden, numero_contenedor, naviera, planta, estado, fecha_arribo_terminal, fecha_retiro_terminal, fecha_devolucion, modo_reloj, dias_demurrage_transcurridos, dias_detention_transcurridos, dias_combined_transcurridos, dias_libres_demurrage, dias_libres_detention, dias_libres_combined, tarifa_dry_usd_dia, exceso_total, costo_proyectado, estado_semaforo, dias_restantes";
 
 // Fila unificada EXPO+IMPO para la tabla principal (§ merge de Alertas, M5 B2). Todo
 // número viene YA calculado de la vista correspondiente — acá solo se copia, nunca se
@@ -466,12 +487,12 @@ function AlertasPageContent() {
     const [alertas, alertasImpo, config] = await Promise.all([
       supabase
         .from("vista_alertas")
-        .select("*")
+        .select(EXPO_RAW_COLS)
         .order("dias_restantes", { ascending: true, nullsFirst: false })
         .limit(FETCH_CAP),
       supabase
         .from("vista_alertas_impo")
-        .select("*")
+        .select(IMPO_RAW_COLS)
         .order("dias_restantes", { ascending: true, nullsFirst: false })
         .limit(FETCH_CAP),
       // TOLERANTE: si falla (RLS del operador u otra razón) solo se oculta la leyenda

@@ -53,6 +53,9 @@ export type BookingSaldoRow = {
   estado_semaforo: EstadoSemaforo;
 };
 
+const BOOKING_SALDO_COLS =
+  "booking_id, numero, naviera, etd, fecha_corte, buque, contenedores_en_planta, contenedores_totales, dias_a_etd, estado_semaforo";
+
 type SemaforoFilter = "todos" | EstadoSemaforo;
 
 const SEMAFORO_LABEL: Record<EstadoSemaforo, string> = {
@@ -511,7 +514,7 @@ function BookingsPageContent() {
   // tiene que ir al query.
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
-    let q = getSupabase().from("vista_bookings_saldo").select("*");
+    let q = getSupabase().from("vista_bookings_saldo").select(BOOKING_SALDO_COLS);
     if (navieraFiltro !== "") q = q.eq("naviera", navieraFiltro);
     if (searchActive) q = q.ilike("numero", `%${sane}%`);
     const { data, error } = await q.order("dias_a_etd", { ascending: true }).limit(FETCH_CAP);
