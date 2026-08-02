@@ -184,9 +184,12 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. **HIBP** — Authentication → **Attack Protection** → "Prevent use of leaked passwords"
    (NO está en Policies ni Sign In; requiere plan Pro, que la org tiene).
-2. **Decisión waivers `devuelto_vacio`**: cargar los 11 waivers (naviera perdonó) o el
-   número 2025 queda subestimado USD 15.540. El motor drill los lista como divergencia
-   conocida hasta que decida.
+2. ~~Decisión waivers `devuelto_vacio`~~ **RESUELTO por John (2026-08-02): NO se cargan.**
+   La app registra costo DEVENGADO; pagado/facturado no está modelado — cargar waivers
+   sin evidencia sería inventar un hecho comercial. Las 7 divergencias del motor drill
+   quedan como CONOCIDAS permanentes. **Desarrollo futuro (idea de John): módulo de
+   validación de facturas de naviera** — match factura vs contenedores contra las views
+   de costo, semáforo por línea (coincide / de más → reclamo / no esperado / sin factura).
 3. **Backup del keystore Android a Drive**: `android/crm-ssb.keystore` +
    `keystore-password.txt` — SOLO existen en su disco.
 4. **Google Play (si quiere)**: cuenta dev (USD 25, personal vs organización — ver

@@ -8,6 +8,7 @@
 //
 // Respuesta: { enviadas, fallidas, muertas: [endpoint…] } — "muertas" son
 // suscripciones vencidas (404/410) que n8n borra de la tabla (tiene DELETE).
+import { createHash, timingSafeEqual } from "node:crypto";
 import webpush from "web-push";
 
 export const dynamic = "force-dynamic";
@@ -20,9 +21,37 @@ type Cuerpo = {
   suscripciones?: Suscripcion[];
 };
 
+// Anti-SSRF (auditoría 2026-08-02): el endpoint viene en última instancia de
+// crm_push_subscribe (cualquier cuenta activa) — sin allowlist, un usuario podría
+// registrar una URL interna y este server le haría POST ciego. Defensa en DOS capas:
+// el CHECK de la migración 047 en la tabla + esta revalidación acá (el route no
+// confía en lo que la tabla contenga).
+const PUSH_SERVICES = [
+  "https://fcm.googleapis.com/",
+  "https://updates.push.services.mozilla.com/",
+  "https://web.push.apple.com/",
+];
+function esPushServiceValido(endpoint: string): boolean {
+  try {
+    const u = new URL(endpoint);
+    if (u.protocol !== "https:") return false;
+    if (PUSH_SERVICES.some((p) => endpoint.startsWith(p))) return true;
+    return u.hostname.endsWith(".notify.windows.com");
+  } catch {
+    return false;
+  }
+}
+
+// contra saturación si el secreto se filtrara: tope duro de trabajo por request
+const MAX_SUSCRIPCIONES = 500;
+
+const sha256 = (s: string) => createHash("sha256").update(s).digest();
+
 export async function POST(req: Request) {
   const secreto = process.env.PUSH_ENDPOINT_SECRET;
-  if (!secreto || req.headers.get("x-push-secret") !== secreto) {
+  const recibido = req.headers.get("x-push-secret");
+  // comparación constant-time (hasheados a longitud fija — timingSafeEqual lo exige)
+  if (!secreto || !recibido || !timingSafeEqual(sha256(secreto), sha256(recibido))) {
     return Response.json({ error: "no_autorizado" }, { status: 401 });
   }
 
@@ -40,15 +69,23 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "json_invalido" }, { status: 400 });
   }
-  const subs = Array.isArray(body.suscripciones) ? body.suscripciones : [];
+  const subs = (Array.isArray(body.suscripciones) ? body.suscripciones : []).slice(
+    0,
+    MAX_SUSCRIPCIONES,
+  );
   if (subs.length === 0) {
     return Response.json({ enviadas: 0, fallidas: 0, muertas: [] });
   }
 
+  // la URL de destino solo puede ser un path propio (el sw.js también lo revalida)
+  const urlDestino =
+    typeof body.url === "string" && body.url.startsWith("/") && !body.url.startsWith("//")
+      ? body.url.slice(0, 200)
+      : "/alertas";
   const payload = JSON.stringify({
-    titulo: body.titulo ?? "CRM Detention",
-    cuerpo: body.cuerpo ?? "",
-    url: body.url ?? "/alertas",
+    titulo: (body.titulo ?? "CRM Detention").slice(0, 120),
+    cuerpo: (body.cuerpo ?? "").slice(0, 300),
+    url: urlDestino,
   });
 
   const muertas: string[] = [];
@@ -57,7 +94,7 @@ export async function POST(req: Request) {
 
   await Promise.all(
     subs.map(async (s) => {
-      if (!s?.endpoint || !s?.p256dh || !s?.auth) {
+      if (!s?.endpoint || !s?.p256dh || !s?.auth || !esPushServiceValido(s.endpoint)) {
         fallidas++;
         return;
       }

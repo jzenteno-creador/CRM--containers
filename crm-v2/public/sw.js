@@ -52,7 +52,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/alertas";
+  // solo paths propios: nunca navegar a un destino externo que venga en un payload
+  let url = (event.notification.data && event.notification.data.url) || "/alertas";
+  if (typeof url !== "string" || !url.startsWith("/") || url.startsWith("//")) url = "/alertas";
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((abiertas) => {
       for (const c of abiertas) {
