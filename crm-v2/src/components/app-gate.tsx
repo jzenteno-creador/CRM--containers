@@ -9,29 +9,27 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/fd/button";
+import { BootSplash } from "@/components/fd/boot-splash";
 import { ErrorState } from "@/components/fd/error-state";
 import { GateFrame } from "@/components/fd/gate-frame";
-import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { useSession } from "@/lib/session";
 
-/** Skeleton a pantalla completa con la atmósfera del gate (misma familia que .gate-page). */
-function GateSkeleton() {
-  return (
-    <GateFrame>
-      <div className="gate-card" aria-busy="true" aria-label="cargando sesión">
-        <SkeletonBlock width={44} height={44} style={{ borderRadius: "50%" }} />
-        <SkeletonBlock width="55%" height={14} delay={150} />
-        <SkeletonBlock width="80%" delay={300} />
-        <SkeletonBlock width="70%" delay={450} />
-      </div>
-    </GateFrame>
-  );
-}
+// Garantía de escena del boot-splash: la sesión suele resolver en 200-800ms; el
+// splash corre EN PARALELO y se mantiene un mínimo para que la secuencia de
+// marca se lea completa (contenedor dibujándose + wordmark). No es tiempo
+// agregado en cargas lentas: es max(carga, MIN_BOOT_MS).
+const MIN_BOOT_MS = 1400;
 
 export function AppGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { status, perfil, perfilError, refreshPerfil, signOut } = useSession();
   const [signingOut, setSigningOut] = useState(false);
+  const [bootListo, setBootListo] = useState(false);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setBootListo(true), MIN_BOOT_MS);
+    return () => window.clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (status === "signedOut") router.replace("/login");
@@ -70,10 +68,10 @@ export function AppGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (status === "signedIn" && perfil?.estado === "activo") {
+  if (status === "signedIn" && perfil?.estado === "activo" && bootListo) {
     return <>{children}</>;
   }
 
-  // loading, signedOut (mientras redirige) o estado ≠ activo (mientras redirige)
-  return <GateSkeleton />;
+  // loading, garantía de escena del boot, signedOut o estado ≠ activo (redirigiendo)
+  return <BootSplash />;
 }
