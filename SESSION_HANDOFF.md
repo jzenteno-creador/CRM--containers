@@ -117,14 +117,46 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 - **`_archivo/` adentro del repo** y `docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx`
   gitignoreado (queda local, pedido de John).
 
+## ✅ QUINTA TANDA (2026-08-02, "seguí" / "continue" + tarea Android)
+- **Motor drill EN MASTER Y VERDE** (`.github/workflows/motor-drill.yml`): restaura el
+  último backup en Postgres 17 descartable y corre `crm-v2/tests/golden-motor.sql` — los
+  43 casos golden contra la **view real**, no el oráculo TS. Veredictos:
+  OK / DIVERGENCIA_CONOCIDA / REGRESION (falla el job) / FALTA. Primer run: 36 exactos +
+  7 divergencias conocidas (categoría `devuelto_vacio`: el golden dice waiver-total, la
+  view cobra — son las 11 operaciones waiver pendientes de decisión de John,
+  USD ~14-15,5k).
+- **Migración 044 APLICADA — P1 nuevo cazado post-auditoría**: `exceso_actual` re-resolvía
+  la tarifa con su propio LATERAL SIN filtro de país → con el contrato global de 40 países,
+  **191 de 200 operaciones daban distinto que las views**. Es el tope de los waivers: el
+  primer waiver real de Omar habría salido mal topeado. Fix: leer DE las views (fuente
+  única). Hash del costo total pre/post IDÉNTICO (`1f070fb9…`, USD 621.285) — el fix no
+  movió un centavo del cálculo. **Migración 045**: `dias_facturables` deprecada (mismo
+  defecto, cero consumidores). Regla "fuente única" documentada en AGENTS.md.
+- **Multi-región documentada como NOT-NOW** en AGENTS.md: la única deuda real es la TZ
+  hardcodeada (45 puntos); Brasil comparte offset, solo importa MX/CO/PE cerca de
+  medianoche. Plan de 4 pasos escrito; no ejecutar sin operación fuera de AR/BR.
+- **📱 APP ANDROID CONSTRUIDA, FIRMADA E INSTALADA EN EL S25 DE JOHN** ("me encanta").
+  Arquitectura PWA+TWA: manifest + sw.js (navegación network-only: jamás plata vieja) +
+  /offline + **/privacidad (Ley 25.326)** + íconos → deploy prod; `assetlinks.json` con la
+  huella real del certificado (verificada idéntica vía apksigner). Bubblewrap 1.25 con
+  toolchain propio en `~/.bubblewrap/` (JDK 17 Temurin + build-tools 36.1.0 + symlink
+  legacy `tools/bin`). Package `com.ssbint.crmdetention`. **Release GitHub
+  `app-android-v1.0.0`** con APK (1,0 MB) y AAB. Keystore + password SOLO locales en
+  `android/` (gitignored). **Kit Play Store completo en `android/PLAY-STORE.md`** (ficha,
+  Data Safety, IARC, prueba cerrada, paso post-subida de Play App Signing) + gráfico
+  destacado 1024×500 generado.
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. **HIBP** — Authentication → **Attack Protection** → "Prevent use of leaked passwords"
    (NO está en Policies ni Sign In; requiere plan Pro, que la org tiene).
-2. Decisión **carga peligrosa**: sigue abierta (contrato: ¿tarifa/free time distinto para
-   peligrosa?). Mientras: flag marcado "no usado por el motor" en Admin. Si se confirma
-   diferenciación → desarrollo real (columna en contenedores + filtro en motor).
-3. HIBP toggle en Supabase Auth (1 click, John ya tiene acceso al dashboard).
-4. Bucket viejo `incidencias`: quedó privado e inerte; baja física desde dashboard.
+2. **Decisión waivers `devuelto_vacio`**: cargar los 11 waivers (naviera perdonó) o el
+   número 2025 queda subestimado USD 15.540. El motor drill los lista como divergencia
+   conocida hasta que decida.
+3. **Backup del keystore Android a Drive**: `android/crm-ssb.keystore` +
+   `keystore-password.txt` — SOLO existen en su disco.
+4. **Google Play (si quiere)**: cuenta dev (USD 25, personal vs organización — ver
+   `android/PLAY-STORE.md` §0), 2+ capturas desde el S25, usuario de revisión para Google.
+   Tras subir: pasar la huella de Play App Signing → Claude la agrega al assetlinks.
 
 ## Pendientes de trabajo (no bloqueados)
 - ~~UI de waiver/corrección impo~~ ✅ **HECHA Y EN PROD** (2026-08-01):
@@ -152,8 +184,11 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   cherry-picks de infra (fix schema crm, aviso n8n, fix pg_dump 17, restore-drill). Working tree limpio
   salvo untracked de John (`docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx` — sin clasificar,
   John no explicó qué es).
-- DB prod: migraciones **hasta 043** aplicadas y verificadas (037-043 todas de hoy). Front prod: deploy del Bloque
-  3 (alineados). CI: verde. Backup: cron diario 03:00 AR operativo con alerta.
+- DB prod: migraciones **hasta 045** aplicadas y verificadas (037-045 de la maratón).
+  Front prod: deploy con capa PWA (manifest/sw/offline/privacidad/assetlinks). CI: verde.
+  Backup: cron diario 03:00 AR operativo con alerta + motor drill en master.
+- Android: release `app-android-v1.0.0` (APK+AAB firmados, huella `9A:2E:…:F2:B9`),
+  toolchain reproducible en `~/.bubblewrap/`, config versionada en `android/twa-manifest.json`.
 - n8n: 2 workflows ACTIVOS del CRM — mail diario `NvpzO39XqZrTU6UD` (7AM, proyecto
   *export proyect*) y snapshot mensual `zTQW5xdg2CEYSmG3` (día 1, 4AM). Draft viejo archivado.
 
