@@ -88,6 +88,15 @@ export default function PrivacidadPage() {
       </section>
 
       <section style={S}>
+        <h2 style={H}>Eliminación de cuenta</h2>
+        <p>
+          Los titulares de una cuenta pueden solicitar su eliminación siguiendo los pasos
+          de la página <a href="/eliminar-cuenta">Eliminación de cuenta</a> (también
+          accesible desde el menú de usuario dentro de la aplicación).
+        </p>
+      </section>
+
+      <section style={S}>
         <h2 style={H}>Contacto</h2>
         <p>
           SSB International S.A. — <a href="mailto:jzenteno@ssbint.com">jzenteno@ssbint.com</a>
