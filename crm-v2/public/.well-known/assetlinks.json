@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ssbint.crmdetention",
+      "sha256_cert_fingerprints": [
+        "9A:2E:19:4E:A6:31:C3:A2:85:D6:90:A8:7C:75:DA:FA:C2:79:04:BA:DF:F6:92:0B:6D:99:0D:E2:C4:ED:F2:B9"
+      ]
+    }
+  }
+]

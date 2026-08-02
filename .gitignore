@@ -24,3 +24,16 @@ skills-lock.json
 
 # Material de trabajo de John que queda LOCAL (pedido explícito 2026-08-01)
 docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx
+
+# App Android: la llave de firma y su password NUNCA se versionan (John guarda copia
+# en Drive); los binarios de build tampoco (se distribuyen por GitHub Release).
+android/crm-ssb.keystore
+android/keystore-password.txt
+android/*.apk
+android/*.aab
+android/app/
+android/build/
+android/gradle*
+android/.gradle/
+android/*.log
+android/manifest-checksum.txt
