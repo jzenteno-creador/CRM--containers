@@ -23,6 +23,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFechaHora } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { invalidarCatalogo } from "@/lib/catalogos";
 
 const CLAVE_UMBRAL = "umbral_alerta_amarillo";
 
@@ -142,6 +143,7 @@ export default function ConfiguracionPage() {
       setSubmitError("La base de datos no aceptó el cambio — verificá que tu cuenta siga siendo administrador activo.");
       return;
     }
+    invalidarCatalogo("configuracion");
     toast({
       type: "exito",
       title: `Umbral amarillo: ${n} día${n === 1 ? "" : "s"}`,

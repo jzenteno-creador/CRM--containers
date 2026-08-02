@@ -31,7 +31,7 @@ import { useEffect, useRef, useState } from "react";
 import { ContainerNumber } from "@/components/container-number";
 import { Button } from "@/components/fd/button";
 import { DateField, Field, Input, Select, Textarea } from "@/components/fd/fields";
-import { FieldHelp } from "@/components/fd/field-help";
+import { FieldHelp, prefetchFieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PhotoUpload, type PhotoItem } from "@/components/fd/photo-upload";
 import { SkeletonBlock } from "@/components/fd/skeleton-row";
@@ -99,6 +99,11 @@ export function AltaIncidenciaForm({ onCreated }: { onCreated: () => void }) {
   const reqIdRef = useRef(0);
 
   // debounce 300ms (mismo patrón que la planilla /contenedores)
+  // prefetch en lote del copy de ayuda de este form (1 request en vez de N)
+  useEffect(() => {
+    prefetchFieldHelp(["incidencias.fecha", "incidencias.numero_orden", "incidencias.monto_usd"]);
+  }, []);
+
   useEffect(() => {
     const t = window.setTimeout(() => setSearch(searchInput), 300);
     return () => window.clearTimeout(t);

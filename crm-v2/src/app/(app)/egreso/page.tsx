@@ -24,13 +24,14 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { DateField, Field, Input, Select, Textarea } from "@/components/fd/fields";
-import { FieldHelp } from "@/components/fd/field-help";
+import { FieldHelp, prefetchFieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { useToast } from "@/components/fd/toast";
 import { fmtFecha, fmtFechaDia, hoyAR, TIPO_CIERRE_LABELS } from "@/lib/format";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
+import { getNavieras } from "@/lib/catalogos";
 import { EstadoCargaBadge } from "../contenedores/estado-operacion";
 
 type ContenedorEmbed = {
@@ -155,8 +156,11 @@ export default function EgresoPage() {
   }, []);
 
   const loadNavieras = useCallback(async () => {
-    const { data, error } = await getSupabase().from("navieras").select("id, nombre").eq("activa", true).order("nombre");
-    setNavieras(error ? [] : ((data as NavieraOption[]) ?? []));
+    try {
+      setNavieras(await getNavieras());
+    } catch {
+      setNavieras([]);
+    }
   }, []);
 
   const loadEnPlanta = useCallback(async () => {
@@ -224,6 +228,11 @@ export default function EgresoPage() {
       });
       return next.size === prev.size ? prev : next;
     });
+  }, []);
+
+  // prefetch en lote del copy de ayuda de este form (1 request en vez de N)
+  useEffect(() => {
+    prefetchFieldHelp(["egreso.fecha_salida", "egreso.fecha_devolucion"]);
   }, []);
 
   useEffect(() => {

@@ -38,7 +38,7 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { DateField, Field, Input, Select, Textarea, Toggle } from "@/components/fd/fields";
-import { FieldHelp } from "@/components/fd/field-help";
+import { FieldHelp, prefetchFieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { Modal } from "@/components/fd/modal";
 import { PageHeader } from "@/components/fd/page-header";
@@ -990,6 +990,11 @@ function OrigenPanel({
   const [rowsError, setRowsError] = useState<string | null>(null);
   const [modal, setModal] = useState<{ open: boolean; row: OrigenRow | null }>({ open: false, row: null });
   const [importOpen, setImportOpen] = useState(false);
+
+  // prefetch en lote del copy de ayuda de este form (1 request en vez de N)
+  useEffect(() => {
+    prefetchFieldHelp(["admin.tarifa.pais", "admin.tarifa.convencion", "admin.tarifa.nota", "admin.tarifa.vigente_desde", "admin.tarifa.convencion_destino"]);
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setSearch(searchInput), 300);

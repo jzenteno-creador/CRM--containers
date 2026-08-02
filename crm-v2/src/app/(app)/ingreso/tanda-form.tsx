@@ -38,6 +38,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFechaDia } from "@/lib/format";
 import { parsearListaContenedores } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
+import { getPrefijosRestringidos, invalidarCatalogo } from "@/lib/catalogos";
 import type { Perfil } from "@/lib/session";
 
 export type Naviera = { id: string; nombre: string };
@@ -97,6 +98,7 @@ function NuevoDepositoModal({
       setSubmitError(error.message);
       return;
     }
+    invalidarCatalogo("depositos");
     onCreado(data as string);
   };
 
@@ -351,12 +353,9 @@ export function TandaForm({
     let alive = true;
     void (async () => {
       try {
-        const { data, error } = await getSupabase()
-          .from("prefijos_restringidos")
-          .select("prefijo, nota")
-          .eq("activo", true);
-        if (!alive || error || !data) return;
-        setPrefijosRestringidos(new Map((data as { prefijo: string; nota: string | null }[]).map((r) => [r.prefijo, r.nota])));
+        const data = await getPrefijosRestringidos();
+        if (!alive) return;
+        setPrefijosRestringidos(new Map(data.map((r) => [r.prefijo, r.nota])));
       } catch {
         // degradado silencioso: sin conexión / RLS / catálogo no desplegado aún
       }

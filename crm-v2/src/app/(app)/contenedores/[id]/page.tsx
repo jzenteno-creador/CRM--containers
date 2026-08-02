@@ -473,95 +473,78 @@ export default function ContenedorFichaPage({ params }: { params: Promise<{ id: 
     const openOp = operaciones.find((o) => o.estado !== "cerrado" && o.estado !== "anulada") ?? null;
     const opIds = operaciones.map((o) => o.id);
 
-    let eventos: EventoRow[] = [];
-    if (opIds.length > 0) {
-      const ev = await supabase
-        .from("operacion_eventos")
-        .select("id, operacion_id, tipo_evento, fecha, usuario_id, detalle")
-        .in("operacion_id", opIds)
-        .order("fecha", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(300);
-      if (rid !== reqIdRef.current) return;
-      if (ev.error) {
-        setData(null);
-        setNotFound(false);
-        setLoadError(ev.error.message);
-        return;
-      }
-      eventos = ev.data as unknown as EventoRow[];
-    }
-
-    let movimientos: MovimientoFicha[] = [];
-    if (openOp) {
-      // embeds origen/destino desambiguados por nombre de FK (dos FKs a plantas)
-      const mv = await supabase
-        .from("movimientos_planta")
-        .select(
-          "id, estado, medio, fecha_salida, fecha_llegada_confirmada, planta_origen_id, planta_destino_id, planta_origen:plantas!movimientos_planta_planta_origen_id_fkey(nombre), planta_destino:plantas!movimientos_planta_planta_destino_id_fkey(nombre)",
-        )
-        .eq("operacion_id", openOp.id)
-        .order("fecha_salida", { ascending: false });
-      if (rid !== reqIdRef.current) return;
-      if (mv.error) {
-        setData(null);
-        setNotFound(false);
-        setLoadError(mv.error.message);
-        return;
-      }
-      movimientos = mv.data as unknown as MovimientoFicha[];
-    }
-
-    // costos de la operación mostrada (la misma que elige el render: abierta, o la
-    // última). Abierta → vista_alertas; cerrada → vista_kpi_costos_cerradas (solo tiene
-    // filas con fecha_devolucion). Fetch TOLERANTE: los números son informativos — si
-    // falla o no hay fila, la ficha sale igual sin el bloque de costos.
-    let costos: CostosFicha | null = null;
+    // Las 5 lecturas de abajo dependen SOLO de operaciones/openOp/targetOp (ya
+    // resueltos) — van EN PARALELO (optimización 2026-08-02: eran 5 awaits en fila
+    // india = ~400-600ms de latencia pura evitable en la pantalla de detalle más
+    // visitada). La semántica de error de cada una se conserva: eventos/movimientos/
+    // waivers son duros (LoadError), costos/carga son tolerantes (informativos).
     const targetOp = openOp ?? operaciones[0] ?? null;
-    if (targetOp && targetOp.estado !== "anulada") {
-      const vista = targetOp.estado === "cerrado" ? "vista_kpi_costos_cerradas" : "vista_alertas";
-      const co = await supabase
-        .from(vista)
-        .select("costo_bruto, costo_absorbido, costo_neto, waiver_dias, dias_libres, tarifa_usd_dia, sin_cargo")
-        .eq("operacion_id", targetOp.id)
-        .maybeSingle();
-      if (rid !== reqIdRef.current) return;
-      if (!co.error && co.data) costos = co.data as CostosFicha;
-    }
+    const vistaCostos =
+      targetOp?.estado === "cerrado" ? "vista_kpi_costos_cerradas" : "vista_alertas";
 
-    // historial de waivers (021) de la MISMA operación mostrada — READ directo
-    // permitido (RLS scopea por visibilidad de la operación); se pide siempre que haya
-    // targetOp (incluso anulada: es historial, no una acción nueva).
-    let waivers: OperacionWaiverRow[] = [];
-    if (targetOp) {
-      const wv = await supabase
-        .from("operacion_waivers")
-        .select("id, dias, motivo, referencia, registrado_por, created_at, estado, anulado_motivo, anulado_por, anulado_fecha")
-        .eq("operacion_id", targetOp.id)
-        .order("created_at", { ascending: false });
-      if (rid !== reqIdRef.current) return;
-      if (wv.error) {
-        setData(null);
-        setNotFound(false);
-        setLoadError(wv.error.message);
-        return;
-      }
-      waivers = wv.data as unknown as OperacionWaiverRow[];
-    }
+    const [ev, mv, co, wv, ca] = await Promise.all([
+      opIds.length > 0
+        ? supabase
+            .from("operacion_eventos")
+            .select("id, operacion_id, tipo_evento, fecha, usuario_id, detalle")
+            .in("operacion_id", opIds)
+            .order("fecha", { ascending: false })
+            .order("created_at", { ascending: false })
+            .limit(300)
+        : null,
+      openOp
+        ? // embeds origen/destino desambiguados por nombre de FK (dos FKs a plantas)
+          supabase
+            .from("movimientos_planta")
+            .select(
+              "id, estado, medio, fecha_salida, fecha_llegada_confirmada, planta_origen_id, planta_destino_id, planta_origen:plantas!movimientos_planta_planta_origen_id_fkey(nombre), planta_destino:plantas!movimientos_planta_planta_destino_id_fkey(nombre)",
+            )
+            .eq("operacion_id", openOp.id)
+            .order("fecha_salida", { ascending: false })
+        : null,
+      // costos de la operación mostrada (abierta → vista_alertas; cerrada →
+      // vista_kpi_costos_cerradas). TOLERANTE: informativo, la ficha sale igual.
+      targetOp && targetOp.estado !== "anulada"
+        ? supabase
+            .from(vistaCostos)
+            .select("costo_bruto, costo_absorbido, costo_neto, waiver_dias, dias_libres, tarifa_usd_dia, sin_cargo")
+            .eq("operacion_id", targetOp.id)
+            .maybeSingle()
+        : null,
+      // historial de waivers (021) — READ directo permitido (RLS scopea por la
+      // operación); se pide incluso anulada: es historial, no una acción nueva.
+      targetOp
+        ? supabase
+            .from("operacion_waivers")
+            .select("id, dias, motivo, referencia, registrado_por, created_at, estado, anulado_motivo, anulado_por, anulado_fecha")
+            .eq("operacion_id", targetOp.id)
+            .order("created_at", { ascending: false })
+        : null,
+      // carga actual (029) — TOLERANTE (D3): informativo.
+      targetOp
+        ? supabase
+            .from("vista_carga_actual")
+            .select("operacion_id, lineas, total_bolsas")
+            .eq("operacion_id", targetOp.id)
+            .maybeSingle()
+        : null,
+    ]);
+    if (rid !== reqIdRef.current) return;
 
-    // carga actual (029) de la MISMA operación mostrada — READ directo (RLS scopea
-    // transitivamente vía la operación). Fetch TOLERANTE: es informativo (D3), si falla
-    // o no hay fila (vacío) la ficha sale igual sin el bloque de carga.
-    let cargaActual: CargaActualRow | null = null;
-    if (targetOp) {
-      const ca = await supabase
-        .from("vista_carga_actual")
-        .select("operacion_id, lineas, total_bolsas")
-        .eq("operacion_id", targetOp.id)
-        .maybeSingle();
-      if (rid !== reqIdRef.current) return;
-      if (!ca.error && ca.data) cargaActual = ca.data as unknown as CargaActualRow;
+    const duro = [ev, mv, wv].find((r) => r?.error);
+    if (duro?.error) {
+      setData(null);
+      setNotFound(false);
+      setLoadError(duro.error.message);
+      return;
     }
+    const eventos: EventoRow[] = (ev?.data as unknown as EventoRow[]) ?? [];
+    const movimientos: MovimientoFicha[] = (mv?.data as unknown as MovimientoFicha[]) ?? [];
+    const waivers: OperacionWaiverRow[] = (wv?.data as unknown as OperacionWaiverRow[]) ?? [];
+    const costos: CostosFicha | null =
+      co && !co.error && co.data ? (co.data as CostosFicha) : null;
+    const cargaActual: CargaActualRow | null =
+      ca && !ca.error && ca.data ? (ca.data as unknown as CargaActualRow) : null;
 
     setLoadError(null);
     setNotFound(false);

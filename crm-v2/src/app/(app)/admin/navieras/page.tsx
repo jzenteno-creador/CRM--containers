@@ -29,6 +29,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtUSDTarifa } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { invalidarCatalogo } from "@/lib/catalogos";
 
 // espeja el CHECK de crm.navieras.tipo_proveedor
 const TIPO_PROVEEDOR_LABELS: Record<string, string> = {
@@ -103,6 +104,7 @@ function NavieraModal({
       setSubmitError("La base de datos no aceptó el cambio — verificá que tu cuenta siga siendo administrador activo.");
       return;
     }
+    invalidarCatalogo("navieras");
     toast({
       type: "exito",
       title: target ? "Naviera actualizada" : "Naviera creada",

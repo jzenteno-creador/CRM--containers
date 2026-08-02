@@ -31,6 +31,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { invalidarCatalogo } from "@/lib/catalogos";
 
 type Pais = { id: string; nombre: string; activo: boolean };
 
@@ -105,6 +106,7 @@ function PlantaModal({
       setSubmitError("La base de datos no aceptó el cambio — verificá que tu cuenta siga siendo administrador activo.");
       return;
     }
+    invalidarCatalogo("plantas");
     toast({
       type: "exito",
       title: target ? "Planta actualizada" : "Planta creada",
@@ -279,6 +281,7 @@ export default function PlantasPage() {
       });
       return;
     }
+    invalidarCatalogo("plantas");
     toast({
       type: "exito",
       title: estadoTarget.activa ? `${estadoTarget.planta.nombre} reactivada` : `${estadoTarget.planta.nombre} desactivada`,

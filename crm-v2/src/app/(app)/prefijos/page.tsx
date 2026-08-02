@@ -37,6 +37,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { invalidarCatalogo } from "@/lib/catalogos";
 import { EstadoCargaBadge, EstadoOperacionBadge } from "../contenedores/estado-operacion";
 
 /* ─────────────────────────── tipos ─────────────────────────── */
@@ -146,6 +147,7 @@ function PrefijoModal({
       );
       return;
     }
+    invalidarCatalogo("prefijos");
     toast({
       type: "exito",
       title: target ? "Prefijo actualizado" : "Prefijo agregado a la lista restringida",

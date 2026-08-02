@@ -29,6 +29,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { invalidarCatalogo } from "@/lib/catalogos";
 
 type DepositoRow = {
   id: string;
@@ -80,6 +81,7 @@ function DepositoModal({
       setSubmitError("La base de datos no aceptó el cambio — verificá que tu cuenta siga siendo administrador activo.");
       return;
     }
+    invalidarCatalogo("depositos");
     toast({
       type: "exito",
       title: target ? "Depósito actualizado" : "Depósito creado",
@@ -331,6 +333,7 @@ export default function DepositosPage() {
       });
       return;
     }
+    invalidarCatalogo("depositos");
     toast({
       type: "exito",
       title: estadoTarget.activo ? `${estadoTarget.deposito.nombre} reactivado` : `${estadoTarget.deposito.nombre} desactivado`,

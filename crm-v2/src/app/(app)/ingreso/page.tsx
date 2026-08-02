@@ -17,13 +17,14 @@ import { DataTable, type Column } from "@/components/fd/data-table";
 import { EmptyState } from "@/components/fd/empty-state";
 import { ErrorState } from "@/components/fd/error-state";
 import { DateField, Field, Select } from "@/components/fd/fields";
-import { FieldHelp } from "@/components/fd/field-help";
+import { FieldHelp, prefetchFieldHelp } from "@/components/fd/field-help";
 import { FormAlert } from "@/components/fd/form-alert";
 import { PageHeader } from "@/components/fd/page-header";
 import { useToast } from "@/components/fd/toast";
 import { fmtFecha, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { getNavieras, getPlantas } from "@/lib/catalogos";
 import { TandaForm, type Deposito, type Naviera, type Planta } from "./tanda-form";
 
 type PendienteRow = {
@@ -84,22 +85,25 @@ export default function IngresoPage() {
 
   const loadMaestros = useCallback(async () => {
     const supabase = getSupabase();
-    const [nv, pl, dp] = await Promise.all([
-      // activa=true (B1, migración 026): naviera/forwarder dado de baja deja de ofrecerse
-      // para tandas nuevas — es un combo OPERATIVO (elegir naviera para crear la tanda),
-      // a diferencia de Admin → Tarifas/Navieras o Reportes/Contenedores, que siguen
-      // mostrando todas (gestión y consulta histórica, no alta de operaciones nuevas).
-      supabase.from("navieras").select("id, nombre").eq("activa", true).order("nombre"),
-      // activa=true: una planta dada de baja (Admin → Plantas) deja de ofrecerse para
-      // tandas nuevas, sin afectar las operaciones que ya la tienen como destino.
-      supabase.from("plantas").select("id, nombre, codigo").eq("activa", true).order("nombre"),
-      // activo=true (023): mismo criterio que plantas. Si la tabla todavía no existe
-      // (42P01 — migración pendiente de GO) degradamos en vez de bloquear el módulo.
-      supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
-    ]);
-    if (nv.error || pl.error) {
+    // navieras/plantas: activa=true, catálogo cacheado (src/lib/catalogos.ts) — es un
+    // combo OPERATIVO (elegir naviera/planta para crear la tanda), a diferencia de
+    // Admin → Tarifas/Navieras o Reportes/Contenedores, que siguen mostrando todas
+    // (gestión y consulta histórica, no alta de operaciones nuevas).
+    // depositos NO pasa por el caché: necesita distinguir el código 42P01 ("la migración
+    // 023 todavía no está desplegada") de un error real, y el caché solo expone throw/valor.
+    const dpPromise = supabase
+      .from("depositos")
+      .select("id, nombre")
+      .eq("activo", true)
+      .order("nombre");
+    let navieras: Naviera[];
+    let plantas: Planta[];
+    let dp: Awaited<typeof dpPromise>;
+    try {
+      [navieras, plantas, dp] = await Promise.all([getNavieras(), getPlantas(), dpPromise]);
+    } catch (e) {
       setMaestros(null);
-      setMaestrosError((nv.error ?? pl.error)!.message);
+      setMaestrosError(e instanceof Error ? e.message : String(e));
       return;
     }
     if (dp.error && dp.error.code !== "42P01") {
@@ -111,11 +115,16 @@ export default function IngresoPage() {
     }
     setMaestrosError(null);
     setMaestros({
-      navieras: nv.data as Naviera[],
-      plantas: pl.data as Planta[],
+      navieras,
+      plantas,
       depositos: dp.error ? [] : (dp.data as Deposito[]),
       depositosDisponible: !dp.error,
     });
+  }, []);
+
+  // prefetch en lote del copy de ayuda de este form (1 request en vez de N)
+  useEffect(() => {
+    prefetchFieldHelp(["ingreso.fecha_llegada", "ingreso.naviera", "ingreso.retiro_de", "ingreso.fecha_retiro", "ingreso.booking_retiro", "ingreso.estado_carga"]);
   }, []);
 
   useEffect(() => {

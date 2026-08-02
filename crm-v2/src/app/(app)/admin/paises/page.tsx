@@ -29,6 +29,7 @@ import { PageHeader } from "@/components/fd/page-header";
 import { useToast } from "@/components/fd/toast";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { invalidarCatalogo } from "@/lib/catalogos";
 
 // espeja el CHECK de crm.paises.region
 const REGIONES = ["LATAM", "EMEAI", "APAC", "NAM"] as const;
@@ -84,6 +85,7 @@ function PaisModal({
       setSubmitError("La base de datos no aceptó el cambio — verificá que tu cuenta siga siendo administrador activo.");
       return;
     }
+    invalidarCatalogo("paises");
     toast({
       type: "exito",
       title: target ? "País actualizado" : "País creado",

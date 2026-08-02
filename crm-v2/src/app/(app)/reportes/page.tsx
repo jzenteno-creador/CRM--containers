@@ -36,6 +36,7 @@ import {
   ymdADate,
 } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
+import { getDepositos } from "@/lib/catalogos";
 import { ESTADO_CARGA_LABELS, EstadoCargaBadge, EstadoOperacionBadge } from "../contenedores/estado-operacion";
 import { ImpoSection } from "./impo-section";
 import { generarExcelOmar, type OmarResult } from "./omar-export";
@@ -398,18 +399,21 @@ export default function ReportesPage() {
   const [omarError, setOmarError] = useState<string | null>(null);
   const [omarResult, setOmarResult] = useState<OmarResult | null>(null);
 
-  // catálogos para los combobox de filtro — tolerante (si falla, el combo queda solo con "Todas")
+  // catálogos para los combobox de filtro — tolerante (si falla, el combo queda solo con "Todas").
+  // navieras/plantas NO pasan por el caché de src/lib/catalogos.ts: acá se muestran TODAS
+  // (activas e inactivas) a propósito, es consulta histórica, no alta de operaciones nuevas
+  // (mismo criterio documentado en /ingreso) — el caché solo expone las activas.
   useEffect(() => {
     void (async () => {
       const supabase = getSupabase();
       const [nav, pl, dep] = await Promise.all([
         supabase.from("navieras").select("id, nombre").order("nombre"),
         supabase.from("plantas").select("id, nombre").order("nombre"),
-        supabase.from("depositos").select("id, nombre").eq("activo", true).order("nombre"),
+        getDepositos().catch(() => null),
       ]);
       if (!nav.error && nav.data) setNavieras(nav.data as Catalogo[]);
       if (!pl.error && pl.data) setPlantas(pl.data as Catalogo[]);
-      if (!dep.error && dep.data) setDepositos(dep.data as Catalogo[]);
+      if (dep) setDepositos(dep);
     })();
   }, []);
 

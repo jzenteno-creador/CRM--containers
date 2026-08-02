@@ -36,6 +36,7 @@ import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
 import { useToast } from "@/components/fd/toast";
 import { fmtFechaDia } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
+import { getNavieras } from "@/lib/catalogos";
 
 // Contrato de crm.vista_bookings_saldo (migración 028): números y semáforo YA
 // calculados en DB — el front solo formatea y filtra lo ya traído.
@@ -525,8 +526,11 @@ function BookingsPageContent() {
   }, [navieraFiltro, sane, searchActive]);
 
   const loadNavieras = useCallback(async () => {
-    const { data, error } = await getSupabase().from("navieras").select("id, nombre").eq("activa", true).order("nombre");
-    setNavieras(error ? [] : ((data as NavieraOption[]) ?? []));
+    try {
+      setNavieras(await getNavieras());
+    } catch {
+      setNavieras([]);
+    }
   }, []);
 
   // navieras: una sola vez al montar (no depende de los filtros de bookings).

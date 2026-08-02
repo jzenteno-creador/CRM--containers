@@ -20,6 +20,7 @@
 // Sin Realtime (v2 no lo usa). Refetch al recuperar foco, igual que /ingreso y /egreso.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { prefetchFieldHelp } from "@/components/fd/field-help";
 import { Badge } from "@/components/fd/badge";
 import { Button } from "@/components/fd/button";
 import { CollapsibleSection } from "@/components/fd/collapsible-section";
@@ -35,6 +36,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFecha, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { getNavieras, getPlantas } from "@/lib/catalogos";
 import { AccionesPlataImpo, type OperacionPlataImpo } from "./acciones-plata";
 import { OrdenImpoForm, type Naviera, type Planta } from "./orden-form";
 
@@ -531,18 +533,19 @@ export default function ImportacionPage() {
   const [maestrosError, setMaestrosError] = useState<string | null>(null);
 
   const loadMaestros = useCallback(async () => {
-    const supabase = getSupabase();
-    const [nv, pl] = await Promise.all([
-      supabase.from("navieras").select("id, nombre").eq("activa", true).order("nombre"),
-      supabase.from("plantas").select("id, nombre, codigo").eq("activa", true).order("nombre"),
-    ]);
-    if (nv.error || pl.error) {
+    try {
+      const [navieras, plantas] = await Promise.all([getNavieras(), getPlantas()]);
+      setMaestrosError(null);
+      setMaestros({ navieras, plantas });
+    } catch (e) {
       setMaestros(null);
-      setMaestrosError((nv.error ?? pl.error)!.message);
-      return;
+      setMaestrosError(e instanceof Error ? e.message : String(e));
     }
-    setMaestrosError(null);
-    setMaestros({ navieras: nv.data as Naviera[], plantas: pl.data as Planta[] });
+  }, []);
+
+  // prefetch en lote del copy de ayuda de este form (1 request en vez de N)
+  useEffect(() => {
+    prefetchFieldHelp(["importacion.numero_orden", "importacion.naviera", "importacion.fecha_arribo", "importacion.planta_destino"]);
   }, []);
 
   useEffect(() => {
