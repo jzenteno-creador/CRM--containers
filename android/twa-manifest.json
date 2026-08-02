@@ -1,7 +1,7 @@
 {
   "packageId": "com.ssbint.crmdetention",
   "host": "crm-detention.vercel.app",
-  "name": "CRM Detention — SSB",
+  "name": "CRM Detention \u2014 SSB",
   "launcherName": "CRM SSB",
   "display": "standalone",
   "themeColor": "#0A0C10",
@@ -22,15 +22,14 @@
   },
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
-  "shortcuts": [
-    { "name": "Alertas", "short_name": "Alertas", "url": "https://crm-detention.vercel.app/alertas", "chosenIconUrl": "https://crm-detention.vercel.app/icons/icon-192.png" },
-    { "name": "Ingreso", "short_name": "Ingreso", "url": "https://crm-detention.vercel.app/ingreso", "chosenIconUrl": "https://crm-detention.vercel.app/icons/icon-192.png" }
-  ],
+  "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://crm-detention.vercel.app/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
-  "alphaDependencies": { "enabled": false },
+  "alphaDependencies": {
+    "enabled": false
+  },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,

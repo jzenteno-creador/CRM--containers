@@ -24,16 +24,12 @@ Google para empaquetar una aplicación web como app nativa. Significa:
 
 ## Publicar en Google Play (opcional, cuando John quiera)
 
-Todo lo técnico ya está listo (paquete `.aab`, política de privacidad en
-`https://crm-detention.vercel.app/privacidad`, íconos). Lo que falta es administrativo
-y es de John:
-
-1. Cuenta de desarrollador de Google Play (única vez, USD 25) con identidad verificada.
-2. Crear la app en Play Console → subir el `.aab` → completar la ficha
-   (descripción, capturas, la URL de privacidad de arriba, formulario de seguridad de
-   datos: se declara cámara + datos de cuenta corporativa, sin venta de datos, sin ads).
-3. Como es una herramienta interna, conviene publicarla como **prueba cerrada** o
-   **distribución privada** (solo cuentas invitadas), no pública.
+Todo lo técnico ya está listo (paquete `.aab` en el release `app-android-v1.0.0`,
+política de privacidad en `https://crm-detention.vercel.app/privacidad`, íconos,
+gráfico destacado). **Guía completa con textos copy-paste: [`PLAY-STORE.md`](PLAY-STORE.md)**
+— incluye la decisión cuenta personal vs organización, las respuestas exactas del
+formulario Data Safety y el paso post-subida de Play App Signing (agregar la huella
+de Google al assetlinks — lo hace Claude).
 
 ## Archivos de esta carpeta
 
