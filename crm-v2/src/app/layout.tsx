@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
+import { PwaRegister } from "@/components/pwa-register";
 import { SessionProvider } from "@/lib/session";
 import "./globals.css";
 
@@ -18,6 +19,17 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "CRM Detention · SSB",
   description: "CRM de detention de contenedores — SSB International",
+  // Capa PWA/Android (2026-08-02): manifest + íconos de instalación.
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: { capable: true, title: "CRM SSB", statusBarStyle: "black-translucent" },
+};
+
+export const viewport = {
+  themeColor: "#0a0c10",
 };
 
 export default function RootLayout({
@@ -39,6 +51,7 @@ export default function RootLayout({
             (login/registro redirigen si ya hay sesión; el callback de
             confirmación depende de detectSessionInUrl del cliente). */}
         <SessionProvider>{children}</SessionProvider>
+        <PwaRegister />
       </body>
     </html>
   );

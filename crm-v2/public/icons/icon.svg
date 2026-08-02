@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícono de la app CRM Detention — contenedor estilizado, paleta Flight Deck -->
+  <rect width="512" height="512" rx="96" fill="#0a0c10"/>
+  <!-- contenedor: caja con costillas verticales -->
+  <g stroke="#22d3ee" stroke-width="18" fill="none" stroke-linecap="round">
+    <rect x="116" y="176" width="280" height="160" rx="14"/>
+    <line x1="172" y1="196" x2="172" y2="316"/>
+    <line x1="228" y1="196" x2="228" y2="316"/>
+    <line x1="284" y1="196" x2="284" y2="316"/>
+    <line x1="340" y1="196" x2="340" y2="316"/>
+  </g>
+  <!-- reloj de detention: aguja sobre la esquina -->
+  <circle cx="396" cy="160" r="52" fill="#0a0c10" stroke="#f59e0b" stroke-width="16"/>
+  <line x1="396" y1="160" x2="396" y2="130" stroke="#f59e0b" stroke-width="14" stroke-linecap="round"/>
+  <line x1="396" y1="160" x2="418" y2="172" stroke="#f59e0b" stroke-width="14" stroke-linecap="round"/>
+</svg>
