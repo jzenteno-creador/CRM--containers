@@ -3,6 +3,9 @@ import { Archivo, JetBrains_Mono } from "next/font/google";
 import { PwaRegister, UpdateAlert } from "@/components/pwa-register";
 import { SessionProvider } from "@/lib/session";
 import "./globals.css";
+// Subset propio de Tabler (scripts/subset-tabler.mjs): 122 íconos / 23 KB
+// self-hosted — reemplaza el CDN de jsdelivr (825 KB, bloqueante, rompía CSP)
+import "./tabler-subset.css";
 
 // Tipografía Flight Deck: Archivo variable (display/UI, eje wdth para el stretch 115-120%)
 // + JetBrains Mono (TODO número, ID, timestamp — siempre tabular-nums). Patrón v1 probado.
@@ -42,13 +45,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${archivo.variable} ${jetbrains.variable}`}>
-      <head>
-        {/* Íconos Tabler outline (mismo canal que v1 en producción) */}
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css"
-        />
-      </head>
       <body>
         {/* Sesión global (M2): también las páginas públicas la consumen
             (login/registro redirigen si ya hay sesión; el callback de

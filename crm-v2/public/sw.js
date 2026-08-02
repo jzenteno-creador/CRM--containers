@@ -7,13 +7,14 @@
 //   · ESTÁTICOS PROPIOS (íconos, logos, manifest): cache-first — no cambian y hacen
 //     que la app abra instantánea.
 //   · TODO LO DEMÁS (API, Supabase, chunks JS): pasa directo a la red, sin tocar.
-const CACHE = "crm-ssb-v1";
+const CACHE = "crm-ssb-v2";
 const ESTATICOS = [
   "/offline",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/logos/ssb-white.svg",
+  "/fonts/tabler-subset.woff2",
 ];
 
 self.addEventListener("install", (event) => {
