@@ -38,6 +38,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { getNavieras, getPlantas } from "@/lib/catalogos";
 import { AccionesPlataImpo, type OperacionPlataImpo } from "./acciones-plata";
+import { CerradasImpo } from "./cerradas";
 import { OrdenImpoForm, type Naviera, type Planta } from "./orden-form";
 
 type PendienteImpoRow = {
@@ -573,6 +574,11 @@ export default function ImportacionPage() {
   const [modalRetiro, setModalRetiro] = useState<PendienteImpoRow[] | null>(null);
   const [anularTarget, setAnularTarget] = useState<{ id: string; label: string } | null>(null);
   const [accionesPlataTarget, setAccionesPlataTarget] = useState<OperacionPlataImpo | null>(null);
+  // bumpeado cada vez que una acción de plata (waiver/corrección) termina con éxito —
+  // <CerradasImpo> lo mira para refetchear (el target puede venir de una fila cerrada, y el
+  // modal es compartido con los pendientes: más simple refrescar los dos que distinguir el
+  // origen).
+  const [cerradasRefreshTick, setCerradasRefreshTick] = useState(0);
 
   const abrirAccionesPlata = (r: PendienteImpoRow) => {
     setAccionesPlataTarget({
@@ -858,6 +864,11 @@ export default function ImportacionPage() {
         </>
       )}
 
+      {/* Cerradas: historial, no cola operativa — visual gate sup+ (mismo rol que Plata/
+          Anular arriba; la RLS de operaciones_impo scopea igual). Es donde vive la única
+          forma de llegar al modal de corrección de fechas de una operación ya cerrada. */}
+      {canAnular && <CerradasImpo onAccionesPlata={setAccionesPlataTarget} refreshSignal={cerradasRefreshTick} />}
+
       {modalRetiro && modalRetiro.length > 0 && (
         <ConfirmarRetiroModal
           rows={modalRetiro}
@@ -876,7 +887,12 @@ export default function ImportacionPage() {
         <AccionesPlataImpo
           operacion={accionesPlataTarget}
           onClose={() => setAccionesPlataTarget(null)}
-          onDone={() => void loadPendientes()}
+          onDone={() => {
+            // el target puede ser una fila de Pendientes o de Cerradas — refrescar las dos
+            // listas es más simple y barato que distinguir el origen.
+            void loadPendientes();
+            setCerradasRefreshTick((t) => t + 1);
+          }}
         />
       )}
     </>
