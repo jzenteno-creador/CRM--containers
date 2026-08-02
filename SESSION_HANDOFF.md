@@ -181,9 +181,40 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
 - Executor SIN CREATE en schema crm en prod (algo lo revocó post-030) → la 046 lo
   otorga y lo revoca al final; patrón para futuras migraciones con alter owner.
 
+## ✅ SÉPTIMA TANDA (2026-08-02, seguridad "todos los requerimientos" + optimización "todas" + apertura de marca)
+- **Auditoría de seguridad integral** (3 agentes + advisors + verificación propia): CERO
+  ALTOS. Informe: `docs/auditoria-seguridad-2026-08-02.md`. Fixes APLICADOS: anti-SSRF
+  en 2 capas (migración **047** CHECK allowlist push-services + revalidación en route,
+  ambas verificadas), 5 headers de seguridad en prod, timingSafeEqual, caps de payload,
+  notificationclick solo paths propios. APK **v1.2.0** (allowBackup=false, release
+  publicado). HIBP: NO disponible (plan free — la memoria "org Pro" era de la OTRA org);
+  mitigación real: aprobación manual de cuentas.
+- **Optimización (medida, no teoría)**: subset propio de Tabler **825 KB → 23 KB** (−97%,
+  CDN eliminado; scripts/subset-tabler.mjs — gotcha: GSUB de Tabler rota, se dropea) ·
+  caché de catálogos con TTL 5min + invalidaciones (20 sitios; las consultas históricas
+  con filas inactivas quedaron a propósito sin caché) · prefetchFieldHelp en lote (6→1
+  requests por form) · ficha de contenedor: 5 awaits en fila india → Promise.all
+  (~400-600ms) · CSP Report-Only activa (self + Supabase; promover tras observación).
+  DB advisors performance: todo INFO, nada urgente a escala actual.
+- **Apertura de marca (pedido "algo disruptivo, vale 10.000")**: BootSplash Flight Deck —
+  contenedor dibujándose en trazos cian + reloj ámbar del ícono + wordmark SSB·DETENTION
+  con línea de escaneo; max(carga, 1.4s), reduced-motion → estática. Reemplaza el
+  skeleton del gate. **Pendiente de smoke visual de John** (nada de esto se vio en
+  pantalla real).
+- **Push VERIFICADO con John en vivo**: suscripción real (2 dispositivos), envío
+  enviadas:2, notificación de confirmación vista en el S25. Detalle abierto: aparece
+  atribuida a "Chrome" — v1.0 no declaraba el DelegationService; con v1.1+ instalada se
+  corrige cuando Chrome refresca su registro (arranque en frío / forzar detención de
+  Chrome). Cosmético.
+- **REGLA nueva (feedback John)**: la app registra costo DEVENGADO; pagado/facturado NO
+  está modelado — jamás cargar waivers para reconciliar. Futuro: módulo validación de
+  facturas de naviera (memoria `costo-devengado-vs-facturado`).
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
-1. **HIBP** — Authentication → **Attack Protection** → "Prevent use of leaked passwords"
-   (NO está en Policies ni Sign In; requiere plan Pro, que la org tiene).
+1. ~~HIBP~~ **NO DISPONIBLE — plan free** (John lo intentó 2026-08-02: pide Pro; la
+   memoria "la org tiene Pro" era de la OTRA org, no la de cctuowth). Mitigación real
+   vigente: toda cuenta nueva exige aprobación manual de un admin — una contraseña
+   filtrada sola no da acceso. Retomar si algún día se upgradea el plan.
 2. ~~Decisión waivers `devuelto_vacio`~~ **RESUELTO por John (2026-08-02): NO se cargan.**
    La app registra costo DEVENGADO; pagado/facturado no está modelado — cargar waivers
    sin evidencia sería inventar un hecho comercial. Las 7 divergencias del motor drill
