@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
-import { PwaRegister } from "@/components/pwa-register";
+import { PwaRegister, UpdateAlert } from "@/components/pwa-register";
 import { SessionProvider } from "@/lib/session";
 import "./globals.css";
 
@@ -52,6 +52,7 @@ export default function RootLayout({
             confirmación depende de detectSessionInUrl del cliente). */}
         <SessionProvider>{children}</SessionProvider>
         <PwaRegister />
+        <UpdateAlert />
       </body>
     </html>
   );
