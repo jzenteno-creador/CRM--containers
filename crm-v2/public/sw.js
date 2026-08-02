@@ -30,6 +30,42 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// ── Web Push (2026-08-02): el resumen diario llega como notificación ──────────
+// Payload JSON { titulo, cuerpo, url } cifrado por /api/push/enviar (VAPID).
+self.addEventListener("push", (event) => {
+  let data = { titulo: "CRM Detention", cuerpo: "", url: "/alertas" };
+  try {
+    data = { ...data, ...event.data.json() };
+  } catch {
+    /* payload no-JSON: se muestra el default */
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.titulo, {
+      body: data.cuerpo,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url },
+      tag: "crm-resumen", // una sola notificación del resumen; la nueva pisa la vieja
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/alertas";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((abiertas) => {
+      for (const c of abiertas) {
+        if ("focus" in c) {
+          c.navigate(url);
+          return c.focus();
+        }
+      }
+      return clients.openWindow(url);
+    }),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;

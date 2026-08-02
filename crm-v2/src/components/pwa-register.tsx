@@ -5,6 +5,7 @@
 // propósito: si el navegador no soporta SW o los checks fallan, la web sigue
 // funcionando exactamente igual — la PWA es una capa opcional, nunca una dependencia.
 import { useEffect, useState } from "react";
+import { getSupabase } from "@/lib/supabase";
 
 export function PwaRegister() {
   useEffect(() => {
@@ -15,6 +16,86 @@ export function PwaRegister() {
     }
   }, []);
   return null;
+}
+
+// ── Notificaciones push (2026-08-02) ────────────────────────────────────────────
+// El resumen diario de alertas llega como notificación de Android. Suscripción:
+// permiso → pushManager.subscribe(VAPID pública) → crm_push_subscribe (RPC).
+// El menú de usuario del shell ofrece activar/desactivar; la confirmación es una
+// notificación LOCAL inmediata (no pasa por el server: prueba permiso + display).
+
+export type EstadoPush = "activas" | "inactivas" | "no-soportado";
+
+function base64UrlToUint8Array(base64: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+export async function estadoPush(): Promise<EstadoPush> {
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "no-soportado";
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    return sub ? "activas" : "inactivas";
+  } catch {
+    return "no-soportado";
+  }
+}
+
+export async function activarPush(): Promise<{ ok: boolean; motivo?: string }> {
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      return { ok: false, motivo: "Este navegador no soporta notificaciones." };
+    }
+    const clave = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!clave) return { ok: false, motivo: "Falta configuración del servidor (VAPID)." };
+
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") {
+      return { ok: false, motivo: "El permiso quedó denegado — se habilita desde Ajustes → Notificaciones." };
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: base64UrlToUint8Array(clave) as BufferSource,
+    });
+    const json = sub.toJSON();
+    const { error } = await getSupabase().rpc("crm_push_subscribe", {
+      p_endpoint: sub.endpoint,
+      p_p256dh: json.keys?.p256dh ?? "",
+      p_auth: json.keys?.auth ?? "",
+      p_user_agent: navigator.userAgent.slice(0, 300),
+    });
+    if (error) {
+      await sub.unsubscribe(); // no dejar una suscripción huérfana que nadie conoce
+      return { ok: false, motivo: "No se pudo guardar la suscripción en el sistema." };
+    }
+
+    void reg.showNotification("Notificaciones activadas ✅", {
+      body: "Así van a llegar las alertas del CRM en este dispositivo.",
+      icon: "/icons/icon-192.png",
+      tag: "crm-bienvenida",
+    });
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Error inesperado al activar las notificaciones." };
+  }
+}
+
+export async function desactivarPush(): Promise<{ ok: boolean; motivo?: string }> {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return { ok: true }; // ya estaba desactivado
+    // primero la DB (mientras el JWT sigue vivo), después el navegador
+    await getSupabase().rpc("crm_push_unsubscribe", { p_endpoint: sub.endpoint });
+    await sub.unsubscribe();
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Error inesperado al desactivar." };
+  }
 }
 
 // ── Aviso de actualización ──────────────────────────────────────────────────────

@@ -51,6 +51,15 @@ y NUNCA escribe directo sobre tablas de plata.
   M5 (la letra original decía admin-only; la 031 lo abrió a supervisor+ como desvío
   documentado, y la auditoría 2026-07-31 detectó que el código citaba una sección "B6"
   inexistente de este archivo — esta entrada es la sanción formal que faltaba).
+- **`push_suscripciones` es RPC-only (migración 046, 2026-08-02)**: suscripciones Web
+  Push del resumen diario. Escritura SOLO vía `crm_push_subscribe`/`crm_push_unsubscribe`
+  (DEFINER owner=executor, guard activo, upsert por endpoint — el último login del
+  dispositivo manda). `authenticated` NO tiene ni SELECT (endpoint+keys permiten enviar
+  push a ese dispositivo si se combina con la VAPID privada — que vive SOLO en el env de
+  Vercel). `service_role` tiene SELECT+DELETE sobre ESTA tabla (ampliación explícita y
+  acotada del mínimo de la 042: n8n lee para enviar y borra endpoints vencidos 404/410).
+  Gotcha medido: la policy de SELECT del executor es OBLIGATORIA aunque "solo escriba" —
+  `ON CONFLICT DO UPDATE` lee la fila en conflicto y sin policy es default-deny (42501).
 - **`operacion_impo_waivers` es RPC-only (migración 039, 2026-07-31)**: espejo de
   `operacion_waivers` — SELECT para authenticated, escritura SOLO vía
   `crm_registrar_waiver_impo`/`crm_anular_waiver_impo` (DEFINER owner=postgres, guard

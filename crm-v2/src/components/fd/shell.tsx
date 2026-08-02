@@ -17,10 +17,12 @@ import { isRouteBuilt } from "@/lib/nav";
 import { usePendientes } from "@/lib/pendientes";
 import { ROL_LABELS, useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
+import { activarPush, desactivarPush, estadoPush, type EstadoPush } from "@/components/pwa-register";
 import { CommandPalette } from "./command-palette";
 import { Dropdown, Popover } from "./dropdown";
 import { HelpPanel } from "./help-panel";
 import { Markdown } from "./markdown";
+import { useToast } from "./toast";
 
 // Solapas §8 — Admin se filtra por rol (abajo, en FdShell). El estado "construida"
 // NO vive acá: sale de ROUTE_BUILT (lib/nav.ts), fuente de verdad única. Las no
@@ -477,8 +479,38 @@ export function FdShell({
   const pathname = usePathname();
   const router = useRouter();
   const { displayName, email, perfil, signOut } = useSession();
+  const toast = useToast();
   const [helpOpen, setHelpOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  // push del resumen diario: estado real del dispositivo (pwa-register)
+  const [push, setPush] = useState<EstadoPush | "cargando">("cargando");
+  useEffect(() => {
+    void estadoPush().then(setPush);
+  }, []);
+  const togglePush = async () => {
+    if (push === "activas") {
+      const r = await desactivarPush();
+      if (r.ok) {
+        setPush("inactivas");
+        toast({ type: "info", title: "Notificaciones desactivadas" });
+      } else {
+        toast({ type: "error", title: "No se pudo desactivar", detail: r.motivo });
+      }
+    } else {
+      const r = await activarPush();
+      if (r.ok) {
+        setPush("activas");
+        toast({
+          type: "exito",
+          title: "Notificaciones activadas",
+          detail: "El resumen diario de alertas va a llegar a este dispositivo.",
+        });
+      } else {
+        toast({ type: "error", title: "No se pudo activar", detail: r.motivo });
+      }
+    }
+  };
 
   // Rail colapsable (SOLO desktop): estado en la cookie fd_sidebar, sembrado desde el
   // server. El toggle escribe la cookie (para el próximo SSR) y actualiza el estado local
@@ -637,6 +669,16 @@ export function FdShell({
             items={[
               { id: "buscar", label: "Buscar (⌘K)", icon: "ti-search", onSelect: openSearch },
               { id: "ayuda", label: "Ayuda de esta solapa", icon: "ti-help-circle", onSelect: () => setHelpOpen(true) },
+              ...(push === "no-soportado" || push === "cargando"
+                ? []
+                : [
+                    {
+                      id: "push",
+                      label: push === "activas" ? "Desactivar notificaciones" : "Activar notificaciones",
+                      icon: push === "activas" ? "ti-bell-off" : "ti-bell-ringing",
+                      onSelect: () => void togglePush(),
+                    },
+                  ]),
               {
                 // requisito Google Play (política Datos del Usuario): eliminación de
                 // cuenta accesible desde adentro de la app, además de la URL pública
