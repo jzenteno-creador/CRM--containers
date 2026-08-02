@@ -146,6 +146,41 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   Data Safety, IARC, prueba cerrada, paso post-subida de Play App Signing) + gráfico
   destacado 1024×500 generado.
 
+## ✅ SEXTA TANDA (2026-08-02, "mejorala" + "todas" + "requerimientos de Google Store, todos")
+- **Aviso de versión nueva EN PROD**: build sellado (NEXT_PUBLIC_BUILD_ID; gotcha:
+  VERCEL_GIT_COMMIT_SHA en CLI deploys es STRING VACÍO → `||`, no `??`), /api/version,
+  UpdateAlert compara al volver a primer plano y cada 15 min → aviso persistente con
+  botón Actualizar. Demo disparada con deploy encadenado.
+- **Pasada mobile EN PROD** (relevamiento por agente + fixes): tab bar de app (Inicio ·
+  Alertas con contador rojo · Ingreso · Escanear directo a cámara · hoja "Más" con el
+  resto + buscador) reemplaza la tira scrolleable de 13 solapas; store compartido
+  `lib/pendientes` (un poller para campana y barra); piso táctil `.fd-btn` 44px
+  !important en ≤640 (había botones de 18-23px: el inline pisaba la regla global);
+  `.fd-iconbtn` 40px; **viewport-fit=cover** (sin él TODOS los env(safe-area-inset-*)
+  valían 0 — estaban inertes). Tablas ya OK (DataTable trae overflow-x).
+- **Cumplimiento Google Play COMPLETO (lado técnico)**: página pública /eliminar-cuenta
+  (política de Datos del Usuario: qué se borra, qué se conserva y por qué, 30 días) +
+  link desde /privacidad + ítem "Eliminar mi cuenta" en el menú de la app (la política
+  exige ambos accesos). targetSdk 36 ≥ exigencia 2026. Kit administrativo ya estaba
+  (PLAY-STORE.md).
+- **APK v1.1.0** (release `app-android-v1.1.0`, misma firma → se instala ENCIMA):
+  shortcuts del ícono (Alertas/Escanear/Ingreso — el crash escapeGradleString de v1.0
+  era el formato web-manifest; el correcto es ShortcutInfo con chosenIconUrl) +
+  `enableNotifications: true` (POST_NOTIFICATIONS). Gotcha: bubblewrap update deja
+  versionName vacío → parchear app/build.gradle antes del build.
+- **PUSH DEL RESUMEN DIARIO VIVO** (ejecución 36851 verde de punta a punta):
+  migración **046 APLICADA** (push_suscripciones RPC-only; authenticated sin SELECT;
+  service_role SELECT+DELETE solo acá; gotcha medido: ON CONFLICT DO UPDATE exige
+  policy de SELECT del executor aunque "solo escriba") · /api/push/enviar en Vercel
+  (VAPID privada solo en env; secreto compartido; 401 sin secreto verificado) ·
+  sw.js con push+notificationclick · menú "Activar notificaciones" con confirmación
+  local inmediata · workflow n8n v2 publicado (rama ¿Hay rojos?→suscripciones→envío→
+  limpieza de vencidas 404/410; push SOLO con rojos, el mail no cambia). Credencial
+  "CRM push secret" (CBFdmSD9nNPjyBjS) transferida al proyecto por API (la CLI 1.9.3
+  no tiene transfer; PUT /credentials/:id/transfer → 204).
+- Executor SIN CREATE en schema crm en prod (algo lo revocó post-030) → la 046 lo
+  otorga y lo revoca al final; patrón para futuras migraciones con alter owner.
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. **HIBP** — Authentication → **Attack Protection** → "Prevent use of leaked passwords"
    (NO está en Policies ni Sign In; requiere plan Pro, que la org tiene).
@@ -184,11 +219,14 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   cherry-picks de infra (fix schema crm, aviso n8n, fix pg_dump 17, restore-drill). Working tree limpio
   salvo untracked de John (`docs/Modelo LOGIN VGM SISTEMA E-Cargo.xlsx` — sin clasificar,
   John no explicó qué es).
-- DB prod: migraciones **hasta 045** aplicadas y verificadas (037-045 de la maratón).
-  Front prod: deploy con capa PWA (manifest/sw/offline/privacidad/assetlinks). CI: verde.
-  Backup: cron diario 03:00 AR operativo con alerta + motor drill en master.
-- Android: release `app-android-v1.0.0` (APK+AAB firmados, huella `9A:2E:…:F2:B9`),
-  toolchain reproducible en `~/.bubblewrap/`, config versionada en `android/twa-manifest.json`.
+- DB prod: migraciones **hasta 046** aplicadas y verificadas. Front prod: PWA completa
+  (manifest/sw con push/offline/privacidad/eliminar-cuenta/assetlinks) + pasada mobile +
+  aviso de versión. CI: verde. Backup: cron diario 03:00 AR + motor drill en master.
+- Android: release **`app-android-v1.1.0`** (misma huella `9A:2E:…:F2:B9`; shortcuts +
+  notificaciones), toolchain en `~/.bubblewrap/`, config en `android/twa-manifest.json`.
+- n8n: mail diario v2 con rama push (`NvpzO39XqZrTU6UD`), snapshot mensual, credencial
+  push `CBFdmSD9nNPjyBjS` en proyecto *export proyect*. VAPID en env de Vercel (público/
+  privado/subject) + PUSH_ENDPOINT_SECRET (mismo valor en la credencial n8n).
 - n8n: 2 workflows ACTIVOS del CRM — mail diario `NvpzO39XqZrTU6UD` (7AM, proyecto
   *export proyect*) y snapshot mensual `zTQW5xdg2CEYSmG3` (día 1, 4AM). Draft viejo archivado.
 
