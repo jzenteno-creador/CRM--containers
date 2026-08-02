@@ -25,6 +25,40 @@ type CopyRow = { titulo: string; contenido_md: string };
 const copyCache = new Map<string, Promise<CopyRow | null>>();
 const valoresCache = new Map<string, Promise<AyudaValores | null>>();
 
+/** Prefetch EN LOTE del copy de varios campos (optimización 2026-08-02): un form
+ * con 6 <FieldHelp> disparaba 6 requests individuales en el primer render de la
+ * sesión. Llamar esto una vez al montar la página/form con todas sus claves →
+ * UNA request `.in()` que siembra el mismo copyCache; los FieldHelp encuentran
+ * su promesa ya en vuelo. Claves ya cacheadas se saltean. Nunca lanza. */
+export function prefetchFieldHelp(claves: string[]) {
+  const faltan = claves.filter((c) => !copyCache.has(c));
+  if (faltan.length === 0) return;
+  const lote = (async () => {
+    try {
+      const { data, error } = await getSupabase()
+        .from("ayuda_contenido")
+        .select("clave, titulo, contenido_md")
+        .eq("nivel", "campo")
+        .in("clave", faltan)
+        .eq("publicado", true);
+      if (error) return new Map<string, CopyRow>();
+      const m = new Map<string, CopyRow>();
+      for (const r of (data ?? []) as Array<CopyRow & { clave: string }>) {
+        m.set(r.clave, { titulo: r.titulo, contenido_md: r.contenido_md });
+      }
+      return m;
+    } catch {
+      return new Map<string, CopyRow>(); // degrada a "sin tooltip", como fetchCopy
+    }
+  })();
+  for (const clave of faltan) {
+    copyCache.set(
+      clave,
+      lote.then((m) => m.get(clave) ?? null),
+    );
+  }
+}
+
 function fetchCopy(clave: string): Promise<CopyRow | null> {
   let p = copyCache.get(clave);
   if (!p) {
