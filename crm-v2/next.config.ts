@@ -12,14 +12,30 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId,
   },
-  // Headers de seguridad (auditoría 2026-08-02). CSP completa queda pendiente a
-  // propósito: exige allowlist de jsdelivr (íconos Tabler) + Supabase + Roboflow
-  // y una pasada de prueba — no se agrega sin verificarla en vivo.
+  // Headers de seguridad (auditoría 2026-08-02). La CSP corre en MODO REPORTE
+  // (observa sin bloquear): el subset self-hosted de Tabler eliminó jsdelivr,
+  // así que la allowlist ya es solo self + Supabase. Tras un período sin
+  // violaciones en consola → promover a Content-Security-Policy real.
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'", // runtime inline de Next (sin infra de nonces)
+              "style-src 'self' 'unsafe-inline'", // estilos inline del design system
+              "img-src 'self' data: blob: https://cctuowthpnstvdgjuomq.supabase.co",
+              "font-src 'self'",
+              "connect-src 'self' https://cctuowthpnstvdgjuomq.supabase.co wss://cctuowthpnstvdgjuomq.supabase.co",
+              "worker-src 'self' blob:", // tf.js (visión) puede usar workers blob
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
