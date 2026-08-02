@@ -1,0 +1,151 @@
+name: Motor Drill (el cálculo de plata, contra la SQL real)
+
+# POR QUÉ EXISTE. Los 101 tests de Vitest validan un ORÁCULO en TypeScript que
+# reimplementa la fórmula de costos. Si alguien cambia la SQL de `vista_alertas` o
+# `vista_kpi_costos_cerradas` y rompe el cálculo, esos tests SIGUEN EN VERDE y el CI
+# aprueba el push. Es decir: hoy la red atrapa errores del parser y de las fechas,
+# pero NO de la plata — lo único que no se puede equivocar.
+#
+# Este drill cierra ese hueco: restaura el último backup en un Postgres 17 descartable
+# y corre los 43 casos golden (montos reales del Excel de Omar) contra LA MISMA VIEW
+# que usa producción, sobre LOS MISMOS DATOS. Cero contacto con prod.
+#
+# Corre solo cuando cambia algo que puede mover la plata (migraciones o el golden set),
+# y también a mano. Hallazgo del primer run (2026-08-01): 36 exactos + 7 divergencias
+# conocidas y documentadas (`devuelto_vacio`: Omar no cobró, el motor sí calcula —
+# decisión de negocio pendiente desde M6). El drill TOLERA esas 7 y FALLA ante una nueva.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [v2-rebuild, master]
+    paths:
+      - "crm-v2/supabase/migrations/**"
+      - "crm-v2/tests/golden-motor.sql"
+      - "crm-v2/tests/golden-costos.json"
+      - ".github/workflows/motor-drill.yml"
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: drill
+          POSTGRES_DB: drill
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: drill
+      PGDATABASE: drill
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar cliente Postgres 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --batch --yes --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "PSQL=/usr/lib/postgresql/17/bin/psql"           >> "$GITHUB_ENV"
+          echo "PGRESTORE=/usr/lib/postgresql/17/bin/pg_restore" >> "$GITHUB_ENV"
+
+      - name: Bajar el último backup exitoso
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=$(gh run list --workflow=backup-db.yml --status=success \
+                 --limit=1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$RUN" ] || [ "$RUN" = "null" ]; then
+            echo "::error::No hay backup exitoso del cual restaurar. Revisar Actions → Backup DB CRM."
+            exit 1
+          fi
+          gh run download "$RUN" --dir backup --repo "${{ github.repository }}"
+          DUMP=$(find backup -type f -name 'crm-db-*.dump' | head -1)
+          [ -n "$DUMP" ] || { echo "::error::El artifact no trae .dump"; exit 1; }
+          echo "DUMP=$DUMP"   >> "$GITHUB_ENV"
+          echo "RUN_ID=$RUN"  >> "$GITHUB_ENV"
+
+      - name: Preparar el cluster (roles, extensiones, auth.uid)
+        run: |
+          # Igual que el restore-drill: los roles son objetos de CLUSTER y no viajan en
+          # el dump; auth.uid() no existe fuera de Supabase (las views son
+          # security_invoker y lo referencian).
+          "$PSQL" -v ON_ERROR_STOP=1 -c "
+            do \$\$ begin
+              if not exists (select 1 from pg_roles where rolname='anon')             then create role anon nologin; end if;
+              if not exists (select 1 from pg_roles where rolname='authenticated')    then create role authenticated nologin; end if;
+              if not exists (select 1 from pg_roles where rolname='service_role')     then create role service_role nologin bypassrls; end if;
+              if not exists (select 1 from pg_roles where rolname='crm_rpc_executor') then create role crm_rpc_executor nologin; end if;
+              if not exists (select 1 from pg_roles where rolname='supabase_admin')   then create role supabase_admin nologin; end if;
+            end \$\$;"
+          "$PSQL" -v ON_ERROR_STOP=1 -c "create extension if not exists pg_trgm; create extension if not exists pgcrypto;"
+          "$PSQL" -v ON_ERROR_STOP=1 -c "
+            create schema if not exists auth;
+            create or replace function auth.uid() returns uuid language sql stable as \$\$ select null::uuid \$\$;"
+
+      - name: Restaurar
+        run: |
+          "$PGRESTORE" --no-owner --no-privileges --dbname="$PGDATABASE" "$DUMP" 2> restore.log || true
+          OPS=$("$PSQL" -tAX -c "select count(*) from crm.operaciones")
+          echo "operaciones restauradas: $OPS"
+          [ "$OPS" -gt 0 ] || { echo "::error::El restore no dejó operaciones"; exit 1; }
+
+      - name: VERIFICAR el motor contra los 43 casos golden
+        run: |
+          "$PSQL" -X -f crm-v2/tests/golden-motor.sql | tee resultado.txt
+
+          Q() { "$PSQL" -tAX -c "$1"; }
+          # Se re-ejecuta la lógica para obtener conteos parseables por veredicto.
+          OK=$("$PSQL" -tAX -f crm-v2/tests/golden-motor.sql | awk -F'|' '$1=="OK"{print $2}')
+          CONOCIDAS=$("$PSQL" -tAX -f crm-v2/tests/golden-motor.sql | awk -F'|' '$1=="DIVERGENCIA_CONOCIDA"{print $2}')
+          REGRESION=$("$PSQL" -tAX -f crm-v2/tests/golden-motor.sql | awk -F'|' '$1=="REGRESION"{print $2}')
+          FALTA=$("$PSQL" -tAX -f crm-v2/tests/golden-motor.sql | awk -F'|' '$1=="FALTA"{print $2}')
+          OK=${OK:-0}; CONOCIDAS=${CONOCIDAS:-0}; REGRESION=${REGRESION:-0}; FALTA=${FALTA:-0}
+
+          {
+            echo "## Motor Drill — el cálculo de plata contra la SQL real"
+            echo ""
+            echo "Backup restaurado: run \`$RUN_ID\`"
+            echo ""
+            echo "| Veredicto | Casos |"
+            echo "|---|---|"
+            echo "| ✅ Exactos contra el Excel de Omar | **$OK** |"
+            echo "| 📋 Divergencias conocidas (devuelto_vacio, decisión pendiente) | $CONOCIDAS |"
+            echo "| 🔴 **Regresiones nuevas** | **$REGRESION** |"
+            echo "| ⚠️ Operaciones faltantes | $FALTA |"
+            echo ""
+            echo '```'
+            cat resultado.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$REGRESION" != "0" ] || [ "$FALTA" != "0" ]; then
+            echo "::error::El motor cambió: $REGRESION regresión(es) y $FALTA faltante(s). Ver el resumen del run."
+            exit 1
+          fi
+          echo "OK: $OK exactos · $CONOCIDAS divergencias conocidas · 0 regresiones"
+
+      - name: Avisar fallo por n8n
+        if: failure()
+        run: |
+          curl -s -X POST https://jzenteno.app.n8n.cloud/webhook/claude-handoff \
+            -H "Content-Type: application/json" \
+            -d "{\"chatInput\": \"🔴 MOTOR DRILL FALLÓ — el cálculo de detention cambió respecto de los casos validados contra el Excel de Omar. Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            || echo "::warning::No se pudo notificar a n8n"
