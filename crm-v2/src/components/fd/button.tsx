@@ -64,7 +64,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`${HOVER[variant]} ${className}`}
+      className={`fd-btn ${HOVER[variant]} ${className}`}
       style={{ ...BASE, ...VARIANTS[variant], ...style }}
       {...rest}
     >

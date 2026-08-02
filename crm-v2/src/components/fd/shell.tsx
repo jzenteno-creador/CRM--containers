@@ -10,10 +10,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { interpolarAyuda, type AyudaValores } from "@/lib/ayuda";
 import { buscarContenedoresGlobal } from "@/lib/busqueda";
 import { isRouteBuilt } from "@/lib/nav";
+import { usePendientes } from "@/lib/pendientes";
 import { ROL_LABELS, useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { CommandPalette } from "./command-palette";
@@ -187,17 +188,6 @@ function ClockAR() {
   );
 }
 
-/** Espejo de crm.get_pendientes() — jsonb de CONTADORES, ya scopeado por rol en la DB
- * (reforzados_pendientes solo sup+, solicitudes_acceso solo admin: si la clave no
- * viene, esa línea no se muestra — no hace falta repetir el gate acá). */
-type Pendientes = {
-  pendientes_ingreso: number;
-  pendientes_devolucion: number;
-  alertas: { amarillo: number; rojo: number };
-  reforzados_pendientes?: number;
-  solicitudes_acceso?: number;
-};
-
 const BELL_LINE: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -245,58 +235,15 @@ function BellLine({
   );
 }
 
-/** Campana de notificaciones (M6): get_pendientes() refresca al montar, al recuperar
- * foco/visibilidad y cada 60s SOLO si la pestaña está visible. El badge del ícono
- * es SOLO alertas.rojo (decisión de producto — los amarillos son línea informativa
- * dentro del popover, sin badge). Si la RPC falla: sin badge, en silencio (ningún
- * toast ni error visible; el popover cerrado no muestra nada raro). */
+/** Campana de notificaciones (M6): los contadores vienen del store compartido
+ * usePendientes() (lib/pendientes — un solo poller para campana y bottom-bar).
+ * El badge del ícono es SOLO alertas.rojo (decisión de producto — los amarillos son
+ * línea informativa dentro del popover, sin badge). Si la RPC falla: sin badge, en
+ * silencio (ningún toast ni error visible; el popover cerrado no muestra nada raro). */
 function NotificationBell() {
   const router = useRouter();
   const { perfil } = useSession();
-  const [data, setData] = useState<Pendientes | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  const load = useCallback(async () => {
-    const { data: d, error } = await getSupabase().rpc("get_pendientes");
-    if (error) {
-      // en silencio: sin toast, sin FormAlert — solo se cae a "sin datos"
-      setData(null);
-      setLoaded(true);
-      return;
-    }
-    setData(d as Pendientes);
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    // IIFE async: los setState de load() quedan detrás del await (set-state-in-effect)
-    void (async () => {
-      await load();
-    })();
-  }, [load]);
-
-  // refresh: foco de ventana + visibilitychange→visible (cubre volver de otra pestaña
-  // sin pasar por focus, ej. atajo de teclado del OS)
-  useEffect(() => {
-    const onFocus = () => void load();
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [load]);
-
-  // intervalo 60s SOLO con la pestaña visible (se limpia siempre al desmontar)
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [load]);
+  const { data, loaded } = usePendientes();
 
   const rojo = data?.alertas.rojo ?? 0;
   const badgeLabel = rojo > 9 ? "9+" : String(rojo);
@@ -398,6 +345,113 @@ function NotificationBell() {
         </div>
       )}
     </Popover>
+  );
+}
+
+// ── Bottom-bar móvil (pasada mobile 2026-08-02) ─────────────────────────────────
+// 4 accesos fijos + "Más": una tab bar de app de verdad, no una tira scrolleable de
+// 13 solapas. Alertas lleva el contador rojo (mismo store que la campana); Escanear
+// va DIRECTO a la cámara (/vision/escanear) — es LA función mobile. "Más" abre una
+// hoja con el resto de las secciones + el buscador global.
+const BAR_PRINCIPAL = [
+  { href: "/inicio", match: "/inicio", label: "Inicio", icon: "ti-layout-dashboard" },
+  { href: "/alertas", match: "/alertas", label: "Alertas", icon: "ti-bell" },
+  { href: "/ingreso", match: "/ingreso", label: "Ingreso", icon: "ti-login-2" },
+  { href: "/vision/escanear", match: "/vision", label: "Escanear", icon: "ti-camera" },
+];
+
+function MobileBar({ tabs, pathname }: { tabs: typeof TABS; pathname: string }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const { data } = usePendientes();
+  const rojo = data?.alertas.rojo ?? 0;
+
+  // la hoja se cierra con Escape (además de scrim y navegación)
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSheetOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheetOpen]);
+
+  const resto = tabs.filter((t) => !BAR_PRINCIPAL.some((p) => p.match === t.href));
+  const enPrincipal = BAR_PRINCIPAL.some((p) => pathname.startsWith(p.match));
+
+  const abrirBuscar = () => {
+    setSheetOpen(false);
+    window.dispatchEvent(new CustomEvent("fd-palette"));
+  };
+
+  return (
+    <>
+      {sheetOpen && (
+        <div
+          className="fd-sheet-scrim"
+          onClick={() => setSheetOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="fd-sheet"
+            role="dialog"
+            aria-label="más secciones"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" className="fd-sheet-tile" onClick={abrirBuscar}>
+              <i className="ti ti-search" aria-hidden />
+              Buscar
+            </button>
+            {resto.map((t) =>
+              isRouteBuilt(t.href) ? (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  className={`fd-sheet-tile ${pathname.startsWith(t.href) ? "active" : ""}`}
+                  onClick={() => setSheetOpen(false)}
+                >
+                  <i className={`ti ${t.icon}`} aria-hidden />
+                  {t.label}
+                </Link>
+              ) : (
+                <span key={t.href} className="fd-sheet-tile fd-soon" aria-disabled="true">
+                  <i className={`ti ${t.icon}`} aria-hidden />
+                  {t.label}
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+      )}
+      <nav className="fd-bottombar">
+        {BAR_PRINCIPAL.map((p) => (
+          <Link
+            key={p.href}
+            href={p.href}
+            className={pathname.startsWith(p.match) ? "active" : ""}
+            onClick={() => setSheetOpen(false)}
+          >
+            <span className="fd-bar-ico">
+              <i className={`ti ${p.icon}`} aria-hidden />
+              {p.match === "/alertas" && rojo > 0 && (
+                <span className="fd-badge-count">{rojo > 9 ? "9+" : rojo}</span>
+              )}
+            </span>
+            {p.label}
+          </Link>
+        ))}
+        <button
+          type="button"
+          className={`fd-bar-mas ${sheetOpen || !enPrincipal ? "active" : ""}`}
+          aria-expanded={sheetOpen}
+          onClick={() => setSheetOpen((v) => !v)}
+        >
+          <span className="fd-bar-ico">
+            <i className="ti ti-grid-dots" aria-hidden />
+          </span>
+          Más
+        </button>
+      </nav>
+    </>
   );
 }
 
@@ -584,6 +638,14 @@ export function FdShell({
               { id: "buscar", label: "Buscar (⌘K)", icon: "ti-search", onSelect: openSearch },
               { id: "ayuda", label: "Ayuda de esta solapa", icon: "ti-help-circle", onSelect: () => setHelpOpen(true) },
               {
+                // requisito Google Play (política Datos del Usuario): eliminación de
+                // cuenta accesible desde adentro de la app, además de la URL pública
+                id: "eliminar-cuenta",
+                label: "Eliminar mi cuenta",
+                icon: "ti-user-x",
+                onSelect: () => router.push("/eliminar-cuenta"),
+              },
+              {
                 id: "logout",
                 label: signingOut ? "Cerrando sesión…" : "Cerrar sesión",
                 icon: "ti-logout",
@@ -615,22 +677,8 @@ export function FdShell({
         </main>
       </div>
 
-      {/* bottom-nav móvil: una línea con scroll horizontal, touch ≥44px */}
-      <nav className="fd-bottombar">
-        {tabs.map((t) =>
-          isRouteBuilt(t.href) ? (
-            <Link key={t.href} href={t.href} className={pathname.startsWith(t.href) ? "active" : ""}>
-              <i className={`ti ${t.icon}`} aria-hidden />
-              {t.label}
-            </Link>
-          ) : (
-            <span key={t.href} className="fd-soon" aria-disabled="true" title={SOON_TIP}>
-              <i className={`ti ${t.icon}`} aria-hidden />
-              {t.label}
-            </span>
-          ),
-        )}
-      </nav>
+      {/* bottom-nav móvil: 4 accesos fijos + hoja "Más" (MobileBar) */}
+      <MobileBar tabs={tabs} pathname={pathname} />
     </div>
   );
 }

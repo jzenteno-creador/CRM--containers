@@ -209,6 +209,8 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
 @keyframes fd-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 @keyframes fd-palette-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 @keyframes fd-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fd-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fd-sheet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 @keyframes fd-spin { to { transform: rotate(360deg); } }
 @keyframes fd-panel-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 
@@ -370,28 +372,60 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
   .fd-header { padding: 0 12px; height: 52px; gap: 8px; }
   .fd-title { font-size: 13px; }
   .hide-md { display: none !important; }
+  /* íconos del header (campana, "?") con área táctil real en el dedo */
+  .fd-iconbtn { width: 40px; height: 40px; }
+  /* tab bar de app: 5 celdas fijas iguales (4 accesos + Más), sin scroll */
   .fd-bottombar {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    height: calc(58px + env(safe-area-inset-bottom));
-    padding: 0 4px env(safe-area-inset-bottom);
+    height: calc(60px + env(safe-area-inset-bottom));
+    padding: 0 2px env(safe-area-inset-bottom);
     background: var(--color-bg-rail); border-top: 1px solid var(--color-border-subtle);
-    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
-  .fd-bottombar::-webkit-scrollbar { display: none; }
-  .fd-bottombar a {
-    flex: 0 0 auto; min-width: 64px; height: 58px;
+  .fd-bottombar a, .fd-bottombar .fd-bar-mas {
+    flex: 1 1 0; min-width: 0; height: 60px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     text-decoration: none; color: var(--color-text-muted); font-size: 10px; font-weight: 500;
+    border: none; background: transparent; padding: 0; min-height: 0; cursor: pointer;
   }
-  .fd-bottombar a i { font-size: 18px; }
-  .fd-bottombar a.active { color: var(--color-accent-500); }
-  .fd-bottombar .fd-soon {
-    flex: 0 0 auto; min-width: 64px; height: 58px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    color: var(--color-text-muted); font-size: 10px; font-weight: 500;
-    opacity: 0.4; cursor: not-allowed;
+  .fd-bottombar a.active, .fd-bottombar .fd-bar-mas.active { color: var(--color-accent-500); }
+  .fd-bar-ico { position: relative; display: inline-grid; place-items: center; }
+  .fd-bar-ico i { font-size: 20px; }
+  .fd-bar-ico .fd-badge-count {
+    position: absolute; top: -4px; right: -10px;
+    min-width: 14px; height: 14px; padding: 0 3px;
+    border-radius: 999px; background: var(--color-status-red);
+    color: #fff; font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    display: inline-grid; place-items: center; line-height: 1;
   }
-  .fd-bottombar .fd-soon i { font-size: 18px; }
+  /* hoja "Más": scrim + panel deslizante sobre la barra, grilla de secciones */
+  .fd-sheet-scrim {
+    position: fixed; inset: 0; z-index: 39;
+    background: rgba(4, 6, 9, 0.6); backdrop-filter: blur(2px);
+    animation: fd-fade-in 160ms var(--ease-out-expo);
+  }
+  .fd-sheet {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(60px + env(safe-area-inset-bottom));
+    background: var(--color-surface-1);
+    border-top: 1px solid var(--color-border-strong);
+    border-radius: 14px 14px 0 0;
+    padding: 14px 12px 10px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.5);
+    animation: fd-sheet-in 240ms var(--ease-out-expo);
+  }
+  .fd-sheet-tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    min-height: 64px; padding: 8px 4px;
+    border: 1px solid var(--color-border-subtle); border-radius: var(--radius-input);
+    background: var(--color-surface-2); text-decoration: none;
+    color: var(--color-text-secondary); font-size: 11px; font-weight: 500;
+    cursor: pointer;
+  }
+  .fd-sheet-tile i { font-size: 19px; color: var(--color-text-muted); }
+  .fd-sheet-tile.active { border-color: var(--color-accent-line); color: var(--color-accent-500); }
+  .fd-sheet-tile.active i { color: var(--color-accent-500); }
+  .fd-sheet-tile.fd-soon { opacity: 0.35; cursor: not-allowed; }
 }
 
 /* ---- login institucional (split brand + form) + espera de aprobación ---- */
@@ -456,6 +490,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
 @media (max-width: 640px) {
   /* touch targets ≥44px + font 16px (evita zoom automático de iOS) */
   input, select, textarea, button { min-height: 44px; font-size: 16px; }
+  /* los <Button> del design system suelen traer minHeight:0 inline (chips compactos
+     de desktop) — el estilo inline le gana a la regla de arriba, por eso el piso
+     táctil va con !important SOLO acá (pasada mobile 2026-08-02: había botones
+     operativos de ~18-23px de alto en reportes/importación/ingreso) */
+  .fd-btn { min-height: 44px !important; }
   input[type="checkbox"], input[type="radio"] { min-height: 0; width: 22px; height: 22px; }
   /* columnas/elementos secundarios fuera en móvil */
   .hide-sm { display: none !important; }

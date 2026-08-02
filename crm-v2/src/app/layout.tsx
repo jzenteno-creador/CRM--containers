@@ -30,6 +30,9 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: "#0a0c10",
+  // Sin viewport-fit=cover, env(safe-area-inset-*) vale 0 y todo el CSS de safe-areas
+  // (bottombar, aviso de versión) queda inerte en teléfonos con gesture bar/notch.
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({
