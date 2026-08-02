@@ -128,3 +128,40 @@ modelo—, (b) sumar el filtro al LATERAL de tarifa de `vista_alertas` / `vista_
 / las de costos cerrados, y (c) rehacer el índice de vigencia única: `ux_freetime_vigente`
 NO incluye el flag, así que hoy cargar una tarifa "peligrosa" **CIERRA** la normal en vez de
 coexistir con ella.
+
+# Resolución de tarifa: UNA sola fuente (lección de la 044/045, 2026-08-02)
+
+**Nadie re-resuelve la tarifa por su cuenta.** El LATERAL que elige la versión vigente de
+`freetime_origin`/`freetime_destino` vive en las views del motor (`vista_alertas`,
+`vista_kpi_costos_cerradas` y sus espejos de impo) y NADA MÁS debe replicarlo.
+
+Por qué: `exceso_actual` (021) tenía su propio LATERAL sin filtro de país. Con los 40
+países del contrato global (027), el `order by vigente_desde desc limit 1` resolvía la
+tarifa de cualquiera — **medido: 191 de 200 operaciones daban distinto que las views**.
+Es el tope de los waivers, así que el primer waiver real de Omar habría sido rechazado o
+mal topeado. La 044 lo hizo leer DE las views; `exceso_actual_impo` (039) ya nacía así.
+La 045 deprecó `dias_facturables`, que arrastraba el mismo defecto sin consumidores.
+
+Si necesitás días facturables, exceso o costo: **consultá las views**. Si te falta una
+columna, agregala a la view — no escribas otro LATERAL.
+
+# Multi-región: qué falta de verdad (estado 2026-08-02)
+
+Ya funciona: tarifas por país (026 + contrato global 027 con 40 países vigentes),
+importador de Excel para origen y destino, país de la operación resuelto vía
+`plantas.pais_id`.
+
+**Deuda real y acotada — la zona horaria.** El motor calcula los días con
+`America/Argentina/Buenos_Aires` HARDCODEADA en 45 puntos entre migraciones, incluida
+`crm.dias_con_convencion` (que es `immutable`, así que no puede leer configuración: habría
+que pasarle la TZ como parámetro y tocar a todos sus llamadores). Con toda la operación en
+Argentina es exacto; para Brasil el offset coincide (UTC-3) así que tampoco cambiaría nada.
+Recién importa en México (UTC-6), Colombia o Perú (UTC-5), y SOLO para movimientos cerca
+de medianoche: un retiro a las 21:00 de México cae al día siguiente en hora argentina y
+suma un día de más.
+
+Plan cuando haga falta: (1) `paises.timezone` con la IANA de cada país, (2)
+`dias_con_convencion(desde, hasta, convencion, tz)` con `tz` explícita, (3) las views
+resuelven la TZ del país de la operación, (4) verificar con el motor drill que el hash del
+cálculo argentino NO cambia. NO hacerlo antes de tener una operación fuera de Argentina:
+es reescribir SQL de plata validada a cambio de un beneficio que todavía no existe.
