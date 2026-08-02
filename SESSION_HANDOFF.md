@@ -210,6 +210,21 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   está modelado — jamás cargar waivers para reconciliar. Futuro: módulo validación de
   facturas de naviera (memoria `costo-devengado-vs-facturado`).
 
+## ✅ OCTAVA TANDA (2026-08-02, "procede con todas" — menú autónomo)
+- **Sección Cerradas en /importacion EN PROD** (ui-builder + review): historial de impo
+  cerradas con costos de la view, búsqueda, gate sup+ — **desbloquea la corrección de
+  fechas de la 039** (por fin tiene caller). Migración 048 (seed ayuda) APLICADA.
+  Gotcha: enum real `estado='cerrado'`, no 'cerrada'.
+- **Flecos de optimización EN PROD**: 2 secciones de /alertas con auto-refresh 60s;
+  7 select(*) fijados a columnas explícitas (blindaje de contrato).
+- **ERD versionado**: docs/erd-crm.md (mermaid, 50 FKs desde prod).
+- **Módulo facturas**: diseño v1 en docs/design-modulo-facturas.md (migración 049
+  futura, match contra BRUTO, veredictos) — implementación esperando una factura real
+  de MAERSK de John para calibrar el formato.
+- **Keystore→Drive**: carpeta "CRM-Detention — Respaldo Keystore Android" CREADA en el
+  Drive de John (id 1Bcv_eKXl1MGnRVd7Kb-7nZfpOTKU2IK6); el clasificador de permisos
+  bloqueó (bien) que yo lea/suba la clave — John arrastra los 2 archivos (30 seg).
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. ~~HIBP~~ **NO DISPONIBLE — plan free** (John lo intentó 2026-08-02: pide Pro; la
    memoria "la org tiene Pro" era de la OTRA org, no la de cctuowth). Mitigación real
