@@ -11,7 +11,7 @@
   "navigationDividerColor": "#0A0C10",
   "navigationDividerColorDark": "#0A0C10",
   "backgroundColor": "#0A0C10",
-  "enableNotifications": false,
+  "enableNotifications": true,
   "startUrl": "/inicio?source=twa",
   "iconUrl": "https://crm-detention.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://crm-detention.vercel.app/icons/maskable-512.png",
@@ -20,9 +20,28 @@
     "path": "./crm-ssb.keystore",
     "alias": "crm-ssb"
   },
-  "appVersionName": "1.0.0",
-  "appVersionCode": 1,
-  "shortcuts": [],
+  "appVersionName": "1.1.0",
+  "appVersionCode": 2,
+  "shortcuts": [
+    {
+      "name": "Alertas",
+      "shortName": "Alertas",
+      "url": "/alertas",
+      "chosenIconUrl": "https://crm-detention.vercel.app/icons/icon-192.png"
+    },
+    {
+      "name": "Escanear",
+      "shortName": "Escanear",
+      "url": "/vision/escanear",
+      "chosenIconUrl": "https://crm-detention.vercel.app/icons/icon-192.png"
+    },
+    {
+      "name": "Ingreso",
+      "shortName": "Ingreso",
+      "url": "/ingreso",
+      "chosenIconUrl": "https://crm-detention.vercel.app/icons/icon-192.png"
+    }
+  ],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://crm-detention.vercel.app/manifest.webmanifest",
   "fallbackType": "customtabs",
