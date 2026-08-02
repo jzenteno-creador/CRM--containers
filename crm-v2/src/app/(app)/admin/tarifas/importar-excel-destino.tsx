@@ -1,35 +1,47 @@
 "use client";
 
-// Importador de tarifas de freetime desde Excel/CSV (Admin → Tarifas, pestaña Origen).
+// Importador de tarifas de freetime desde Excel/CSV (Admin → Tarifas, pestaña Destino).
+// Espejo de importar-excel.tsx (Origen) para freetime_destino — MISMO flujo de 3 pasos,
+// MISMO enfoque de simulación del efecto atómico de la RPC, pero con la matriz de
+// validación propia del modelo de destino (ver migración 026_multiregion_freetime.sql):
 //
-// POR QUÉ: cargar la tarifa de una naviera hoy es SQL a mano de un desarrollador. La
-// propuesta al cliente promete 2 semanas de CONFIGURACIÓN para el piloto, no de
-// desarrollo — este importador es lo que hace cierta esa promesa.
+//   - freetime_destino NO tiene régimen (freetime_origin sí) — acá no hay ese campo.
+//   - Tres contadores de días NULLABLE en vez de uno: dias_combined, dias_demurrage,
+//     dias_detention. El motor (vista_alertas_impo, migración 039) decide el modo así:
+//       split    si dias_demurrage Y dias_detention están cargados Y (demurrage+detention) > 0
+//       combined en cualquier otro caso (incluida la fila que no cargó nada)
+//     El preview simula esa misma regla para avisar de dos problemas que la RPC NO
+//     rechaza (son válidos a nivel de columna, solo inútiles a nivel de negocio):
+//       (a) los tres contadores en null → tarifa "inerte" (el motor nunca va a calcular)
+//       (b) combined Y split cargados a la vez → ambigüedad (el motor usa split y
+//           el valor de combined queda guardado pero NUNCA se lee)
+//   - aplica_carga_peligrosa es NULLABLE (tri-estado: sin dato / true / false), a
+//     diferencia de origen que es boolean NOT NULL con default false. Acá "" = sin dato.
+//   - Tarifas: tarifa_dry_usd_dia y tarifa_reefer_usd_dia (origen solo tiene una tarifa
+//     "dry" + la reefer opcional con los mismos nombres).
 //
-// Escribe SOLO vía crm_nueva_version_freetime, fila por fila, SECUENCIAL (no Promise.all:
-// son escrituras de plata y el orden importa — dos filas de la MISMA combinación
-// naviera+país+régimen+hub deben cerrarse/abrirse en el orden del archivo). Mismos
-// parámetros y mismos defaults que OrigenVersionModal en modo alta (page.tsx) — este
+// Escribe SOLO vía crm_nueva_version_freetime_destino, fila por fila, SECUENCIAL (no
+// Promise.all: son escrituras de plata y el orden importa — dos filas de la MISMA
+// combinación naviera+país+hub deben cerrarse/abrirse en el orden del archivo). Mismos
+// parámetros y mismos defaults que DestinoVersionModal en modo alta (page.tsx) — este
 // módulo NO reimplementa la lógica de versionado, solo arma el payload y llama la RPC
-// (ver AGENTS.md "regla de escritura a la DB": freetime_origin es RPC-only).
+// (ver AGENTS.md "regla de escritura a la DB": freetime_destino es RPC-only).
 //
-// Gating: el botón que abre este modal vive en OrigenPanel, que solo se renderiza si
+// A diferencia de crm_nueva_version_freetime (origen), crm_nueva_version_freetime_destino
+// NO tiene lógica de herencia de convención desde la versión anterior — p_convencion es
+// NOT NULL a nivel de validación de la función (rechaza NULL explícito, aunque el SQL
+// declare DEFAULT 'retiro_dia_1' — el default de Postgres solo aplica si el parámetro se
+// OMITE, no si se manda NULL). Por eso acá "convencion" SIEMPRE resuelve a un string
+// concreto ("retiro_dia_1" si el Excel no trae la columna), nunca null.
+//
+// Gating: el botón que abre este modal vive en DestinoPanel, que solo se renderiza si
 // TarifasPage ya resolvió isAdmin (mismo gate que "Nueva tarifa") — no hay chequeo propio
 // acá, la RPC además valida rol server-side (defensa en profundidad, igual que el resto
 // de la página).
 //
-// Alcance: SOLO Origen (freetime_origin, con régimen/tipo). El equivalente para Destino
-// (freetime_destino: sin régimen, tres contadores de días nullable, tri-estado de carga
-// peligrosa) vive en importar-excel-destino.tsx — NO es este mismo componente parametrizado:
-// el modelo difiere lo suficiente (regimen/tipo acá, dias_combined/demurrage/detention +
-// modo split/combined allá) como para que forzar un shell genérico complicara más de lo
-// que ahorra. Lo genuinamente común (normalización de encabezados/valores, parseo de
-// números/fechas, resolución de nombre→id) está en importar-excel-shared.ts.
-//
-// Columnas NO cubiertas por el importador (a propósito, fuera del synonym-map pedido):
-// carga peligrosa (siempre false — mismo default que el modal; la operación no la
-// diferencia, decisión de John 2026-08-01) y freetime/tarifa reefer (siempre null — no
-// están en la lista de encabezados aceptados). Agregarlas es una columna + 3 líneas acá.
+// Lo genuinamente común con el importador de origen (normalización de encabezados/
+// valores, parseo de números/fechas, resolución de nombre→id) vive en
+// importar-excel-shared.ts — ver ese archivo para el porqué de no compartir más.
 
 import { useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/fd/badge";
@@ -54,43 +66,63 @@ import {
 type Naviera = { id: string; nombre: string };
 type Pais = { id: string; nombre: string; activo: boolean };
 
-// Sinónimos EXACTOS del brief — case/acentos-insensitive vía normKey (así "Días Libres",
-// "dias_libres" y "FREE TIME" caen todos en el mismo canónico).
+// Sinónimos EXACTOS del brief — case/acentos-insensitive vía normKey.
 const HEADER_SYNONYMS: Record<string, string> = {
   naviera: "naviera",
   pais: "pais",
-  dias_libres: "dias_libres",
-  free_time: "dias_libres",
-  freetime: "dias_libres",
-  tarifa: "tarifa",
-  tarifa_usd_dia: "tarifa",
-  usd_dia: "tarifa",
+  hub: "hub",
+  dias_combined: "dias_combined",
+  combined: "dias_combined",
+  dias_demurrage: "dias_demurrage",
+  demurrage: "dias_demurrage",
+  dias_detention: "dias_detention",
+  detention: "dias_detention",
+  tarifa_dry: "tarifa_dry",
+  tarifa: "tarifa_dry",
+  tarifa_dry_usd_dia: "tarifa_dry",
+  usd_dia: "tarifa_dry",
+  tarifa_reefer: "tarifa_reefer",
+  tarifa_reefer_usd_dia: "tarifa_reefer",
+  freetime_reefer: "freetime_reefer",
   vigente_desde: "vigente_desde",
   desde: "vigente_desde",
-  regimen: "regimen",
-  tipo: "tipo",
   convencion_conteo: "convencion_conteo",
   convencion: "convencion_conteo",
-  hub: "hub",
+  carga_peligrosa: "carga_peligrosa",
+  peligrosa: "carga_peligrosa",
   nota: "nota",
   notas: "nota",
-  cobra_detention_origen: "cobra_detention_origen",
-  cobra_detention: "cobra_detention_origen",
-  cobra: "cobra_detention_origen",
 };
 
-// Bloquean el procesamiento ANTES de leer una sola fila si falta el encabezado — son los
-// únicos parámetros de la RPC sin default utilizable (p_tipo/p_peligrosa sí tienen default
-// de UI, ver arriba). Etiqueta humana para el mensaje de error.
+// Bloquean el procesamiento ANTES de leer una sola fila si falta el encabezado. A
+// diferencia de origen, acá SOLO naviera y vigente_desde son obligatorios — los tres
+// contadores de días y las tarifas son NULLABLE en freetime_destino (una fila puede
+// cargar únicamente combined, únicamente split, o ninguno todavía — el preview lo
+// marca con advertencia, no con error, ver computeModo más abajo).
 const REQUIRED_CANONICAL: { key: string; label: string }[] = [
   { key: "naviera", label: "naviera" },
-  { key: "dias_libres", label: "días libres (dias_libres / días libres / free time)" },
-  { key: "tarifa", label: "tarifa (tarifa / tarifa_usd_dia / usd/día)" },
   { key: "vigente_desde", label: "vigente desde (vigente_desde / desde)" },
 ];
 
-const REGIMEN_LABELS: Record<string, string> = { vacios: "vacíos", cargados: "cargados", sin_uso: "sin uso" };
-const TIPOS = ["Detention", "Demurrage", "Combined"] as const;
+/* ---------- modo del reloj (split/combined/ambiguo/inerte) — espejo de vista_alertas_impo ---------- */
+
+type Modo = "combined" | "split" | "ambiguo" | "inerte";
+
+function computeModo(diasCombined: number | null, diasDemurrage: number | null, diasDetention: number | null): Modo {
+  const isSplit = diasDemurrage != null && diasDetention != null && diasDemurrage + diasDetention > 0;
+  const isCombinedLoaded = diasCombined != null;
+  if (isSplit && isCombinedLoaded) return "ambiguo";
+  if (isSplit) return "split";
+  if (isCombinedLoaded) return "combined";
+  return "inerte";
+}
+
+const MODO_BADGE: Record<Modo, { tone: "verde" | "amarillo" | "rojo"; label: string }> = {
+  combined: { tone: "verde", label: "combined" },
+  split: { tone: "verde", label: "split" },
+  ambiguo: { tone: "amarillo", label: "ambiguo" },
+  inerte: { tone: "rojo", label: "inerte" },
+};
 
 /* ---------- fila parseada + validación ---------- */
 
@@ -103,24 +135,38 @@ type ParsedRow = {
   paisRaw: string;
   paisId: string | null;
   paisNombre: string;
-  regimen: string;
   hub: string | null;
-  diasLibresRaw: string;
-  diasLibres: number | null;
-  tarifaRaw: string;
-  tarifa: number | null;
-  tipo: string;
-  convencion: string | null;
-  cobra: boolean | null;
+  diasCombinedRaw: string;
+  diasCombined: number | null;
+  diasDemurrageRaw: string;
+  diasDemurrage: number | null;
+  diasDetentionRaw: string;
+  diasDetention: number | null;
+  tarifaDryRaw: string;
+  tarifaDry: number | null;
+  tarifaReeferRaw: string;
+  tarifaReefer: number | null;
+  freetimeReeferRaw: string;
+  freetimeReefer: number | null;
+  peligrosa: boolean | null;
+  convencion: string;
   nota: string | null;
   vigenteDesdeRaw: string;
   vigenteDesde: string | null;
+  modo: Modo;
   previousVigenteId: string | null;
   status: ImportStatus;
   message: string | null;
 };
 
-type VigenteSnap = { id: string; diasLibres: number; tarifaUsdDia: number; tipo: string; vigenteDesde: string };
+type VigenteSnap = {
+  id: string;
+  diasCombined: number | null;
+  diasDemurrage: number | null;
+  diasDetention: number | null;
+  tarifaDry: number | null;
+  vigenteDesde: string;
+};
 
 function buildHeaderMap(headerRow: string[]): { map: Map<string, string>; missing: { key: string; label: string }[] } {
   const map = new Map<string, string>();
@@ -153,6 +199,11 @@ function parseRows(
   vigMap: Map<string, VigenteSnap>,
   XLSX: typeof import("xlsx"),
 ): ParsedRow[] {
+  const intErr = (label: string, raw: string, n: number | null) =>
+    raw !== "" && (n == null || !Number.isInteger(n) || n < 0) ? `${label} inválido: "${raw}" (entero ≥ 0)` : null;
+  const numErr = (label: string, raw: string, n: number | null) =>
+    raw !== "" && (n == null || n < 0) ? `${label} inválida: "${raw}" (número ≥ 0)` : null;
+
   return dataRows.map((raw, i) => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -170,18 +221,41 @@ function parseRows(
     const hubRaw = rawDisplay(getCanon(raw, headerMap, "hub"));
     const hub = hubRaw === "" ? null : hubRaw;
 
-    const diasLibresInput = getCanon(raw, headerMap, "dias_libres");
-    const diasLibresRaw = rawDisplay(diasLibresInput);
-    const diasLibres = parseNumber(diasLibresInput);
-    if (diasLibresInput === undefined) errors.push("falta días libres");
-    else if (diasLibres == null || !Number.isInteger(diasLibres) || diasLibres < 0)
-      errors.push(`días libres inválidos: "${diasLibresRaw}" (entero ≥ 0)`);
+    const diasCombinedInput = getCanon(raw, headerMap, "dias_combined");
+    const diasCombinedRaw = rawDisplay(diasCombinedInput);
+    const diasCombined = parseNumber(diasCombinedInput);
+    const eCombined = intErr("días combined", diasCombinedRaw, diasCombined);
+    if (eCombined) errors.push(eCombined);
 
-    const tarifaInput = getCanon(raw, headerMap, "tarifa");
-    const tarifaRaw = rawDisplay(tarifaInput);
-    const tarifa = parseNumber(tarifaInput);
-    if (tarifaInput === undefined) errors.push("falta la tarifa");
-    else if (tarifa == null || tarifa < 0) errors.push(`tarifa inválida: "${tarifaRaw}" (número ≥ 0)`);
+    const diasDemurrageInput = getCanon(raw, headerMap, "dias_demurrage");
+    const diasDemurrageRaw = rawDisplay(diasDemurrageInput);
+    const diasDemurrage = parseNumber(diasDemurrageInput);
+    const eDemurrage = intErr("días demurrage", diasDemurrageRaw, diasDemurrage);
+    if (eDemurrage) errors.push(eDemurrage);
+
+    const diasDetentionInput = getCanon(raw, headerMap, "dias_detention");
+    const diasDetentionRaw = rawDisplay(diasDetentionInput);
+    const diasDetention = parseNumber(diasDetentionInput);
+    const eDetention = intErr("días detention", diasDetentionRaw, diasDetention);
+    if (eDetention) errors.push(eDetention);
+
+    const tarifaDryInput = getCanon(raw, headerMap, "tarifa_dry");
+    const tarifaDryRaw = rawDisplay(tarifaDryInput);
+    const tarifaDry = parseNumber(tarifaDryInput);
+    const eTarifaDry = numErr("tarifa dry", tarifaDryRaw, tarifaDry);
+    if (eTarifaDry) errors.push(eTarifaDry);
+
+    const tarifaReeferInput = getCanon(raw, headerMap, "tarifa_reefer");
+    const tarifaReeferRaw = rawDisplay(tarifaReeferInput);
+    const tarifaReefer = parseNumber(tarifaReeferInput);
+    const eTarifaReefer = numErr("tarifa reefer", tarifaReeferRaw, tarifaReefer);
+    if (eTarifaReefer) errors.push(eTarifaReefer);
+
+    const freetimeReeferInput = getCanon(raw, headerMap, "freetime_reefer");
+    const freetimeReeferRaw = rawDisplay(freetimeReeferInput);
+    const freetimeReefer = parseNumber(freetimeReeferInput);
+    const eFreetimeReefer = intErr("freetime reefer", freetimeReeferRaw, freetimeReefer);
+    if (eFreetimeReefer) errors.push(eFreetimeReefer);
 
     const desdeInput = getCanon(raw, headerMap, "vigente_desde");
     const vigenteDesdeRaw = rawDisplay(desdeInput);
@@ -189,32 +263,8 @@ function parseRows(
     if (desdeInput === undefined) errors.push("falta la fecha de vigencia (vigente_desde)");
     else if (!vigenteDesde) errors.push(`fecha de vigencia ilegible: "${vigenteDesdeRaw}" (usá AAAA-MM-DD o DD/MM/AAAA)`);
 
-    const regimenInput = rawDisplay(getCanon(raw, headerMap, "regimen"));
-    let regimen = "vacios";
-    if (regimenInput !== "") {
-      const norm = normKey(regimenInput);
-      if (!(norm in REGIMEN_LABELS)) {
-        errors.push(`régimen no soportado: "${regimenInput}" (válidos: vacíos, cargados, sin uso)`);
-      } else {
-        regimen = norm;
-        if (norm !== "vacios") {
-          warnings.push(
-            `régimen "${REGIMEN_LABELS[norm]}" — el motor de costeo usa 'vacíos' fijo, se va a guardar pero NINGÚN cálculo la va a leer`,
-          );
-        }
-      }
-    }
-
-    const tipoInput = rawDisplay(getCanon(raw, headerMap, "tipo"));
-    let tipo = "Detention";
-    if (tipoInput !== "") {
-      const match = TIPOS.find((t) => normKey(t) === normKey(tipoInput));
-      if (!match) errors.push(`tipo inválido: "${tipoInput}" (válidos: Detention, Demurrage, Combined)`);
-      else tipo = match;
-    }
-
     const convencionInput = rawDisplay(getCanon(raw, headerMap, "convencion_conteo"));
-    let convencion: string | null = null;
+    let convencion = "retiro_dia_1";
     if (convencionInput !== "") {
       const norm = normKey(convencionInput);
       if (norm === "retiro_dia_1" || norm === "dia_1") convencion = "retiro_dia_1";
@@ -222,16 +272,31 @@ function parseRows(
       else errors.push(`convención de conteo inválida: "${convencionInput}" (válidos: retiro_dia_1, retiro_dia_0)`);
     }
 
-    const cobraInput = getCanon(raw, headerMap, "cobra_detention_origen");
-    const cobraRes = parseBool(cobraInput);
-    if (!cobraRes.ok) errors.push(`valor inválido en cobra_detention_origen: "${rawDisplay(cobraInput)}" (usá sí/no)`);
+    const peligrosaInput = getCanon(raw, headerMap, "carga_peligrosa");
+    const peligrosaRes = parseBool(peligrosaInput);
+    if (!peligrosaRes.ok) errors.push(`valor inválido en carga_peligrosa: "${rawDisplay(peligrosaInput)}" (usá sí/no, o dejalo vacío)`);
 
     const notaRaw = rawDisplay(getCanon(raw, headerMap, "nota"));
     const nota = notaRaw === "" ? null : notaRaw;
 
+    const modo = computeModo(diasCombined, diasDemurrage, diasDetention);
+    if (modo === "inerte") {
+      warnings.push(
+        "no carga combined ni demurrage+detention — la tarifa queda inerte, el motor de costeo no va a calcular nada para esta combinación hasta que cargues al menos uno de los dos modos",
+      );
+    } else if (modo === "ambiguo") {
+      warnings.push(
+        `cargaste combined (${diasCombined} días) Y demurrage+detention (${diasDemurrage}+${diasDetention} días) a la vez — el motor arranca en modo split automáticamente cuando demurrage y detention están cargados y suman > 0, así que combined se va a guardar pero NINGÚN cálculo lo va a leer`,
+      );
+    } else if (tarifaDry == null) {
+      warnings.push(
+        `días de ${modo} cargados pero falta tarifa_dry_usd_dia — sin tarifa el motor no calcula costo para esta combinación aunque los días estén completos`,
+      );
+    }
+
     let previousVigenteId: string | null = null;
     if (naviera && pais && vigenteDesde && errors.length === 0) {
-      const key = `${naviera.id}|${regimen}|${pais.id}|${hub ?? ""}`;
+      const key = `${naviera.id}|${pais.id}|${hub ?? ""}`;
       const prev = vigMap.get(key);
       if (prev) {
         previousVigenteId = prev.id;
@@ -241,15 +306,19 @@ function parseRows(
           );
         } else {
           warnings.push(
-            `ya existe una versión vigente desde ${fmtFechaDia(prev.vigenteDesde)} — ${prev.diasLibres} días libres, ${fmtUSDTarifa(prev.tarifaUsdDia)}/día, ${prev.tipo}. Esta importación la va a CERRAR y reemplazar.`,
+            `ya existe una versión vigente desde ${fmtFechaDia(prev.vigenteDesde)} — combined ${prev.diasCombined ?? "—"} / demurrage ${prev.diasDemurrage ?? "—"} / detention ${prev.diasDetention ?? "—"}, ${fmtUSDTarifa(prev.tarifaDry)}/día. Esta importación la va a CERRAR y reemplazar.`,
           );
         }
       }
       // Simula el efecto atómico de la RPC (cierra + abre) para que filas duplicadas del
       // MISMO archivo se comparen contra lo que la fila anterior dejaría vigente, no
-      // contra el snapshot inicial de la DB.
-      if (diasLibres != null && tarifa != null && (!prev || vigenteDesde > prev.vigenteDesde)) {
-        vigMap.set(key, { id: prev?.id ?? "pendiente", diasLibres, tarifaUsdDia: tarifa, tipo, vigenteDesde });
+      // contra el snapshot inicial de la DB. A diferencia de origen, acá NO se exige
+      // diasCombined/tarifa != null: una fila "inerte" (los tres contadores en null) es
+      // una versión válida que igual cierra la anterior — el warning ya avisó del hecho.
+      // (!prev || vigenteDesde > prev.vigenteDesde) ya excluye el caso de error de arriba:
+      // si vigenteDesde <= prev.vigenteDesde la condición da false y el snapshot no se toca.
+      if (!prev || vigenteDesde > prev.vigenteDesde) {
+        vigMap.set(key, { id: prev?.id ?? "pendiente", diasCombined, diasDemurrage, diasDetention, tarifaDry, vigenteDesde });
       }
     }
 
@@ -263,18 +332,25 @@ function parseRows(
       paisRaw,
       paisId: pais?.id ?? null,
       paisNombre: pais?.nombre ?? paisRaw,
-      regimen,
       hub,
-      diasLibresRaw,
-      diasLibres,
-      tarifaRaw,
-      tarifa,
-      tipo,
+      diasCombinedRaw,
+      diasCombined,
+      diasDemurrageRaw,
+      diasDemurrage,
+      diasDetentionRaw,
+      diasDetention,
+      tarifaDryRaw,
+      tarifaDry,
+      tarifaReeferRaw,
+      tarifaReefer,
+      freetimeReeferRaw,
+      freetimeReefer,
+      peligrosa: peligrosaRes.value,
       convencion,
-      cobra: cobraRes.value,
       nota,
       vigenteDesdeRaw,
       vigenteDesde,
+      modo,
       previousVigenteId,
       status,
       message,
@@ -293,23 +369,27 @@ async function descargarPlantilla(navieras: Naviera[]) {
     [
       "naviera",
       "pais",
-      "regimen",
-      "tipo",
-      "dias_libres",
-      "tarifa_usd_dia",
       "hub",
+      "dias_combined",
+      "dias_demurrage",
+      "dias_detention",
+      "tarifa_dry",
+      "tarifa_reefer",
+      "freetime_reefer",
       "convencion_conteo",
-      "cobra_detention_origen",
+      "carga_peligrosa",
       "vigente_desde",
       "nota",
     ],
-    [n1, "ARGENTINA", "vacios", "Detention", 14, 2.5, "", "retiro_dia_1", "true", hoy, "ejemplo — reemplazar por datos reales"],
-    [n2, "ARGENTINA", "vacios", "Detention", 10, 3.1, "", "retiro_dia_1", "true", hoy, ""],
+    // ejemplo 1: modo combined — un solo contador, demurrage/detention vacíos.
+    [n1, "ARGENTINA", "", 21, "", "", 4.2, 6.5, 5, "retiro_dia_1", "true", hoy, "ejemplo combined — reemplazar por datos reales"],
+    // ejemplo 2: modo split — demurrage + detention cargados, combined vacío.
+    [n2, "ARGENTINA", "", "", 7, 14, 3.8, "", "", "retiro_dia_1", "", hoy, "ejemplo split — demurrage 7 + detention 14"],
   ];
   const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates: true });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "tarifas_origen");
-  XLSX.writeFile(wb, "plantilla_tarifas_origen.xlsx", { cellDates: true });
+  XLSX.utils.book_append_sheet(wb, ws, "tarifas_destino");
+  XLSX.writeFile(wb, "plantilla_tarifas_destino.xlsx", { cellDates: true });
 }
 
 /* ---------- resultado de la importación ---------- */
@@ -321,7 +401,7 @@ function buildReporteTexto(outcomes: ImportOutcome[]): string {
   const sinCambios = outcomes.filter((o) => o.ok && o.sinCambios);
   const fallidas = outcomes.filter((o) => !o.ok);
   const lineas: string[] = [];
-  lineas.push(`Importación de tarifas de origen — ${new Date().toLocaleString("es-AR")}`);
+  lineas.push(`Importación de tarifas de destino — ${new Date().toLocaleString("es-AR")}`);
   lineas.push(`Procesadas: ${outcomes.length} · OK: ${ok.length} · sin cambios: ${sinCambios.length} · fallidas: ${fallidas.length}`);
   lineas.push("");
   if (ok.length > 0) {
@@ -353,7 +433,7 @@ function buildReporteTexto(outcomes: ImportOutcome[]): string {
 
 type Step = "cargar" | "preview" | "importando" | "resultado";
 
-export function ImportarTarifasOrigenModal({
+export function ImportarTarifasDestinoModal({
   paises,
   navieras,
   onClose,
@@ -416,11 +496,12 @@ export function ImportarTarifasOrigenModal({
         );
       }
 
-      // snapshot de vigentes actuales (cruza combinación naviera+régimen+país+hub) para
-      // detectar en la previsualización qué filas van a CERRAR una versión existente.
+      // snapshot de vigentes actuales (cruza combinación naviera+país+hub — sin régimen,
+      // freetime_destino no lo tiene) para detectar en la previsualización qué filas van a
+      // CERRAR una versión existente.
       const { data: vigentes, error: vigError } = await getSupabase()
-        .from("freetime_origin")
-        .select("id, naviera_id, pais_id, hub, regimen, dias_libres, tarifa_usd_dia, tipo, vigente_desde")
+        .from("freetime_destino")
+        .select("id, naviera_id, pais_id, hub, dias_combined, dias_demurrage, dias_detention, tarifa_dry_usd_dia, vigente_desde")
         .is("vigente_hasta", null)
         .limit(VIGENTES_CAP);
       if (vigError) throw new Error(`No se pudo leer el estado actual de tarifas: ${vigError.message}`);
@@ -431,14 +512,21 @@ export function ImportarTarifasOrigenModal({
         naviera_id: string;
         pais_id: string;
         hub: string | null;
-        regimen: string;
-        dias_libres: number;
-        tarifa_usd_dia: number;
-        tipo: string;
+        dias_combined: number | null;
+        dias_demurrage: number | null;
+        dias_detention: number | null;
+        tarifa_dry_usd_dia: number | null;
         vigente_desde: string;
       }[]) {
-        const key = `${v.naviera_id}|${v.regimen}|${v.pais_id}|${v.hub ?? ""}`;
-        vigMap.set(key, { id: v.id, diasLibres: v.dias_libres, tarifaUsdDia: v.tarifa_usd_dia, tipo: v.tipo, vigenteDesde: v.vigente_desde });
+        const key = `${v.naviera_id}|${v.pais_id}|${v.hub ?? ""}`;
+        vigMap.set(key, {
+          id: v.id,
+          diasCombined: v.dias_combined,
+          diasDemurrage: v.dias_demurrage,
+          diasDetention: v.dias_detention,
+          tarifaDry: v.tarifa_dry_usd_dia,
+          vigenteDesde: v.vigente_desde,
+        });
       }
 
       const parsed = parseRows(dataRows, headerMap, navieras, paisesActivos, vigMap, XLSX);
@@ -466,20 +554,19 @@ export function ImportarTarifasOrigenModal({
     // SECUENCIAL a propósito: son escrituras de plata y el orden del archivo importa
     // (dos filas de la misma combinación deben cerrarse/abrirse en orden).
     for (const row of toProcess) {
-      const { data, error } = await supabase.rpc("crm_nueva_version_freetime", {
+      const { data, error } = await supabase.rpc("crm_nueva_version_freetime_destino", {
         p_naviera: row.navieraId,
-        p_dias: row.diasLibres,
-        p_peligrosa: false,
-        p_tipo: row.tipo,
-        p_tarifa: row.tarifa,
-        p_desde: row.vigenteDesde,
-        p_regimen: row.regimen,
-        p_convencion: row.convencion,
-        p_cobra: row.cobra,
         p_pais: row.paisNombre,
+        p_desde: row.vigenteDesde,
         p_hub: row.hub,
-        p_freetime_reefer: null,
-        p_tarifa_reefer_usd_dia: null,
+        p_dias_combined: row.diasCombined,
+        p_dias_demurrage: row.diasDemurrage,
+        p_dias_detention: row.diasDetention,
+        p_peligrosa: row.peligrosa,
+        p_tarifa_dry_usd_dia: row.tarifaDry,
+        p_tarifa_reefer_usd_dia: row.tarifaReefer,
+        p_freetime_reefer: row.freetimeReefer,
+        p_convencion: row.convencion,
         p_nota: row.nota,
       });
       if (error) {
@@ -503,21 +590,46 @@ export function ImportarTarifasOrigenModal({
       sortValue: (r) => r.navieraRaw,
     },
     { key: "pais", header: "país", render: (r) => `${r.paisRaw}${r.hub ? ` (${r.hub})` : ""}`, sortValue: (r) => r.paisRaw },
-    { key: "regimen", header: "régimen", render: (r) => REGIMEN_LABELS[r.regimen] ?? r.regimen, hideOnMobile: true },
-    { key: "tipo", header: "tipo", render: (r) => r.tipo, hideOnMobile: true },
     {
-      key: "dias",
-      header: "días libres",
+      key: "combined",
+      header: "combined",
       numeric: true,
-      render: (r) => (r.diasLibres != null ? r.diasLibres : <span style={{ color: "var(--color-status-red)" }}>{r.diasLibresRaw || "—"}</span>),
-      sortValue: (r) => r.diasLibres,
+      render: (r) => (r.diasCombinedRaw === "" ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : (r.diasCombined ?? <span style={{ color: "var(--color-status-red)" }}>{r.diasCombinedRaw}</span>)),
+      sortValue: (r) => r.diasCombined,
+      hideOnMobile: true,
+    },
+    {
+      key: "demurrage",
+      header: "demurrage",
+      numeric: true,
+      render: (r) => (r.diasDemurrageRaw === "" ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : (r.diasDemurrage ?? <span style={{ color: "var(--color-status-red)" }}>{r.diasDemurrageRaw}</span>)),
+      sortValue: (r) => r.diasDemurrage,
+      hideOnMobile: true,
+    },
+    {
+      key: "detention",
+      header: "detention",
+      numeric: true,
+      render: (r) => (r.diasDetentionRaw === "" ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : (r.diasDetention ?? <span style={{ color: "var(--color-status-red)" }}>{r.diasDetentionRaw}</span>)),
+      sortValue: (r) => r.diasDetention,
+      hideOnMobile: true,
+    },
+    {
+      key: "modo",
+      header: "modo",
+      render: (r) => (
+        <Badge tone={MODO_BADGE[r.modo].tone} mono>
+          {MODO_BADGE[r.modo].label}
+        </Badge>
+      ),
+      sortValue: (r) => r.modo,
     },
     {
       key: "tarifa",
-      header: "tarifa",
+      header: "tarifa dry",
       numeric: true,
-      render: (r) => (r.tarifa != null ? fmtUSDTarifa(r.tarifa) : <span style={{ color: "var(--color-status-red)" }}>{r.tarifaRaw || "—"}</span>),
-      sortValue: (r) => r.tarifa,
+      render: (r) => (r.tarifaDryRaw === "" ? <span style={{ color: "var(--color-text-faint)" }}>—</span> : (r.tarifaDry != null ? fmtUSDTarifa(r.tarifaDry) : <span style={{ color: "var(--color-status-red)" }}>{r.tarifaDryRaw}</span>)),
+      sortValue: (r) => r.tarifaDry,
     },
     {
       key: "desde",
@@ -544,24 +656,28 @@ export function ImportarTarifasOrigenModal({
 
   const titulo =
     step === "cargar"
-      ? "Importar tarifas de origen — 1. Cargar archivo"
+      ? "Importar tarifas de destino — 1. Cargar archivo"
       : step === "preview"
-        ? "Importar tarifas de origen — 2. Revisar y validar"
+        ? "Importar tarifas de destino — 2. Revisar y validar"
         : step === "importando"
-          ? "Importar tarifas de origen — 3. Importando…"
-          : "Importar tarifas de origen — 3. Resultado";
+          ? "Importar tarifas de destino — 3. Importando…"
+          : "Importar tarifas de destino — 3. Resultado";
 
   return (
-    <Modal open onClose={handleCancel} title={titulo} width={860} closeOnBackdrop={!busy}>
+    <Modal open onClose={handleCancel} title={titulo} width={920} closeOnBackdrop={!busy}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {step === "cargar" && (
           <>
             <p style={{ margin: 0, fontSize: 12.5, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
               Subí un .xlsx o .csv con una tarifa por fila. La primera hoja se lee tal cual — encabezados flexibles
-              (mayúsculas/minúsculas y acentos no importan). Columnas obligatorias:{" "}
-              <strong>naviera, días libres, tarifa y vigente desde</strong>. El resto (país, régimen, tipo, hub,
-              convención de conteo, cobra detention, nota) es opcional y usa los mismos valores por defecto que el
-              alta manual.
+              (mayúsculas/minúsculas y acentos no importan). Columnas obligatorias: <strong>naviera y vigente desde</strong>. El
+              resto (país, hub, días combined/demurrage/detention, tarifas dry/reefer, freetime reefer, convención de
+              conteo, carga peligrosa, nota) es opcional y usa los mismos valores por defecto que el alta manual.
+            </p>
+            <p style={{ margin: 0, fontSize: 11.5, color: "var(--color-text-muted)", lineHeight: 1.6 }}>
+              El motor arranca en modo <strong>split</strong> cuando demurrage y detention están cargados y suman más de
+              0 días; si no, usa <strong>combined</strong>. Cargar los dos modos a la vez no rompe la importación, pero
+              el preview lo marca como ambiguo — solo split se va a leer.
             </p>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
               <Button variant="primary" icon="ti-file-spreadsheet" loading={loading} onClick={() => inputRef.current?.click()}>

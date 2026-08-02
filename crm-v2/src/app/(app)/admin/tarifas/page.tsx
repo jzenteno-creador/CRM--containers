@@ -48,6 +48,7 @@ import { useToast } from "@/components/fd/toast";
 import { fmtFechaDia, fmtUSDTarifa, hoyAR } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import { ImportarTarifasDestinoModal } from "./importar-excel-destino";
 import { ImportarTarifasOrigenModal } from "./importar-excel";
 
 type Naviera = { id: string; nombre: string };
@@ -1243,6 +1244,7 @@ function DestinoPanel({
   const [rows, setRows] = useState<DestinoRow[] | null>(null);
   const [rowsError, setRowsError] = useState<string | null>(null);
   const [modal, setModal] = useState<{ open: boolean; row: DestinoRow | null }>({ open: false, row: null });
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setSearch(searchInput), 300);
@@ -1410,9 +1412,14 @@ function DestinoPanel({
         count={rows?.length ?? null}
         truncado={(rows?.length ?? 0) >= FETCH_CAP}
         action={
-          <Button variant="primary" icon="ti-plus" onClick={() => setModal({ open: true, row: null })}>
-            Nueva tarifa
-          </Button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Button variant="ghost" icon="ti-file-spreadsheet" onClick={() => setImportOpen(true)}>
+              Importar Excel
+            </Button>
+            <Button variant="primary" icon="ti-plus" onClick={() => setModal({ open: true, row: null })}>
+              Nueva tarifa
+            </Button>
+          </div>
         }
       />
 
@@ -1448,6 +1455,18 @@ function DestinoPanel({
           onClose={() => setModal({ open: false, row: null })}
           onDone={() => {
             setModal({ open: false, row: null });
+            void load();
+          }}
+        />
+      )}
+
+      {importOpen && (
+        <ImportarTarifasDestinoModal
+          paises={paises}
+          navieras={navieras}
+          onClose={() => setImportOpen(false)}
+          onDone={() => {
+            setImportOpen(false);
             void load();
           }}
         />
