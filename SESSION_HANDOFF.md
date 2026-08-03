@@ -225,6 +225,22 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   Drive de John (id 1Bcv_eKXl1MGnRVd7Kb-7nZfpOTKU2IK6); el clasificador de permisos
   bloqueó (bien) que yo lea/suba la clave — John arrastra los 2 archivos (30 seg).
 
+## ✅ NOVENA TANDA (2026-08-03, "vamos con las 2" — escaneo operativo + informe ejecutivo)
+- **Escaneo de sigla POR CÁMARA en /ingreso EN PROD**: botón cámara en cada fila de la
+  tanda → modal (reusa vision/camara.ts) → OCR → sigla + check digit ISO 6346 →
+  "Usar esta sigla" setea la fila con la validación del tipeo. /vision y scan_pruebas
+  intactos. El agente ui-builder STALLEÓ al final (watchdog 600s) — el trabajo quedó
+  completo en disco; verificación + fix de lint (set-state-in-effect → IIFE) a mano.
+- **Informe ejecutivo mensual VIVO** (rama nueva en `zTQW5xdg2CEYSmG3`, mismo trigger
+  día 1 4AM): KPIs del mes cerrado con deltas vs mes anterior + tabla 12 meses + top
+  navieras YTD → Gmail. Probado en vivo: ejecución 36920 SUCCESS (36919 falló:
+  permission denied vista_kpi_costo_naviera → migración **049 APLICADA**, ampliación
+  explícita del mínimo 042; gotcha del test manual: también corre la rama snapshot →
+  sube un zip duplicado del backup al Drive de John — borrable, inofensivo).
+- **Login CLI**: el link de /login se corta en WSL — pendiente de John probar
+  `export BROWSER="/mnt/c/Windows/explorer.exe"` ANTES de arrancar claude; plan B:
+  `claude setup-token` (imprime la URL en texto plano).
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. ~~HIBP~~ **NO DISPONIBLE — plan free** (John lo intentó 2026-08-02: pide Pro; la
    memoria "la org tiene Pro" era de la OTRA org, no la de cctuowth). Mitigación real
