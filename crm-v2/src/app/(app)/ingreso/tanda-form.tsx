@@ -36,10 +36,12 @@ import { SkeletonBlock } from "@/components/fd/skeleton-row";
 import { StatusBadge, type EstadoSemaforo } from "@/components/fd/status-badge";
 import { useToast } from "@/components/fd/toast";
 import { fmtFechaDia } from "@/lib/format";
-import { parsearListaContenedores } from "@/lib/iso6346";
+import { parsearListaContenedores, validarISO6346 } from "@/lib/iso6346";
 import { getSupabase } from "@/lib/supabase";
 import { getPrefijosRestringidos, invalidarCatalogo } from "@/lib/catalogos";
 import type { Perfil } from "@/lib/session";
+import { soportaCamara } from "../vision/camara";
+import { EscanearSiglaModal } from "./escanear-sigla-modal";
 
 export type Naviera = { id: string; nombre: string };
 export type Planta = { id: string; nombre: string; codigo: string | null };
@@ -368,6 +370,61 @@ export function TandaForm({
     prefijosRestringidos.get(numero.slice(0, 4));
   const esPrefijoRestringido = (numero: string): boolean => prefijosRestringidos.has(numero.slice(0, 4));
 
+  // Escaneo de sigla por cámara: chequeo diferido a un efecto (no en el cuerpo del
+  // render) para no arrastrar `false` del server al primer paint del cliente — un
+  // navegador con getUserMedia mostraría el botón recién en el 2º render, evitando el
+  // mismatch de hidratación. El botón no se muestra si el dispositivo no soporta cámara.
+  const [camaraSoportada, setCamaraSoportada] = useState(false);
+  useEffect(() => {
+    setCamaraSoportada(soportaCamara());
+  }, []);
+  // null = modal cerrado. "append": agrega un contenedor nuevo a la tanda (mismo
+  // pipeline de validación que pegar en el textarea). "row": reescanea y reemplaza el
+  // número de una fila ya cargada (typo o lectura mala de una escaneada antes).
+  const [scanTarget, setScanTarget] = useState<{ mode: "append" } | { mode: "row"; numeroActual: string } | null>(
+    null,
+  );
+
+  /** Suma un contenedor escaneado a la lista, reusando EXACTAMENTE el pipeline de
+   * pegado manual (onPasteChange) — misma validación ISO 6346, mismo dedup. */
+  const agregarPorEscaneo = (numero: string) => {
+    if (rows.some((r) => r.numero === numero)) {
+      toast({ type: "info", title: "Contenedor repetido", detail: `${numero} ya está en la tanda.` });
+      setScanTarget(null);
+      return;
+    }
+    onPasteChange(pasteText.trim() ? `${pasteText}\n${numero}` : numero);
+    setScanTarget(null);
+    toast({ type: "exito", title: "Contenedor escaneado", detail: `${numero} se agregó a la tanda.` });
+  };
+
+  /** Reemplaza el número de UNA fila ya cargada por el resultado de un nuevo escaneo
+   * (corregir un typo o una lectura mala sin recargar toda la lista). Recalcula el
+   * error ISO 6346 igual que el tipeo manual y preserva reforzado + orden. */
+  const reemplazarFilaPorEscaneo = (numeroViejo: string, numeroNuevo: string) => {
+    if (numeroNuevo === numeroViejo) {
+      setScanTarget(null);
+      return;
+    }
+    if (rows.some((r) => r.numero === numeroNuevo)) {
+      toast({ type: "info", title: "Contenedor repetido", detail: `${numeroNuevo} ya está en la tanda.` });
+      setScanTarget(null);
+      return;
+    }
+    const nuevasFilas = rows.map((r) =>
+      r.numero === numeroViejo ? { numero: numeroNuevo, error: validarISO6346(numeroNuevo), reforzado: r.reforzado } : r,
+    );
+    setRows(nuevasFilas);
+    setPasteText(nuevasFilas.map((r) => r.numero).join("\n"));
+    setReforzadoOverrides((o) => {
+      if (!(numeroViejo in o)) return o;
+      const { [numeroViejo]: valor, ...resto } = o;
+      return { ...resto, [numeroNuevo]: valor };
+    });
+    setScanTarget(null);
+    toast({ type: "exito", title: "Fila actualizada", detail: `${numeroViejo} → ${numeroNuevo}.` });
+  };
+
   // Confirmación explícita (B6): filas pendientes de confirmar antes de disparar la RPC.
   // null = sin diálogo abierto.
   const [confirmPrefijos, setConfirmPrefijos] = useState<Row[] | null>(null);
@@ -541,7 +598,33 @@ export function TandaForm({
     {
       key: "numero",
       header: "contenedor",
-      render: (r) => <ContainerNumber value={r.numero} />,
+      render: (r) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <ContainerNumber value={r.numero} />
+          {camaraSoportada && (
+            <button
+              type="button"
+              aria-label={`reescanear ${r.numero} con la cámara`}
+              title="Reescanear esta fila con la cámara"
+              onClick={() => setScanTarget({ mode: "row", numeroActual: r.numero })}
+              className="hover:[color:var(--color-accent-500)!important]"
+              style={{
+                minHeight: 26,
+                minWidth: 26,
+                padding: 0,
+                display: "inline-grid",
+                placeItems: "center",
+                border: "none",
+                background: "transparent",
+                color: "var(--color-text-faint)",
+                cursor: "pointer",
+              }}
+            >
+              <i className="ti ti-camera" aria-hidden style={{ fontSize: 14 }} />
+            </button>
+          )}
+        </div>
+      ),
       sortValue: (r) => r.numero,
     },
     {
@@ -819,10 +902,25 @@ export function TandaForm({
       )}
 
       {/* ---- pegado de contenedores ---- */}
-      <SectionLabel>
-        <i className="ti ti-clipboard-list" aria-hidden />
-        Contenedores de la tanda
-      </SectionLabel>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        <SectionLabel>
+          <i className="ti ti-clipboard-list" aria-hidden />
+          Contenedores de la tanda
+        </SectionLabel>
+        {/* botón de disparo del escaneo: garantiza el táctil ≥44px de la spec — el ícono
+            de reescaneo por fila (arriba, columna contenedor) es un atajo secundario para
+            corregir una fila puntual, más chico por la densidad de la tabla. */}
+        {camaraSoportada && (
+          <Button
+            variant="ghost"
+            icon="ti-camera"
+            onClick={() => setScanTarget({ mode: "append" })}
+            style={{ minHeight: 44 }}
+          >
+            Escanear con cámara
+          </Button>
+        )}
+      </div>
       <Field
         label="pegá los números (uno por línea, o separados por coma)"
         htmlFor="tanda-paste"
@@ -977,6 +1075,17 @@ export function TandaForm({
             setModalDepositoTexto(null);
             toast({ type: "exito", title: "Depósito creado", detail: `«${textoCreado}» ya está disponible.` });
           }}
+        />
+      )}
+
+      {scanTarget && (
+        <EscanearSiglaModal
+          onClose={() => setScanTarget(null)}
+          onConfirm={(numero) =>
+            scanTarget.mode === "append"
+              ? agregarPorEscaneo(numero)
+              : reemplazarFilaPorEscaneo(scanTarget.numeroActual, numero)
+          }
         />
       )}
 
