@@ -248,6 +248,19 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   `export BROWSER="/mnt/c/Windows/explorer.exe"` ANTES de arrancar claude; plan B:
   `claude setup-token` (imprime la URL en texto plano).
 
+## ✅ INFORME v4 (2026-08-03, feedback "no lo veo útil" con screenshots)
+- **BUG REAL cazado gracias al screenshot**: tabla de navieras repetida ×13 — un nodo
+  HTTP encadenado tras otro que emite N items ejecuta N requests idénticos (n8n corre
+  el nodo POR ITEM de entrada). Fix: `executeOnce` en los 3 GET del informe Y en el
+  mail diario (`NvpzO39XqZrTU6UD` — ahí era latente: con impo vacío invisible, con
+  filas se duplicaban ×37). Ambos publicados.
+- v4 además: deltas formateados por tipo (pts/días/USD — se acabó "▼ 86195.0"),
+  volumen sin color de juicio, **costo por operación** como KPI (comparar totales de
+  meses con 59 vs 215 cierres engañaba), tarjeta de waivers se reemplaza por
+  "Generaron costo X de N" cuando no hay waivers en el año, dedupe defensivo.
+  Test 36925 SUCCESS, backup reconectado, publicado.
+- REGLA n8n aprendida: GET encadenados SIEMPRE con executeOnce (o rama paralela).
+
 ## ⏸ BLOQUEADO EN JOHN (queda muy poco)
 1. ~~HIBP~~ **NO DISPONIBLE — plan free** (John lo intentó 2026-08-02: pide Pro; la
    memoria "la org tiene Pro" era de la OTRA org, no la de cctuowth). Mitigación real
