@@ -231,6 +231,13 @@ automático 60s en /inicio y /alertas con badge honesto · buscador ⌘K conecta
   "Usar esta sigla" setea la fila con la validación del tipeo. /vision y scan_pruebas
   intactos. El agente ui-builder STALLEÓ al final (watchdog 600s) — el trabajo quedó
   completo en disco; verificación + fix de lint (set-state-in-effect → IIFE) a mano.
+- **Informe ejecutivo v2** ("mejoralo", 2026-08-03): cabecera de marca SSB·DETENTION,
+  "lectura del mes" auto-generada (frases desde los números: free time con delta,
+  costo vs mes anterior, interanual si hay 13 meses), barras inline de costo en la
+  tabla 12 meses, semáforo de color en el KPI de free time. Test aislado SUCCESS
+  (ejecución 36923; gotcha: nodo deshabilitado en n8n DEJA PASAR los datos — para
+  aislar una rama hay que DESCONECTARLA del trigger y reconectar después). Estado
+  final verificado: ambas ramas conectadas, versión publicada.
 - **Informe ejecutivo mensual VIVO** (rama nueva en `zTQW5xdg2CEYSmG3`, mismo trigger
   día 1 4AM): KPIs del mes cerrado con deltas vs mes anterior + tabla 12 meses + top
   navieras YTD → Gmail. Probado en vivo: ejecución 36920 SUCCESS (36919 falló:
