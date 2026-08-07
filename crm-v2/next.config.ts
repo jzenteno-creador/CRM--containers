@@ -19,6 +19,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Texturas de la portada 3D del login: contenido versionado por nombre de
+        // archivo, se cachea para siempre — el ~1 MB se paga una vez por dispositivo.
+        // (El SW no cachea /3d a propósito: su filosofía es solo estáticos de marca.)
+        source: "/3d/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           {
