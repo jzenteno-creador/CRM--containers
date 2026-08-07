@@ -62,8 +62,14 @@ export default function LoginPage() {
 
   // Ya logueado → afuera del login (el gate resuelve espera vs app); y /inicio se
   // precalienta para que la navegación al final del fade sea instantánea.
+  // seqStartedRef: el login EXITOSO también flipea status a signedIn (onAuthStateChange)
+  // — sin este guard, este efecto desmontaba la página en plena secuencia y las puertas
+  // (1,15 s+) nunca se veían. Detectado por John en el smoke del 2026-08-07: "veo la
+  // animación, no veo la apertura de puertas". Con la secuencia en vuelo navega
+  // onSequenceEnd, no este efecto.
+  const seqStartedRef = useRef(false);
   useEffect(() => {
-    if (status === "signedIn") router.replace("/inicio");
+    if (status === "signedIn" && !seqStartedRef.current) router.replace("/inicio");
   }, [status, router]);
   useEffect(() => {
     router.prefetch("/inicio");
@@ -96,11 +102,16 @@ export default function LoginPage() {
     if (!valid || submitting) return;
     setSubmitting(true);
     setAuthError(null);
+    // El ref se levanta ANTES del await: el SIGNED_IN de Supabase puede emitirse en
+    // cualquier orden respecto de esta continuación, y el guard tiene que estar puesto
+    // cuando el efecto de arriba lo lea. Si el login falla, se baja.
+    seqStartedRef.current = true;
     const { error } = await getSupabase().auth.signInWithPassword({
       email: email.trim(),
       password,
     });
     if (error) {
+      seqStartedRef.current = false;
       setAuthError(loginErrorMessage(error));
       setSubmitting(false);
       return;
