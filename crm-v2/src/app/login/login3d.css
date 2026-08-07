@@ -1,0 +1,295 @@
+/* Portada 3D del login — CSS de A4-realista.html (crm-3d), adaptado al port:
+   TODO selector va scopeado bajo .login3d (App Router carga este CSS app-wide una vez
+   visitado /login: sin el namespace, `label`/`input`/`.field` pisarían al resto del CRM
+   — la colisión de clases genéricas ya costó un bug real, ver CLAUDE.md global).
+   Los bloques #final/#replay del demo (overlay "Repetir") no se portaron. */
+
+.login3d {
+  /* PALETA COLOR1 (elegida por John 2026-08-05, reemplaza al Brandbook 2021).
+     Los nombres viejos (--navy / --navy-deep / --text-light) se conservan para no
+     romper las ~40 referencias del resto de la hoja; lo que cambia es el VALOR.
+     REGLA MEDIDA: el teal #14424C sobre el fondo oscuro da contraste 1,55x -> es
+     superficie/bloque, NUNCA tinta. El unico acento legible es el naranja (4,67x).
+     El naranja lleva texto casi-negro encima (5,18x), no blanco (2,9x: falla AA). */
+  --navy: #14424C;            /* teal COLOR1 - superficie de la card */
+  --navy-deep: #1A1A19;       /* deck casi-negro COLOR1 - fondo de pagina y de escena */
+  --text-light: #EAE8D6;      /* crema COLOR1 - 13,96x sobre el deck */
+  --gray-mid: #9A9789;        /* gris calido derivado del crema - 5,52x sobre el deck */
+  --accent: #D6640F;          /* naranja COLOR1 */
+  --accent-btn-bg: #D6640F;
+  --accent-btn-hover: #C25A0D;
+  --accent-ink: #12100F;      /* texto sobre naranja: casi-negro, no blanco */
+  --accent-link: #E8834A;     /* tinte del naranja para links - 6,34x sobre el deck */
+  --font-stack: -apple-system, "Segoe UI", "Helvetica Neue", Roboto, Arial, sans-serif;
+
+  /* En A4 esto era html/body; acá el wrapper ES la página del login. */
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--navy-deep);
+  font-family: var(--font-stack);
+  color: var(--text-light);
+}
+
+.login3d, .login3d * { box-sizing: border-box; }
+
+/* Capa 3D de fondo, fija a viewport, detras de toda la UI. */
+.login3d #scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  display: block;
+  z-index: 0;
+  background: var(--navy-deep);
+}
+
+/* Scrim solo visible en mobile (ver media query abajo) para legibilidad del texto
+   sobre el contenedor 3D centrado detras. */
+.login3d #scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+  background: linear-gradient(rgba(26, 26, 25, .65), rgba(26, 26, 25, .9));
+}
+
+.login3d main.login-col {
+  position: relative;
+  z-index: 2;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 420px;
+  margin-left: 8vw;
+  padding: 40px 24px 40px 0;
+}
+
+.login3d .logo {
+  height: 40px;
+  width: auto;
+  display: block;
+  margin-bottom: 36px;
+}
+
+.login3d .headline {
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-light);
+  margin: 0 0 14px;
+}
+
+.login3d .sub {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--gray-mid);
+  margin: 0 0 28px;
+  max-width: 38ch;
+}
+
+/* Card GLASS: fallback solido bajo prefers-reduced-transparency y @supports sin
+   backdrop-filter (Firefox viejo / navegadores sin soporte) - nunca queda transparente
+   por accidente ni ilegible. */
+.login3d .login-card {
+  background: rgba(20, 66, 76, .55);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, .10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .login3d .login-card {
+    background: rgba(20, 66, 76, .96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .login3d .login-card {
+    background: rgba(20, 66, 76, .96);
+  }
+}
+
+.login3d .field { display: flex; flex-direction: column; margin-top: 18px; }
+.login3d .field:first-child { margin-top: 0; }
+
+.login3d label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 7px;
+}
+
+.login3d input {
+  width: 100%;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: 400 15px/1.4 var(--font-stack);
+  color: var(--text-light);
+}
+
+.login3d input::placeholder { color: rgba(234, 232, 214, .35); }
+
+.login3d input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+
+.login3d .field.has-error input {
+  border-color: var(--accent);
+}
+
+.login3d .error-text {
+  display: none;
+  color: var(--accent-link);
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+.login3d .field.has-error .error-text { display: block; }
+
+.login3d .btn-primary {
+  width: 100%;
+  margin-top: 24px;
+  background: var(--accent-btn-bg);
+  /* casi-negro y no blanco: #D6640F con blanco da 2,90x (falla AA); con --accent-ink
+     da 5,18x. Es la correccion que el analisis de paleta marco como obligatoria. */
+  color: var(--accent-ink);
+  font: 600 15px/1 var(--font-stack);
+  border: none;
+  border-radius: 12px;
+  padding: 15px 18px;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+
+.login3d .btn-primary:hover { background: var(--accent-btn-hover); }
+.login3d .btn-primary:active { transform: translateY(1px); }
+
+.login3d .btn-primary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.login3d .btn-primary[disabled] { cursor: default; opacity: .92; }
+
+.login3d .btn-spinner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 15px;
+}
+
+.login3d .btn-primary.loading .btn-label { display: none; }
+.login3d .btn-primary.loading .btn-spinner { display: inline-flex; }
+
+.login3d .btn-spinner i {
+  display: block;
+  width: 3px;
+  height: 15px;
+  background: #fff;
+  border-radius: 2px;
+  animation: login3d-pulse-bar .9s ease-in-out infinite;
+}
+.login3d .btn-spinner i:nth-child(2) { animation-delay: .15s; }
+.login3d .btn-spinner i:nth-child(3) { animation-delay: .3s; }
+
+@keyframes login3d-pulse-bar {
+  0%, 100% { transform: scaleY(.4); opacity: .5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login3d .btn-spinner i { animation: none; opacity: 1; transform: none; }
+}
+
+.login3d .forgot-link {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--accent-link);
+  font-size: 13.5px;
+  text-decoration: none;
+  align-self: flex-start;
+}
+
+.login3d .forgot-link:hover { text-decoration: underline; }
+
+.login3d .forgot-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* El fade es un overlay DOM (tapa canvas Y formulario de una sola vez), pero su opacidad
+   la escribe el render loop desde el mismo reloj que las puertas y la camara. Con una
+   transicion CSS (reloj de pared) un frame lento adelanta el negro a la camara. */
+.login3d #fade {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 767px) {
+  .login3d #scrim { display: block; }
+  .login3d main.login-col {
+    max-width: none;
+    margin-left: 0;
+    width: 100%;
+    padding: 20px;
+  }
+}
+
+/* ---- Port a crm-v2: lo que A4 no tenía ---- */
+
+/* Error de autenticación (Supabase) a nivel card — mismo lenguaje visual que .error-text */
+.login3d .form-error {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #f0a8a0;
+  margin: 14px 0 0;
+}
+
+/* Links secundarios: "¿Olvidaste tu contraseña?" + "Crear cuenta" en una fila */
+.login3d .card-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.login3d .card-links .forgot-link { align-self: auto; }
+
+/* Mobile (decisión de John 2026-08-07): primero el contenedor, la card entra al posarse.
+   767px = el mismo matchMedia que ya usa la escena. Solo la card se oculta: el logo y el
+   headline quedan desde el primer paint. Sin transition en el estado oculto → sin flash
+   antes de hidratar. */
+@media (max-width: 767px) {
+  .login3d:not(.form-ready) .login-card {
+    opacity: 0;
+    transform: translateY(14px);
+    pointer-events: none;
+  }
+  .login3d.form-ready .login-card {
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login3d.form-ready .login-card { transition: none; }
+}

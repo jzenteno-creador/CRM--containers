@@ -18,10 +18,13 @@ type Props = {
 export function ContainerCanvas({ onReady, onFormReady, onSequenceEnd, onSceneError }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
-  // Los callbacks viven en refs para que el effect corra UNA vez (StrictMode-safe)
-  // sin re-inicializar la escena cuando el padre re-renderiza.
+  // Los callbacks viven en refs para que el effect de montaje corra UNA vez
+  // (StrictMode-safe) sin re-inicializar la escena cuando el padre re-renderiza.
+  // La escritura va en un effect (no en render): regla react-hooks/refs.
   const cbRef = useRef({ onReady, onFormReady, onSequenceEnd, onSceneError });
-  cbRef.current = { onReady, onFormReady, onSequenceEnd, onSceneError };
+  useEffect(() => {
+    cbRef.current = { onReady, onFormReady, onSequenceEnd, onSceneError };
+  });
 
   useEffect(() => {
     let disposed = false;

@@ -1,22 +1,37 @@
 "use client";
 
-// Login (§12, wireado en M2): signInWithPassword + errores claros (credenciales,
-// email sin confirmar, rate limit). Con sesión ya activa redirige a /inicio y el
-// gate decide (activo → app / no activo → espera). Links reales a /registro y
-// /recuperar (reset de contraseña).
+// Login con la portada 3D A4 (spec docs/superpowers/specs/2026-08-07-portada-3d-login-produccion-design.md).
+// La escena es cosmética: el form es usable desde el primer paint (desktop) y el error
+// de credenciales sale a los ~0,5 s como siempre. La secuencia (giro + puertas + fade,
+// 3,30 s) SOLO corre con la credencial ya aceptada; al terminar, onSequenceEnd navega
+// a /inicio ya prefetcheado. En mobile (≤767px) la card espera el posado del contenedor
+// (decisión de John 2026-08-07: primero el contenedor, después el formulario).
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { preload } from "react-dom";
 import type { AuthError } from "@supabase/supabase-js";
-import { AuthBrandPanel } from "@/components/auth/brand-panel";
-import { Button } from "@/components/fd/button";
-import { Field, Input } from "@/components/fd/fields";
-import { FormAlert } from "@/components/fd/form-alert";
+import type { ContainerSceneHandle } from "@/components/auth/container-scene";
+import { ContainerCanvas } from "@/components/auth/container-canvas";
 import { getSupabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
+import "./login3d.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Las 8 texturas que definen el dibujo (TEX_QUE_DEFINEN de la escena): precargarlas
+// adelanta el reveal — mismo rol que los <link rel="preload"> del preview.
+const PRELOAD_TEXTURES = [
+  "/3d/assets/pbr/side-wall-right_albedo_ssb.webp",
+  "/3d/assets/pbr/side-wall-left_albedo_ssb.webp",
+  "/3d/assets/pbr/paint-body-navy_albedo_brand.webp",
+  "/3d/assets/pbr/decal-white_albedo_brand.webp",
+  "/3d/assets/pbr/paint-accent-orange_albedo_brand.webp",
+  "/3d/assets/pbr/door-leaf-left_albedo_ssb.webp",
+  "/3d/assets/pbr/door-leaf-right_albedo_ssb.webp",
+  "/3d/assets/decal/csc-plate.webp",
+];
 
 function loginErrorMessage(error: AuthError): string {
   if (error.code === "invalid_credentials") return "Correo o contraseña incorrectos.";
@@ -33,6 +48,9 @@ function loginErrorMessage(error: AuthError): string {
 export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
+  const sceneRef = useRef<ContainerSceneHandle | null>(null);
+  const [sceneDown, setSceneDown] = useState(false);
+  const [formReady, setFormReady] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
@@ -40,18 +58,36 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Ya logueado → afuera del login (el gate resuelve espera vs app)
+  for (const href of PRELOAD_TEXTURES) preload(href, { as: "image", type: "image/webp" });
+
+  // Ya logueado → afuera del login (el gate resuelve espera vs app); y /inicio se
+  // precalienta para que la navegación al final del fade sea instantánea.
   useEffect(() => {
     if (status === "signedIn") router.replace("/inicio");
   }, [status, router]);
+  useEffect(() => {
+    router.prefetch("/inicio");
+  }, [router]);
+
+  // form-ready: la clase .form-ready solo tiene efecto visual en ≤767px (la card
+  // espera el posado); en desktop la card se ve siempre, así que no hace falta
+  // detectar viewport. Red de seguridad: 22 s pase lo que pase — el peor camino
+  // normal es reveal por timeout (15 s) + bajada completa (5,4 s) ≈ 20,4 s; esto
+  // solo cubre un chunk de la escena que nunca llegó a disparar sus callbacks.
+  useEffect(() => {
+    const t = window.setTimeout(() => setFormReady(true), 22000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  const goInicio = useCallback(() => router.replace("/inicio"), [router]);
 
   const emailError =
     (touched.email || submitted) && email.trim() === ""
-      ? "ingresá tu correo"
+      ? "Ingresá tu correo."
       : (touched.email || submitted) && !EMAIL_RE.test(email.trim())
-        ? "correo inválido"
+        ? "Ingresá un correo con formato válido (debe incluir @)."
         : null;
-  const passwordError = (touched.password || submitted) && password === "" ? "ingresá tu contraseña" : null;
+  const passwordError = (touched.password || submitted) && password === "" ? "Ingresá tu contraseña." : null;
   const valid = EMAIL_RE.test(email.trim()) && password !== "";
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -69,66 +105,101 @@ export default function LoginPage() {
       setSubmitting(false);
       return;
     }
-    // submitting queda en true: bloquea el doble-submit mientras navega
-    router.replace("/inicio");
+    // Credencial aceptada: la secuencia ES la transición (giro + puertas + fade;
+    // onSequenceEnd navega). submitting queda en true: bloquea el doble-submit.
+    if (sceneRef.current && !sceneDown) {
+      sceneRef.current.playLoginSequence();
+    } else {
+      goInicio(); // sin escena no hay show, pero el login jamás depende del show
+    }
   };
 
   return (
-    <div className="login-grid">
-      <AuthBrandPanel />
+    <div className={`login3d${formReady ? " form-ready" : ""}`}>
+      {!sceneDown && (
+        <ContainerCanvas
+          onReady={(h) => {
+            sceneRef.current = h;
+          }}
+          onFormReady={() => setFormReady(true)}
+          onSequenceEnd={goInicio}
+          onSceneError={() => {
+            setSceneDown(true);
+            setFormReady(true);
+          }}
+        />
+      )}
+      <div id="scrim" aria-hidden="true" />
+      <main className="login-col" id="login-main">
+        {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático de marca, sin optimización */}
+        <img className="logo" src="/logos/ssb-white.svg" alt="SSB International" height={40} />
+        <h1 className="headline">Tus exportaciones, bajo control.</h1>
+        <p className="sub">Plataforma interna de seguimiento de contenedores y documentación.</p>
 
-      <div className="login-form">
-        <div style={{ width: "100%", maxWidth: 340 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 600, margin: "0 0 4px", fontFamily: "var(--font-display)" }}>
-            Ingresar
-          </h2>
-          <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "0 0 24px" }}>
-            Acceso operativo · SSB International
-          </p>
-          <form onSubmit={onSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <Field label="correo" htmlFor="email" error={emailError}>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="username"
-                value={email}
-                error={emailError}
-                onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-              />
-            </Field>
-            <Field label="contraseña" htmlFor="password" error={passwordError}>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                error={passwordError}
-                onChange={(e) => setPassword(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-              />
-            </Field>
-            {authError && <FormAlert>{authError}</FormAlert>}
-            <Button type="submit" variant="primary" loading={submitting} style={{ padding: 11, fontSize: 13 }}>
-              Ingresar
-            </Button>
-          </form>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 10,
-              marginTop: 18,
-              fontSize: 12,
-            }}
-          >
-            <Link href="/recuperar">¿Olvidaste tu contraseña?</Link>
-            <Link href="/registro">Crear cuenta</Link>
+        <form className="login-card" id="login-form" noValidate onSubmit={onSubmit}>
+          <div className={`field${emailError ? " has-error" : ""}`}>
+            <label htmlFor="email">Correo corporativo</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="username"
+              placeholder="nombre@ssbint.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => sceneRef.current?.setFocusZoom(true)}
+              onBlur={() => {
+                sceneRef.current?.setFocusZoom(false);
+                setTouched((t) => ({ ...t, email: true }));
+              }}
+            />
+            {emailError && <span className="error-text">{emailError}</span>}
           </div>
-        </div>
-      </div>
+          <div className={`field${passwordError ? " has-error" : ""}`}>
+            <label htmlFor="password">Contraseña</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => sceneRef.current?.setFocusZoom(true)}
+              onBlur={() => {
+                sceneRef.current?.setFocusZoom(false);
+                setTouched((t) => ({ ...t, password: true }));
+              }}
+            />
+            {passwordError && <span className="error-text">{passwordError}</span>}
+          </div>
+          {authError && (
+            <p className="form-error" role="alert">
+              {authError}
+            </p>
+          )}
+          <button
+            type="submit"
+            className={`btn-primary${submitting ? " loading" : ""}`}
+            disabled={submitting}
+            aria-busy={submitting}
+          >
+            <span className="btn-label">Ingresar</span>
+            <span className="btn-spinner" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </button>
+          <div className="card-links">
+            <Link href="/recuperar" className="forgot-link">
+              ¿Olvidaste tu contraseña?
+            </Link>
+            <Link href="/registro" className="forgot-link">
+              Crear cuenta
+            </Link>
+          </div>
+        </form>
+      </main>
     </div>
   );
 }
