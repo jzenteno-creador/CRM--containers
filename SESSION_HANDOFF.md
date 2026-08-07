@@ -96,13 +96,21 @@ data found") en la primerísima carga. Irreproducible en frío, en caliente y en
 
 ## Lo que sigue — PENDIENTES ABIERTOS
 
-### P1 · Deploy a producción (bloqueado solo por el OK de John)
+### ~~P1 · Deploy a producción~~ — ✅ HECHO (2026-08-07)
 
-```bash
-cd /home/jzenteno/projects/Crm-containers/crm-v2 && npx -y vercel@latest deploy --prod --yes
-```
-NO auto-deploya en push. Después: smoke en `crm-detention.vercel.app/login` y **baja de la
-vitrina** (`npx vercel remove ssb-login-preview --yes`, decisión ya tomada por John).
+John aprobó salir con P2 y P3 abiertos (son de pulido, no rompen nada) y el razonamiento de
+que tener el login en prod es justamente lo que permite medir P2 en las máquinas reales del
+equipo, que acá no se puede simular.
+
+- **VIVO en https://crm-detention.vercel.app/login** — deploy `crm-detention-o6yzyn7wb`,
+  Ready en 50 s. Rama pusheada a origin (`b8829d0..5a3ec19`).
+- Smoke en prod, perfil de browser limpio: canvas montado, card, headline correctos ·
+  **39 requests a `/3d` todos 200, 0 errores de consola** · `Cache-Control:
+  public, max-age=31536000, immutable` servido en `/3d/assets` y `/3d/intake` ·
+  `window.__a4` **ausente** (QA gateado, deuda §7 cerrada).
+- **Vitrina dada de baja:** `vercel remove ssb-login-preview` → `ssb-login-preview.vercel.app`
+  devuelve **404**. El README de `~/work/crm-3d` lleva ahora un aviso al tope: ese repo dejó
+  de ser la fuente de verdad de la portada y editar `design/A4-realista.html` no llega a prod.
 
 ### P2 · Latencia y fluidez de la bajada (pedido de John, 2026-08-07)
 
