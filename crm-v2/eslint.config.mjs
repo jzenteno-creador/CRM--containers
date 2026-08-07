@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Port 3D del login: módulos vanilla verificados en ~/work/crm-3d, se mueven, no se editan.
+    "src/components/auth/container-model.js",
+    "src/components/auth/container-scene.js",
   ]),
 ]);
 
